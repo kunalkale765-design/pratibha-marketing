@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Fresh Supply Co. - Customer Order</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec13",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102210",
+                    },
+                    fontFamily: {
+                        "display": ["Work Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "1rem",
+                        "xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        /* Hide number input spinners */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+        
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-gray-900 dark:text-gray-100 antialiased selection:bg-primary selection:text-black">
+<div class="relative flex min-h-screen w-full flex-col mx-auto max-w-md bg-background-light dark:bg-background-dark shadow-2xl overflow-hidden pb-24">
+<!-- Top App Bar -->
+<header class="sticky top-0 z-30 flex items-center justify-between px-4 py-4 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800">
+<div class="flex flex-col">
+<h2 class="text-xl font-bold leading-tight tracking-tight text-gray-900 dark:text-white">Fresh Supply Co.</h2>
+<span class="text-xs font-medium text-gray-500 dark:text-gray-400">Order for Tomorrow, May 12</span>
+</div>
+<button aria-label="Order History" class="flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+<span class="material-symbols-outlined" style="font-size: 24px;">history</span>
+</button>
+</header>
+<!-- Intro Text -->
+<div class="px-4 pt-6 pb-2">
+<h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Hello, Chef.</h1>
+<p class="text-base text-gray-600 dark:text-gray-400 leading-normal">
+                Select your items for tomorrow's delivery. Prices are hidden as per your agreement.
+            </p>
+</div>
+<!-- Sticky Search Bar -->
+<div class="sticky top-[73px] z-20 bg-background-light dark:bg-background-dark px-4 py-4 shadow-sm">
+<div class="relative flex w-full items-center">
+<div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+<span class="material-symbols-outlined text-gray-400" style="font-size: 24px;">search</span>
+</div>
+<input class="block w-full p-3 pl-10 text-base text-gray-900 dark:text-white bg-white dark:bg-gray-900 rounded-lg border-none ring-1 ring-gray-200 dark:ring-gray-700 focus:ring-2 focus:ring-primary focus:outline-none placeholder-gray-400 dark:placeholder-gray-500 shadow-sm" placeholder="Search vegetables..." type="text" value=""/>
+</div>
+</div>
+<!-- Content List -->
+<main class="flex-1 flex flex-col gap-6">
+<!-- Section: Root Vegetables -->
+<div>
+<div class="flex items-center px-4 mb-2 mt-2">
+<h3 class="text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Root Vegetables</h3>
+<div class="ml-4 h-px bg-gray-200 dark:bg-gray-800 flex-1"></div>
+</div>
+<div class="flex flex-col">
+<!-- Item 1 -->
+<div class="group flex items-center justify-between px-4 py-4 border-b border-gray-100 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
+<div class="flex flex-col flex-1 pr-4">
+<span class="text-lg font-bold text-gray-900 dark:text-white">Carrots, Orange</span>
+<span class="text-sm text-gray-500 dark:text-gray-400 font-normal">/kg</span>
+</div>
+<div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-900 rounded-lg p-1">
+<button class="w-10 h-10 flex items-center justify-center rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-95 transition-all">
+<span class="material-symbols-outlined" style="font-size: 20px;">remove</span>
+</button>
+<input class="w-12 p-0 text-center bg-transparent border-none text-lg font-bold text-gray-900 dark:text-white focus:ring-0" type="number" value="12"/>
+<button class="w-10 h-10 flex items-center justify-center rounded-md bg-primary text-black shadow-sm hover:bg-primary/90 active:scale-95 transition-all">
+<span class="material-symbols-outlined" style="font-size: 20px;">add</span>
+</button>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="group flex items-center justify-between px-4 py-4 border-b border-gray-100 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
+<div class="flex flex-col flex-1 pr-4">
+<span class="text-lg font-bold text-gray-900 dark:text-white">Potatoes, Russet</span>
+<span class="text-sm text-gray-500 dark:text-gray-400 font-normal">/sack (20kg)</span>
+</div>
+<div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-900 rounded-lg p-1">
+<button class="w-10 h-10 flex items-center justify-center rounded-md bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-95 transition-all" disabled="">
+<span class="material-symbols-outlined" style="font-size: 20px;">remove</span>
+</button>
+<input class="w-12 p-0 text-center bg-transparent border-none text-lg font-bold text-gray-400 dark:text-gray-500 focus:ring-0" type="number" value="0"/>
+<button class="w-10 h-10 flex items-center justify-center rounded-md bg-primary text-black shadow-sm hover:bg-primary/90 active:scale-95 transition-all">
+<span class="material-symbols-outlined" style="font-size: 20px;">add</span>
+</button>
+</div>
+</div>
+<!-- Item 3 -->
+<div class="group flex items-center justify-between px-4 py-4 border-b border-gray-100 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
+<div class="flex flex-col flex-1 pr-4">
+<span class="text-lg font-bold text-gray-900 dark:text-white">Beets, Red</span>
+<span class="text-sm text-gray-500 dark:text-gray-400 font-normal">/kg</span>
+</div>
+<div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-900 rounded-lg p-1">
+<button class="w-10 h-10 flex items-center justify-center rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-95 transition-all">
+<span class="material-symbols-outlined" style="font-size: 20px;">remove</span>
+</button>
+<input class="w-12 p-0 text-center bg-transparent border-none text-lg font-bold text-gray-900 dark:text-white focus:ring-0" type="number" value="5"/>
+<button class="w-10 h-10 flex items-center justify-center rounded-md bg-primary text-black shadow-sm hover:bg-primary/90 active:scale-95 transition-all">
+<span class="material-symbols-outlined" style="font-size: 20px;">add</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Section: Leafy Greens -->
+<div>
+<div class="flex items-center px-4 mb-2 mt-4">
+<h3 class="text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Leafy Greens</h3>
+<div class="ml-4 h-px bg-gray-200 dark:bg-gray-800 flex-1"></div>
+</div>
+<div class="flex flex-col">
+<!-- Item 4 -->
+<div class="group flex items-center justify-between px-4 py-4 border-b border-gray-100 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
+<div class="flex flex-col flex-1 pr-4">
+<span class="text-lg font-bold text-gray-900 dark:text-white">Romaine Lettuce</span>
+<span class="text-sm text-gray-500 dark:text-gray-400 font-normal">/case (24ct)</span>
+</div>
+<div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-900 rounded-lg p-1">
+<button class="w-10 h-10 flex items-center justify-center rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-95 transition-all">
+<span class="material-symbols-outlined" style="font-size: 20px;">remove</span>
+</button>
+<input class="w-12 p-0 text-center bg-transparent border-none text-lg font-bold text-gray-900 dark:text-white focus:ring-0" type="number" value="2"/>
+<button class="w-10 h-10 flex items-center justify-center rounded-md bg-primary text-black shadow-sm hover:bg-primary/90 active:scale-95 transition-all">
+<span class="material-symbols-outlined" style="font-size: 20px;">add</span>
+</button>
+</div>
+</div>
+<!-- Item 5 -->
+<div class="group flex items-center justify-between px-4 py-4 border-b border-gray-100 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
+<div class="flex flex-col flex-1 pr-4">
+<span class="text-lg font-bold text-gray-900 dark:text-white">Spinach, Baby</span>
+<span class="text-sm text-gray-500 dark:text-gray-400 font-normal">/lb</span>
+</div>
+<div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-900 rounded-lg p-1">
+<button class="w-10 h-10 flex items-center justify-center rounded-md bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-95 transition-all" disabled="">
+<span class="material-symbols-outlined" style="font-size: 20px;">remove</span>
+</button>
+<input class="w-12 p-0 text-center bg-transparent border-none text-lg font-bold text-gray-400 dark:text-white focus:ring-0" type="number" value="0"/>
+<button class="w-10 h-10 flex items-center justify-center rounded-md bg-primary text-black shadow-sm hover:bg-primary/90 active:scale-95 transition-all">
+<span class="material-symbols-outlined" style="font-size: 20px;">add</span>
+</button>
+</div>
+</div>
+<!-- Item 6 -->
+<div class="group flex items-center justify-between px-4 py-4 border-b border-gray-100 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
+<div class="flex flex-col flex-1 pr-4">
+<span class="text-lg font-bold text-gray-900 dark:text-white">Kale, Lacinato</span>
+<span class="text-sm text-gray-500 dark:text-gray-400 font-normal">/bunch</span>
+</div>
+<div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-900 rounded-lg p-1">
+<button class="w-10 h-10 flex items-center justify-center rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-95 transition-all">
+<span class="material-symbols-outlined" style="font-size: 20px;">remove</span>
+</button>
+<input class="w-12 p-0 text-center bg-transparent border-none text-lg font-bold text-gray-900 dark:text-white focus:ring-0" type="number" value="8"/>
+<button class="w-10 h-10 flex items-center justify-center rounded-md bg-primary text-black shadow-sm hover:bg-primary/90 active:scale-95 transition-all">
+<span class="material-symbols-outlined" style="font-size: 20px;">add</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Section: Aromatics -->
+<div>
+<div class="flex items-center px-4 mb-2 mt-4">
+<h3 class="text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Aromatics</h3>
+<div class="ml-4 h-px bg-gray-200 dark:bg-gray-800 flex-1"></div>
+</div>
+<div class="flex flex-col">
+<!-- Item 7 -->
+<div class="group flex items-center justify-between px-4 py-4 border-b border-gray-100 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
+<div class="flex flex-col flex-1 pr-4">
+<span class="text-lg font-bold text-gray-900 dark:text-white">Onions, Yellow</span>
+<span class="text-sm text-gray-500 dark:text-gray-400 font-normal">/bag (50lb)</span>
+</div>
+<div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-900 rounded-lg p-1">
+<button class="w-10 h-10 flex items-center justify-center rounded-md bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-95 transition-all" disabled="">
+<span class="material-symbols-outlined" style="font-size: 20px;">remove</span>
+</button>
+<input class="w-12 p-0 text-center bg-transparent border-none text-lg font-bold text-gray-400 dark:text-white focus:ring-0" type="number" value="0"/>
+<button class="w-10 h-10 flex items-center justify-center rounded-md bg-primary text-black shadow-sm hover:bg-primary/90 active:scale-95 transition-all">
+<span class="material-symbols-outlined" style="font-size: 20px;">add</span>
+</button>
+</div>
+</div>
+<!-- Item 8 -->
+<div class="group flex items-center justify-between px-4 py-4 border-b border-gray-100 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
+<div class="flex flex-col flex-1 pr-4">
+<span class="text-lg font-bold text-gray-900 dark:text-white">Garlic, Peeled</span>
+<span class="text-sm text-gray-500 dark:text-gray-400 font-normal">/jar (5lb)</span>
+</div>
+<div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-900 rounded-lg p-1">
+<button class="w-10 h-10 flex items-center justify-center rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-95 transition-all">
+<span class="material-symbols-outlined" style="font-size: 20px;">remove</span>
+</button>
+<input class="w-12 p-0 text-center bg-transparent border-none text-lg font-bold text-gray-900 dark:text-white focus:ring-0" type="number" value="2"/>
+<button class="w-10 h-10 flex items-center justify-center rounded-md bg-primary text-black shadow-sm hover:bg-primary/90 active:scale-95 transition-all">
+<span class="material-symbols-outlined" style="font-size: 20px;">add</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Spacer for Footer -->
+<div class="h-8"></div>
+</main>
+<!-- Sticky Footer Action -->
+<div class="fixed bottom-0 left-0 right-0 p-4 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 max-w-md mx-auto">
+<button class="w-full h-14 bg-primary text-black text-lg font-bold rounded-xl shadow-lg shadow-primary/30 flex items-center justify-center gap-2 hover:bg-[#0fdc0f] active:scale-[0.99] transition-all">
+<span>Place Order</span>
+<span class="bg-black/10 px-2 py-0.5 rounded text-sm font-semibold min-w-[24px]">29 items</span>
+</button>
+</div>
+</div>
+</body></html>

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Supplier Dashboard - Action Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec13",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102210",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1a2e1a",
+                        "text-main-light": "#0d1b0d",
+                        "text-main-dark": "#e0ece0",
+                        "text-sub-light": "#4c9a4c",
+                        "text-sub-dark": "#8bc98b",
+                    },
+                    fontFamily: {
+                        "display": ["Work Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>.no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }.no-scrollbar {
+            -ms-overflow-style: none;scrollbar-width: none;}input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+    </style>
+<style>
+        body {
+          min-height: max(884px, 100dvh);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-text-main-light dark:text-text-main-dark font-display min-h-screen flex flex-col pb-24 relative overflow-x-hidden selection:bg-primary selection:text-black">
+<header class="sticky top-0 z-30 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md px-4 py-3 flex items-center justify-between border-b border-gray-200 dark:border-white/5">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-full bg-cover bg-center ring-2 ring-primary/50" data-alt="Supplier profile avatar image" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAkH6TBOFLseQS1NO2VahOAfCMgHrcvEaToqCJLacEAoM49xHlb9MaipmOMzGZa6P7mynHHU5iQxbaraA3JFf_vlJAXjh27ff8K-MZMLPPo9-MHBDbAicZlF-ofteI0S2yICYcUgoIQJ8igEcQovkXQlYNdYE9peOg0QfNFl400l2h0_Zt5KclZg4WU8KiEKCiYfj9DkjftAjwyD1VQz5WvL89uFw5fGXGyZw-Z66JU7f_QK85mqAFS4T5bzOogalgmwwhHBORmSoQ');"></div>
+<div>
+<p class="text-xs text-text-sub-light dark:text-text-sub-dark font-medium">Welcome back,</p>
+<h1 class="text-lg font-bold leading-tight">Green Valley Farms</h1>
+</div>
+</div>
+<button class="size-10 flex items-center justify-center rounded-full bg-white dark:bg-surface-dark shadow-sm text-text-main-light dark:text-text-main-dark hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors relative group">
+<span class="material-symbols-outlined transition-transform group-active:scale-95">notifications</span>
+<span class="absolute top-2.5 right-2.5 size-2 bg-primary rounded-full border border-white dark:border-surface-dark animate-pulse"></span>
+</button>
+</header>
+<section class="mt-6 px-4">
+<h2 class="text-xl font-bold tracking-tight mb-3 text-text-main-light dark:text-white">Quick Actions</h2>
+<div class="grid grid-cols-2 gap-3">
+<button class="group flex flex-col items-center justify-center gap-3 bg-primary text-black p-5 rounded-xl shadow-sm hover:bg-[#00d000] transition-all active:scale-[0.98] cursor-pointer">
+<div class="p-2.5 bg-black/10 rounded-full group-hover:bg-black/20 transition-colors">
+<span class="material-symbols-outlined text-[32px]">add_circle</span>
+</div>
+<span class="font-bold text-base">New Order</span>
+</button>
+<button class="group flex flex-col items-center justify-center gap-3 bg-white dark:bg-surface-dark text-text-main-light dark:text-text-main-dark p-5 rounded-xl shadow-sm border border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition-all active:scale-[0.98] cursor-pointer">
+<div class="p-2.5 bg-gray-100 dark:bg-white/10 rounded-full group-hover:bg-gray-200 dark:group-hover:bg-white/20 transition-colors">
+<span class="material-symbols-outlined text-[32px]">groups</span>
+</div>
+<span class="font-bold text-base">Customers</span>
+</button>
+</div>
+</section>
+<section class="mt-8 px-4 flex-1">
+<div class="flex items-center justify-between mb-4">
+<h2 class="text-xl font-bold tracking-tight text-text-main-light dark:text-white">Recent Purchases Log</h2>
+<button class="size-8 flex items-center justify-center text-primary bg-primary/10 hover:bg-primary hover:text-black rounded-lg transition-colors">
+<span class="material-symbols-outlined text-lg">tune</span>
+</button>
+</div>
+<div class="flex flex-col gap-3">
+<div class="bg-white dark:bg-surface-dark p-4 rounded-xl shadow-sm flex items-center gap-3 border border-transparent focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
+<div class="flex-1 min-w-0">
+<h3 class="font-bold truncate text-lg text-text-main-light dark:text-white">Carrot (Ooty)</h3>
+<div class="flex items-center gap-1.5 mt-1">
+<span class="material-symbols-outlined text-[18px] text-text-sub-light dark:text-text-sub-dark">scale</span>
+<p class="text-base text-text-main-light dark:text-text-main-dark font-bold">Total: 320 kg</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<div class="relative group/input">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm pointer-events-none group-focus-within/input:text-primary">$</span>
+<input class="w-24 pl-6 pr-3 py-3 bg-background-light dark:bg-black/20 rounded-lg text-right font-bold text-text-main-light dark:text-white focus:outline-none text-lg border-2 border-transparent focus:bg-white dark:focus:bg-black/40 transition-colors placeholder:text-gray-300 dark:placeholder:text-gray-600" inputmode="decimal" placeholder="42" type="number"/>
+</div>
+</div>
+</div>
+<div class="bg-white dark:bg-surface-dark p-4 rounded-xl shadow-sm flex items-center gap-3 border border-transparent focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
+<div class="flex-1 min-w-0">
+<h3 class="font-bold truncate text-lg text-text-main-light dark:text-white">Potato (Agra)</h3>
+<div class="flex items-center gap-1.5 mt-1">
+<span class="material-symbols-outlined text-[18px] text-text-sub-light dark:text-text-sub-dark">scale</span>
+<p class="text-base text-text-main-light dark:text-text-main-dark font-bold">Total: 850 kg</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<div class="relative group/input">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm pointer-events-none group-focus-within/input:text-primary">$</span>
+<input class="w-24 pl-6 pr-3 py-3 bg-background-light dark:bg-black/20 rounded-lg text-right font-bold text-text-main-light dark:text-white focus:outline-none text-lg border-2 border-transparent focus:bg-white dark:focus:bg-black/40 transition-colors placeholder:text-gray-300 dark:placeholder:text-gray-600" inputmode="decimal" placeholder="--" type="number"/>
+</div>
+</div>
+</div>
+<div class="bg-white dark:bg-surface-dark p-4 rounded-xl shadow-sm flex items-center gap-3 border border-transparent focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
+<div class="flex-1 min-w-0">
+<h3 class="font-bold truncate text-lg text-text-main-light dark:text-white">Tomato (Hybrid)</h3>
+<div class="flex items-center gap-1.5 mt-1">
+<span class="material-symbols-outlined text-[18px] text-text-sub-light dark:text-text-sub-dark">scale</span>
+<p class="text-base text-text-main-light dark:text-text-main-dark font-bold">Total: 120 kg</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<div class="relative group/input">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm pointer-events-none group-focus-within/input:text-primary">$</span>
+<input class="w-24 pl-6 pr-3 py-3 bg-background-light dark:bg-black/20 rounded-lg text-right font-bold text-text-main-light dark:text-white focus:outline-none text-lg border-2 border-transparent focus:bg-white dark:focus:bg-black/40 transition-colors placeholder:text-gray-300 dark:placeholder:text-gray-600" inputmode="decimal" placeholder="--" type="number"/>
+</div>
+</div>
+</div>
+<div class="bg-white dark:bg-surface-dark p-4 rounded-xl shadow-sm flex items-center gap-3 border border-transparent focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
+<div class="flex-1 min-w-0">
+<h3 class="font-bold truncate text-lg text-text-main-light dark:text-white">Spinach (Bunch)</h3>
+<div class="flex items-center gap-1.5 mt-1">
+<span class="material-symbols-outlined text-[18px] text-text-sub-light dark:text-text-sub-dark">scale</span>
+<p class="text-base text-text-main-light dark:text-text-main-dark font-bold">Total: 55 bunches</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<div class="relative group/input">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm pointer-events-none group-focus-within/input:text-primary">$</span>
+<input class="w-24 pl-6 pr-3 py-3 bg-background-light dark:bg-black/20 rounded-lg text-right font-bold text-text-main-light dark:text-white focus:outline-none text-lg border-2 border-transparent focus:bg-white dark:focus:bg-black/40 transition-colors placeholder:text-gray-300 dark:placeholder:text-gray-600" inputmode="decimal" placeholder="--" type="number"/>
+</div>
+</div>
+</div>
+</div>
+<div class="h-6"></div>
+<button class="w-full bg-primary text-black font-bold py-4 rounded-xl shadow-lg hover:bg-[#00d000] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-4">
+<span class="material-symbols-outlined">save</span>
+    Save All Rates
+</button>
+</section>
+<nav class="fixed bottom-0 left-0 w-full bg-white/90 dark:bg-surface-dark/90 backdrop-blur-lg border-t border-gray-200 dark:border-white/5 px-4 pb-6 pt-3 flex justify-between items-end z-50">
+<a class="flex flex-col items-center gap-1.5 flex-1 text-primary group" href="#">
+<div class="relative">
+<span class="material-symbols-outlined text-[26px] group-active:scale-90 transition-transform fill-1">home</span>
+<span class="absolute -bottom-2 left-1/2 -translate-x-1/2 size-1 bg-primary rounded-full"></span>
+</div>
+<span class="text-[10px] font-bold">Home</span>
+</a>
+<a class="flex flex-col items-center gap-1.5 flex-1 text-gray-400 dark:text-gray-500 hover:text-text-main-light dark:hover:text-text-main-dark transition-colors group" href="#">
+<span class="material-symbols-outlined text-[26px] group-active:scale-90 transition-transform">inventory_2</span>
+<span class="text-[10px] font-medium">Inventory</span>
+</a>
+<a class="flex flex-col items-center gap-1.5 flex-1 text-gray-400 dark:text-gray-500 hover:text-text-main-light dark:hover:text-text-main-dark transition-colors group" href="#">
+<span class="material-symbols-outlined text-[26px] group-active:scale-90 transition-transform">receipt_long</span>
+<span class="text-[10px] font-medium">Orders</span>
+</a>
+<a class="flex flex-col items-center gap-1.5 flex-1 text-gray-400 dark:text-gray-500 hover:text-text-main-light dark:hover:text-text-main-dark transition-colors group" href="#">
+<span class="material-symbols-outlined text-[26px] group-active:scale-90 transition-transform">settings</span>
+<span class="text-[10px] font-medium">Settings</span>
+</a>
+</nav>
+</body></html>

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Fresh Supply Co. - Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec13",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102210",
+                    },
+                    fontFamily: {
+                        "display": ["Work Sans", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-gray-900 dark:text-gray-100">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <header class="bg-white dark:bg-gray-800 shadow-sm">
+            <div class="max-w-7xl mx-auto px-6 py-6">
+                <h1 class="text-4xl font-bold">Fresh Supply Co.</h1>
+                <p class="text-gray-600 dark:text-gray-400 mt-2">Agricultural Supply Chain Management System</p>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto px-6 py-12">
+            <!-- Stats Cards -->
+            <div id="statsGrid" class="grid md:grid-cols-4 gap-6 mb-12">
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-gray-600 dark:text-gray-400">Total Orders</span>
+                        <span class="material-symbols-outlined text-primary">shopping_cart</span>
+                    </div>
+                    <div class="text-3xl font-bold" id="totalOrders">-</div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-gray-600 dark:text-gray-400">Active Customers</span>
+                        <span class="material-symbols-outlined text-primary">people</span>
+                    </div>
+                    <div class="text-3xl font-bold" id="totalCustomers">-</div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-gray-600 dark:text-gray-400">Products</span>
+                        <span class="material-symbols-outlined text-primary">inventory</span>
+                    </div>
+                    <div class="text-3xl font-bold" id="totalProducts">-</div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-gray-600 dark:text-gray-400">Pending Orders</span>
+                        <span class="material-symbols-outlined text-yellow-500">pending</span>
+                    </div>
+                    <div class="text-3xl font-bold" id="pendingOrders">-</div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <h2 class="text-2xl font-bold mb-6">Quick Actions</h2>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Create Order -->
+                <a href="/customer-order-form.html" class="bg-gradient-to-br from-green-500 to-primary rounded-xl p-8 text-black hover:shadow-xl transition transform hover:-translate-y-1">
+                    <span class="material-symbols-outlined text-5xl mb-4">add_shopping_cart</span>
+                    <h3 class="text-2xl font-bold mb-2">Create Order</h3>
+                    <p class="text-black/80">Place a new customer order</p>
+                </a>
+
+                <!-- Manage Customers -->
+                <a href="/customer-management.html" class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-8 text-white hover:shadow-xl transition transform hover:-translate-y-1">
+                    <span class="material-symbols-outlined text-5xl mb-4">people</span>
+                    <h3 class="text-2xl font-bold mb-2">Customers</h3>
+                    <p class="text-white/80">Manage customer details</p>
+                </a>
+
+                <!-- Market Rates -->
+                <a href="/market-rates.html" class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-8 text-white hover:shadow-xl transition transform hover:-translate-y-1">
+                    <span class="material-symbols-outlined text-5xl mb-4">trending_up</span>
+                    <h3 class="text-2xl font-bold mb-2">Market Rates</h3>
+                    <p class="text-white/80">View and update pricing</p>
+                </a>
+
+                <!-- Products -->
+                <a href="/products.html" class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-8 text-white hover:shadow-xl transition transform hover:-translate-y-1">
+                    <span class="material-symbols-outlined text-5xl mb-4">inventory_2</span>
+                    <h3 class="text-2xl font-bold mb-2">Products</h3>
+                    <p class="text-white/80">Manage product catalog</p>
+                </a>
+
+                <!-- Orders List -->
+                <a href="/orders.html" class="bg-gradient-to-br from-red-500 to-red-600 rounded-xl p-8 text-white hover:shadow-xl transition transform hover:-translate-y-1">
+                    <span class="material-symbols-outlined text-5xl mb-4">list_alt</span>
+                    <h3 class="text-2xl font-bold mb-2">View Orders</h3>
+                    <p class="text-white/80">Track all orders</p>
+                </a>
+
+                <!-- API Health -->
+                <div id="apiHealth" class="bg-gradient-to-br from-gray-500 to-gray-600 rounded-xl p-8 text-white">
+                    <span class="material-symbols-outlined text-5xl mb-4">health_and_safety</span>
+                    <h3 class="text-2xl font-bold mb-2">API Status</h3>
+                    <p id="apiStatus" class="text-white/80">Checking...</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-white dark:bg-gray-800 mt-12 py-6 text-center text-gray-600 dark:text-gray-400">
+            <p>Fresh Supply Co. &copy; 2026 | Built with Node.js, Express & MongoDB</p>
+        </footer>
+    </div>
+
+    <script>
+        async function loadDashboardStats() {
+            try {
+                const [ordersRes, customersRes, productsRes] = await Promise.all([
+                    fetch('/api/orders'),
+                    fetch('/api/customers'),
+                    fetch('/api/products')
+                ]);
+
+                const orders = await ordersRes.json();
+                const customers = await customersRes.json();
+                const products = await productsRes.json();
+
+                document.getElementById('totalOrders').textContent = orders.count || 0;
+                document.getElementById('totalCustomers').textContent = customers.count || 0;
+                document.getElementById('totalProducts').textContent = products.count || 0;
+
+                const pending = orders.data ? orders.data.filter(o => o.status === 'pending').length : 0;
+                document.getElementById('pendingOrders').textContent = pending;
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        async function checkAPIHealth() {
+            try {
+                const response = await fetch('/api/health');
+                const data = await response.json();
+
+                if (data.status === 'ok') {
+                    document.getElementById('apiStatus').innerHTML = '<span class="text-green-300">● Online</span>';
+                } else {
+                    document.getElementById('apiStatus').innerHTML = '<span class="text-red-300">● Offline</span>';
+                }
+            } catch (error) {
+                document.getElementById('apiStatus').innerHTML = '<span class="text-red-300">● Offline</span>';
+            }
+        }
+
+        // Load stats on page load
+        loadDashboardStats();
+        checkAPIHealth();
+    </script>
+</body>
+</html>

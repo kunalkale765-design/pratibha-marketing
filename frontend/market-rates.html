@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Market Rates - Fresh Supply Co.</title>
+    <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec13",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102210",
+                    },
+                    fontFamily: {
+                        "display": ["Work Sans", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-gray-900 dark:text-gray-100">
+    <div class="max-w-6xl mx-auto p-6">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-3xl font-bold mb-2">Market Rates</h1>
+                <p class="text-gray-600 dark:text-gray-400">Current product pricing and trends</p>
+            </div>
+            <button onclick="showUpdateRateForm()" class="px-6 py-3 bg-primary text-black rounded-lg font-bold">
+                Update Rate
+            </button>
+        </div>
+
+        <!-- Market Rates Grid -->
+        <div id="ratesList" class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- Rates will be loaded here -->
+        </div>
+
+        <!-- Update Rate Modal -->
+        <div id="rateModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4">
+                <h2 class="text-2xl font-bold mb-4">Update Market Rate</h2>
+                <form id="rateForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Select Product *</label>
+                        <select id="productId" required class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                            <option value="">Loading products...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">New Rate (₹) *</label>
+                        <input id="rateValue" type="number" step="0.01" required class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Source</label>
+                        <input id="rateSource" type="text" placeholder="e.g., Local Market, Wholesale" class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Notes</label>
+                        <textarea id="rateNotes" rows="2" class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900"></textarea>
+                    </div>
+                    <div class="flex gap-4 pt-4">
+                        <button type="submit" class="flex-1 py-3 bg-primary text-black rounded-lg font-bold">Update Rate</button>
+                        <button type="button" onclick="closeModal()" class="px-6 py-3 bg-gray-200 dark:bg-gray-700 rounded-lg">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Messages -->
+        <div id="successMessage" class="hidden fixed top-4 right-4 p-4 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-lg"></div>
+        <div id="errorMessage" class="hidden fixed top-4 right-4 p-4 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-lg"></div>
+    </div>
+
+    <script>
+        let products = [];
+
+        async function loadData() {
+            try {
+                const [ratesRes, productsRes] = await Promise.all([
+                    fetch('/api/market-rates'),
+                    fetch('/api/products')
+                ]);
+
+                const ratesData = await ratesRes.json();
+                const productsData = await productsRes.json();
+
+                products = productsData.data;
+                displayRates(ratesData.data);
+                populateProducts();
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Failed to load data');
+            }
+        }
+
+        function displayRates(rates) {
+            const container = document.getElementById('ratesList');
+            if (rates.length === 0) {
+                container.innerHTML = '<p class="col-span-full text-center text-gray-500 py-8">No market rates available</p>';
+                return;
+            }
+
+            container.innerHTML = rates.map(rate => {
+                const trendColor = rate.trend === 'up' ? 'text-green-600' : rate.trend === 'down' ? 'text-red-600' : 'text-gray-600';
+                const trendIcon = rate.trend === 'up' ? 'trending_up' : rate.trend === 'down' ? 'trending_down' : 'trending_flat';
+
+                return `
+                    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow">
+                        <div class="flex justify-between items-start mb-4">
+                            <h3 class="text-lg font-bold">${rate.productName}</h3>
+                            <span class="${trendColor}">
+                                <span class="material-symbols-outlined">${trendIcon}</span>
+                            </span>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600 dark:text-gray-400">Current Rate:</span>
+                                <span class="text-xl font-bold">₹${rate.rate.toFixed(2)}</span>
+                            </div>
+                            ${rate.previousRate ? `
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600 dark:text-gray-400">Previous:</span>
+                                <span>₹${rate.previousRate.toFixed(2)}</span>
+                            </div>
+                            ` : ''}
+                            ${rate.changePercentage ? `
+                            <div class="flex justify-between text-sm ${trendColor}">
+                                <span>Change:</span>
+                                <span>${rate.changePercentage > 0 ? '+' : ''}${rate.changePercentage}%</span>
+                            </div>
+                            ` : ''}
+                            ${rate.source ? `
+                            <div class="text-xs text-gray-500 mt-2">
+                                Source: ${rate.source}
+                            </div>
+                            ` : ''}
+                            <div class="text-xs text-gray-500">
+                                Updated: ${new Date(rate.effectiveDate).toLocaleDateString()}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function populateProducts() {
+            const select = document.getElementById('productId');
+            select.innerHTML = '<option value="">Select a product</option>';
+            products.forEach(product => {
+                const option = document.createElement('option');
+                option.value = product._id;
+                option.textContent = `${product.name} (Current: ₹${product.basePrice})`;
+                select.appendChild(option);
+            });
+        }
+
+        function showUpdateRateForm() {
+            document.getElementById('rateForm').reset();
+            document.getElementById('rateModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('rateModal').classList.add('hidden');
+        }
+
+        function showSuccess(message) {
+            const div = document.getElementById('successMessage');
+            div.textContent = message;
+            div.classList.remove('hidden');
+            setTimeout(() => div.classList.add('hidden'), 3000);
+        }
+
+        function showError(message) {
+            const div = document.getElementById('errorMessage');
+            div.textContent = message;
+            div.classList.remove('hidden');
+            setTimeout(() => div.classList.add('hidden'), 3000);
+        }
+
+        document.getElementById('rateForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const rateData = {
+                product: document.getElementById('productId').value,
+                rate: parseFloat(document.getElementById('rateValue').value),
+                source: document.getElementById('rateSource').value,
+                notes: document.getElementById('rateNotes').value,
+                effectiveDate: new Date().toISOString()
+            };
+
+            try {
+                const response = await fetch('/api/market-rates', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(rateData)
+                });
+
+                if (response.ok) {
+                    showSuccess('Market rate updated successfully');
+                    closeModal();
+                    loadData();
+                } else {
+                    const data = await response.json();
+                    showError(data.message || 'Failed to update rate');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Network error');
+            }
+        });
+
+        // Load data on page load
+        loadData();
+    </script>
+</body>
+</html>

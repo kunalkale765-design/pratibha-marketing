@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Fresh Supply Co. - Customer Order</title>
+    <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec13",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102210",
+                    },
+                    fontFamily: {
+                        "display": ["Work Sans", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-gray-900 dark:text-gray-100">
+    <div class="max-w-4xl mx-auto p-6">
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold mb-2">Create New Order</h1>
+            <p class="text-gray-600 dark:text-gray-400">Fill in the details to place a new order</p>
+        </div>
+
+        <!-- Order Form -->
+        <form id="orderForm" class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 space-y-6">
+            <!-- Customer Selection -->
+            <div>
+                <label class="block text-sm font-medium mb-2">Select Customer</label>
+                <select id="customerId" required class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                    <option value="">Loading customers...</option>
+                </select>
+            </div>
+
+            <!-- Products Section -->
+            <div>
+                <div class="flex justify-between items-center mb-4">
+                    <label class="block text-sm font-medium">Products</label>
+                    <button type="button" onclick="addProductRow()" class="px-4 py-2 bg-primary text-black rounded-lg font-medium">
+                        Add Product
+                    </button>
+                </div>
+                <div id="productsContainer" class="space-y-3">
+                    <!-- Product rows will be added here -->
+                </div>
+            </div>
+
+            <!-- Delivery Address -->
+            <div>
+                <label class="block text-sm font-medium mb-2">Delivery Address</label>
+                <textarea id="deliveryAddress" rows="3" class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900"></textarea>
+            </div>
+
+            <!-- Notes -->
+            <div>
+                <label class="block text-sm font-medium mb-2">Notes (Optional)</label>
+                <textarea id="notes" rows="2" class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900"></textarea>
+            </div>
+
+            <!-- Total Amount -->
+            <div class="bg-gray-100 dark:bg-gray-900 p-4 rounded-lg">
+                <div class="flex justify-between text-lg font-bold">
+                    <span>Total Amount:</span>
+                    <span id="totalAmount">₹0.00</span>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="flex gap-4">
+                <button type="submit" class="flex-1 py-3 bg-primary text-black rounded-lg font-bold hover:bg-green-400 transition">
+                    Place Order
+                </button>
+                <button type="button" onclick="location.href='/'" class="px-6 py-3 bg-gray-200 dark:bg-gray-700 rounded-lg font-medium">
+                    Cancel
+                </button>
+            </div>
+        </form>
+
+        <!-- Success Message -->
+        <div id="successMessage" class="hidden mt-4 p-4 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-lg">
+            Order placed successfully!
+        </div>
+
+        <!-- Error Message -->
+        <div id="errorMessage" class="hidden mt-4 p-4 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-lg"></div>
+    </div>
+
+    <script>
+        let products = [];
+        let customers = [];
+
+        // Load customers and products on page load
+        async function init() {
+            try {
+                const [customersRes, productsRes] = await Promise.all([
+                    fetch('/api/customers'),
+                    fetch('/api/products')
+                ]);
+
+                const customersData = await customersRes.json();
+                const productsData = await productsRes.json();
+
+                customers = customersData.data;
+                products = productsData.data;
+
+                populateCustomers();
+                addProductRow(); // Add first product row
+            } catch (error) {
+                console.error('Error loading data:', error);
+                showError('Failed to load data. Please refresh the page.');
+            }
+        }
+
+        function populateCustomers() {
+            const select = document.getElementById('customerId');
+            select.innerHTML = '<option value="">Select a customer</option>';
+            customers.forEach(customer => {
+                const option = document.createElement('option');
+                option.value = customer._id;
+                option.textContent = `${customer.name} (${customer.phone})`;
+                select.appendChild(option);
+            });
+        }
+
+        function addProductRow() {
+            const container = document.getElementById('productsContainer');
+            const row = document.createElement('div');
+            row.className = 'flex gap-3 items-start';
+            row.innerHTML = `
+                <select class="product-select flex-1 p-3 rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900" required onchange="updateTotal()">
+                    <option value="">Select Product</option>
+                    ${products.map(p => `<option value="${p._id}" data-price="${p.basePrice}" data-unit="${p.unit}">${p.name} (${p.unit})</option>`).join('')}
+                </select>
+                <input type="number" step="0.01" placeholder="Qty" class="quantity-input w-24 p-3 rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900" required oninput="updateTotal()">
+                <input type="number" step="0.01" placeholder="Rate" class="rate-input w-32 p-3 rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900" required oninput="updateTotal()">
+                <button type="button" onclick="this.parentElement.remove(); updateTotal()" class="p-3 bg-red-500 text-white rounded-lg">
+                    <span class="material-symbols-outlined">delete</span>
+                </button>
+            `;
+            container.appendChild(row);
+
+            // Auto-fill rate when product is selected
+            const select = row.querySelector('.product-select');
+            const rateInput = row.querySelector('.rate-input');
+            select.addEventListener('change', (e) => {
+                const option = e.target.selectedOptions[0];
+                if (option.value) {
+                    rateInput.value = option.dataset.price;
+                    updateTotal();
+                }
+            });
+        }
+
+        function updateTotal() {
+            const rows = document.querySelectorAll('#productsContainer > div');
+            let total = 0;
+
+            rows.forEach(row => {
+                const qty = parseFloat(row.querySelector('.quantity-input').value) || 0;
+                const rate = parseFloat(row.querySelector('.rate-input').value) || 0;
+                total += qty * rate;
+            });
+
+            document.getElementById('totalAmount').textContent = `₹${total.toFixed(2)}`;
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.classList.remove('hidden');
+            setTimeout(() => errorDiv.classList.add('hidden'), 5000);
+        }
+
+        function showSuccess() {
+            const successDiv = document.getElementById('successMessage');
+            successDiv.classList.remove('hidden');
+            setTimeout(() => {
+                successDiv.classList.add('hidden');
+                location.href = '/';
+            }, 2000);
+        }
+
+        // Form submission
+        document.getElementById('orderForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const rows = document.querySelectorAll('#productsContainer > div');
+            const orderProducts = [];
+
+            rows.forEach(row => {
+                const productId = row.querySelector('.product-select').value;
+                const qty = parseFloat(row.querySelector('.quantity-input').value);
+                const rate = parseFloat(row.querySelector('.rate-input').value);
+
+                if (productId && qty && rate) {
+                    orderProducts.push({
+                        product: productId,
+                        quantity: qty,
+                        rate: rate
+                    });
+                }
+            });
+
+            if (orderProducts.length === 0) {
+                showError('Please add at least one product');
+                return;
+            }
+
+            const orderData = {
+                customer: document.getElementById('customerId').value,
+                products: orderProducts,
+                deliveryAddress: document.getElementById('deliveryAddress').value,
+                notes: document.getElementById('notes').value
+            };
+
+            try {
+                const response = await fetch('/api/orders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(orderData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showSuccess();
+                } else {
+                    showError(data.message || 'Failed to create order');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Network error. Please try again.');
+            }
+        });
+
+        // Initialize on page load
+        init();
+    </script>
+</body>
+</html>
