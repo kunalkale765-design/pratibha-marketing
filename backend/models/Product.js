@@ -22,7 +22,7 @@ const productSchema = new mongoose.Schema({
   category: {
     type: String,
     trim: true,
-    enum: ['grain', 'seed', 'fertilizer', 'pesticide', 'equipment', 'other'],
+    enum: ['leafy-greens', 'root', 'fruiting', 'gourd', 'grain', 'seed', 'fertilizer', 'pesticide', 'equipment', 'other'],
     default: 'other'
   },
   description: {

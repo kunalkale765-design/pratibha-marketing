@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Products - Pratibha Marketing</title>
+    <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols-Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec13",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102210",
+                    },
+                    fontFamily: {
+                        "display": ["Work Sans", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-gray-900 dark:text-gray-100">
+    <div class="max-w-7xl mx-auto p-6">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-3xl font-bold mb-2">Product Management</h1>
+                <p class="text-gray-600 dark:text-gray-400">Manage your vegetable inventory</p>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="showAddProductForm()" class="px-6 py-3 bg-primary text-black rounded-lg font-bold">
+                    + Add Product
+                </button>
+                <a href="/" class="px-6 py-3 bg-gray-200 dark:bg-gray-700 rounded-lg font-medium">
+                    Dashboard
+                </a>
+            </div>
+        </div>
+
+        <!-- Search and Filter -->
+        <div class="mb-6 flex gap-4">
+            <div class="flex-1">
+                <input id="searchInput" type="text" placeholder="Search products..."
+                       class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900"
+                       oninput="searchProducts()">
+            </div>
+            <select id="categoryFilter" onchange="filterByCategory()" class="p-3 rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                <option value="">All Categories</option>
+                <option value="leafy-greens">Leafy Greens</option>
+                <option value="root">Root Vegetables</option>
+                <option value="fruiting">Fruiting Vegetables</option>
+                <option value="gourd">Gourds</option>
+                <option value="grain">Grains</option>
+                <option value="seed">Seeds</option>
+                <option value="fertilizer">Fertilizer</option>
+                <option value="pesticide">Pesticide</option>
+                <option value="equipment">Equipment</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+
+        <!-- Products Grid -->
+        <div id="productsList" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Products will be loaded here -->
+        </div>
+
+        <!-- Add/Edit Product Modal -->
+        <div id="productModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+                <h2 id="modalTitle" class="text-2xl font-bold mb-4">Add Product</h2>
+                <form id="productForm" class="space-y-4">
+                    <input type="hidden" id="productId">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Product Name *</label>
+                        <input id="productName" type="text" required class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Category *</label>
+                        <select id="productCategory" required class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                            <option value="leafy-greens">Leafy Greens</option>
+                            <option value="root">Root Vegetables</option>
+                            <option value="fruiting">Fruiting Vegetables</option>
+                            <option value="gourd">Gourds</option>
+                            <option value="grain">Grain</option>
+                            <option value="seed">Seed</option>
+                            <option value="fertilizer">Fertilizer</option>
+                            <option value="pesticide">Pesticide</option>
+                            <option value="equipment">Equipment</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Unit *</label>
+                        <select id="productUnit" required class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                            <option value="kg">Kilogram (kg)</option>
+                            <option value="quintal">Quintal</option>
+                            <option value="bag">Bag</option>
+                            <option value="piece">Piece</option>
+                            <option value="ton">Ton</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Base Price (₹) *</label>
+                        <input id="productPrice" type="number" step="0.01" min="0" required class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Stock Quantity</label>
+                        <input id="productStock" type="number" step="0.01" min="0" value="0" class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Minimum Stock Level</label>
+                        <input id="productMinStock" type="number" step="0.01" min="0" value="0" class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Description</label>
+                        <textarea id="productDescription" rows="2" class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900"></textarea>
+                    </div>
+                    <div class="flex gap-4 pt-4">
+                        <button type="submit" class="flex-1 py-3 bg-primary text-black rounded-lg font-bold">Save</button>
+                        <button type="button" onclick="closeModal()" class="px-6 py-3 bg-gray-200 dark:bg-gray-700 rounded-lg">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Messages -->
+        <div id="successMessage" class="hidden fixed top-4 right-4 p-4 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-lg z-50"></div>
+        <div id="errorMessage" class="hidden fixed top-4 right-4 p-4 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-lg z-50"></div>
+    </div>
+
+    <script>
+        let allProducts = [];
+
+        async function loadProducts() {
+            try {
+                const response = await fetch('/api/products');
+                const data = await response.json();
+                allProducts = data.data;
+                displayProducts(allProducts);
+            } catch (error) {
+                console.error('Error loading products:', error);
+                showError('Failed to load products');
+            }
+        }
+
+        function displayProducts(products) {
+            const container = document.getElementById('productsList');
+
+            if (products.length === 0) {
+                container.innerHTML = '<div class="col-span-full text-center text-gray-500 py-12">No products found. Add your first product!</div>';
+                return;
+            }
+
+            container.innerHTML = products.map(product => `
+                <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow hover:shadow-lg transition">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-xl font-bold mb-1">${product.name}</h3>
+                            <span class="inline-block px-2 py-1 text-xs rounded bg-gray-200 dark:bg-gray-700">${product.category}</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick='editProduct(${JSON.stringify(product)})' class="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+                                <span class="material-symbols-outlined text-sm">edit</span>
+                            </button>
+                            <button onclick="deleteProduct('${product._id}')" class="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600">
+                                <span class="material-symbols-outlined text-sm">delete</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600 dark:text-gray-400">Price:</span>
+                            <span class="font-bold text-lg">₹${product.basePrice}/${product.unit}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600 dark:text-gray-400">Stock:</span>
+                            <span class="${product.stockQuantity <= product.minStockLevel ? 'text-red-600 font-bold' : ''}">${product.stockQuantity} ${product.unit}</span>
+                        </div>
+                        ${product.stockQuantity <= product.minStockLevel ? '<div class="text-red-600 text-xs font-bold">⚠️ Low Stock!</div>' : ''}
+                        ${product.description ? `<div class="text-gray-600 dark:text-gray-400 mt-2">${product.description}</div>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function searchProducts() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const category = document.getElementById('categoryFilter').value;
+
+            const filtered = allProducts.filter(p => {
+                const matchesSearch = p.name.toLowerCase().includes(query) || (p.description || '').toLowerCase().includes(query);
+                const matchesCategory = !category || p.category === category;
+                return matchesSearch && matchesCategory;
+            });
+
+            displayProducts(filtered);
+        }
+
+        function filterByCategory() {
+            searchProducts();
+        }
+
+        function showAddProductForm() {
+            document.getElementById('modalTitle').textContent = 'Add Product';
+            document.getElementById('productForm').reset();
+            document.getElementById('productId').value = '';
+            document.getElementById('productModal').classList.remove('hidden');
+        }
+
+        function editProduct(product) {
+            document.getElementById('modalTitle').textContent = 'Edit Product';
+            document.getElementById('productId').value = product._id;
+            document.getElementById('productName').value = product.name;
+            document.getElementById('productCategory').value = product.category;
+            document.getElementById('productUnit').value = product.unit;
+            document.getElementById('productPrice').value = product.basePrice;
+            document.getElementById('productStock').value = product.stockQuantity;
+            document.getElementById('productMinStock').value = product.minStockLevel;
+            document.getElementById('productDescription').value = product.description || '';
+            document.getElementById('productModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('productModal').classList.add('hidden');
+        }
+
+        async function deleteProduct(id) {
+            if (!confirm('Are you sure you want to delete this product?')) return;
+
+            try {
+                const response = await fetch(`/api/products/${id}`, { method: 'DELETE' });
+                if (response.ok) {
+                    showSuccess('Product deleted successfully');
+                    loadProducts();
+                } else {
+                    showError('Failed to delete product');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Network error');
+            }
+        }
+
+        function showSuccess(message) {
+            const div = document.getElementById('successMessage');
+            div.textContent = message;
+            div.classList.remove('hidden');
+            setTimeout(() => div.classList.add('hidden'), 3000);
+        }
+
+        function showError(message) {
+            const div = document.getElementById('errorMessage');
+            div.textContent = message;
+            div.classList.remove('hidden');
+            setTimeout(() => div.classList.add('hidden'), 3000);
+        }
+
+        document.getElementById('productForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const id = document.getElementById('productId').value;
+            const productData = {
+                name: document.getElementById('productName').value,
+                category: document.getElementById('productCategory').value,
+                unit: document.getElementById('productUnit').value,
+                basePrice: parseFloat(document.getElementById('productPrice').value),
+                stockQuantity: parseFloat(document.getElementById('productStock').value),
+                minStockLevel: parseFloat(document.getElementById('productMinStock').value),
+                description: document.getElementById('productDescription').value
+            };
+
+            try {
+                const url = id ? `/api/products/${id}` : '/api/products';
+                const method = id ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(productData)
+                });
+
+                if (response.ok) {
+                    showSuccess(id ? 'Product updated' : 'Product added');
+                    closeModal();
+                    loadProducts();
+                } else {
+                    const data = await response.json();
+                    showError(data.message || 'Failed to save product');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Network error');
+            }
+        });
+
+        // Load products on page load
+        loadProducts();
+    </script>
+</body>
+</html>
