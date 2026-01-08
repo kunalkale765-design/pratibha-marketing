@@ -10,16 +10,16 @@ const userSchema = new mongoose.Schema({
   },
   email: {
     type: String,
-    required: [true, 'Email is required'],
+    required: [true, 'Username is required'],
     unique: true,
     lowercase: true,
     trim: true,
-    match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email']
+    minlength: [3, 'Username must be at least 3 characters']
   },
   password: {
     type: String,
     required: [true, 'Password is required'],
-    minlength: [12, 'Password must be at least 12 characters'],
+    minlength: [6, 'Password must be at least 6 characters'],
     select: false, // Don't return password in queries by default
     validate: {
       validator: function(v) {
@@ -71,8 +71,5 @@ userSchema.pre('save', async function(next) {
 userSchema.methods.comparePassword = async function(enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
-
-// Index for faster lookups
-userSchema.index({ email: 1 });
 
 module.exports = mongoose.model('User', userSchema);

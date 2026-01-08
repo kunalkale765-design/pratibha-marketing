@@ -65,7 +65,6 @@
         .header {
             background: linear-gradient(135deg, var(--gunmetal) 0%, var(--gunmetal-light) 100%);
             color: var(--warm-white);
-            padding: 1.5rem 2rem;
             position: relative;
         }
 
@@ -91,18 +90,6 @@
             display: flex;
             align-items: center;
             gap: 0.75rem;
-        }
-
-        .logo-mark {
-            width: 48px;
-            height: 48px;
-            background: linear-gradient(135deg, var(--dusty-olive) 0%, var(--dusty-olive-dark) 100%);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
 
         .logo-text {
@@ -157,146 +144,273 @@
         .main {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 2rem;
         }
 
-        /* Stats Grid */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1.25rem;
-            margin-bottom: 2.5rem;
-        }
-
-        .stat-card {
+        /* Procurement List */
+        .procurement-container {
             background: var(--warm-white);
-            border-radius: 14px;
-            padding: 1.5rem;
+            border-radius: 12px;
             border: 1px solid var(--pale-slate-light);
-            box-shadow: 0 1px 3px rgba(46, 53, 50, 0.04);
-            transition: all 0.25s ease;
-            position: relative;
             overflow: hidden;
+            margin-top: 1rem;
         }
 
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 4px;
-            height: 100%;
-            background: var(--dusty-olive);
-            opacity: 0;
-            transition: opacity 0.25s ease;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(46, 53, 50, 0.08);
-        }
-
-        .stat-card:hover::before {
-            opacity: 1;
-        }
-
-        .stat-header {
+        .procurement-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 0.75rem;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--pale-slate-light);
+            background: var(--cream);
         }
 
-        .stat-label {
+        .procurement-header h2 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--gunmetal);
+        }
+
+        .procurement-header .header-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .btn-icon {
+            width: 36px;
+            height: 36px;
+            border: 1px solid var(--pale-slate-light);
+            border-radius: 8px;
+            background: var(--cream);
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+        }
+
+        .btn-icon:hover {
+            background: var(--pale-slate-light);
+        }
+
+        .btn-icon:active {
+            transform: scale(0.95);
+        }
+
+        .procurement-list {
+            padding: 0.5rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .procurement-item {
+            background: var(--cream);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .procurement-item:last-child { margin-bottom: 0; }
+        .procurement-item:hover { background: var(--cream-dark); }
+        .procurement-item.expanded { background: var(--cream-dark); }
+
+        .item-main {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            gap: 0.75rem;
+        }
+
+        .item-expand {
+            color: var(--text-muted);
+            transition: transform 0.2s ease;
+            font-size: 0.625rem;
+        }
+
+        .procurement-item.expanded .item-expand { transform: rotate(90deg); }
+
+        .item-name {
+            flex: 1;
+            font-weight: 600;
+            color: var(--gunmetal);
+            font-size: 0.9375rem;
+        }
+
+        .item-qty {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--dusty-olive-dark);
+            min-width: 60px;
+            text-align: right;
+        }
+
+        .item-qty.zero { color: var(--text-muted); font-weight: 400; }
+
+        .item-unit {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            min-width: 40px;
+        }
+
+        .item-rate-input {
+            width: 80px;
+            padding: 0.375rem 0.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+            border: 1.5px solid var(--pale-slate);
+            border-radius: 6px;
+            background: var(--warm-white);
+            color: var(--text-primary);
+            text-align: right;
+        }
+
+        .item-rate-input:focus {
+            outline: none;
+            border-color: var(--dusty-olive);
+            box-shadow: 0 0 0 2px rgba(126, 145, 129, 0.12);
+        }
+
+        .item-rate-input.changed {
+            border-color: var(--dusty-olive);
+            background: rgba(126, 145, 129, 0.08);
+        }
+
+        .item-details {
+            display: none;
+            padding: 0 1rem 0.75rem 2.5rem;
             font-size: 0.8125rem;
-            font-weight: 500;
+        }
+
+        .procurement-item.expanded .item-details { display: block; }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.375rem 0;
+            border-bottom: 1px dashed var(--pale-slate-light);
+        }
+
+        .detail-row:last-child { border-bottom: none; }
+        .detail-label { color: var(--text-muted); }
+        .detail-value { font-family: 'JetBrains Mono', monospace; color: var(--gunmetal); }
+        .detail-value.highlight { color: var(--dusty-olive-dark); font-weight: 600; }
+
+        .btn-save-rates {
+            padding: 0.5rem 1rem;
+            background: var(--dusty-olive);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: none;
+        }
+
+        .btn-save-rates.show { display: inline-block; }
+        .btn-save-rates:hover { background: var(--dusty-olive-dark); }
+
+        .empty-state {
+            padding: 2rem;
+            text-align: center;
             color: var(--text-muted);
         }
 
-        .stat-icon {
-            font-size: 1.25rem;
+        /* Stat Cards */
+        .stats-row {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .stat-card {
+            flex: 1;
+            background: var(--gunmetal);
+            border-radius: 8px;
+            padding: 0.625rem 0.875rem;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .stat-card.sale {
+            background: var(--dusty-olive);
+        }
+
+        .stat-card.profit {
+            background: var(--terracotta);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            opacity: 0.9;
         }
 
         .stat-value {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 2rem;
+            font-size: 1.125rem;
             font-weight: 600;
-            color: var(--gunmetal);
         }
 
         /* Quick Actions */
         .section-title {
             font-family: 'Crimson Pro', serif;
-            font-size: 1.5rem;
+            font-size: 1.25rem;
             font-weight: 600;
             color: var(--gunmetal);
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem;
         }
 
         .actions-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 1.25rem;
+            gap: 0.5rem;
         }
 
         .action-card {
             background: var(--warm-white);
-            border-radius: 16px;
-            padding: 2rem;
+            border-radius: 8px;
+            padding: 0.75rem;
             border: 1px solid var(--pale-slate-light);
             text-decoration: none;
             color: inherit;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
-        .action-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: var(--dusty-olive);
-            transform: scaleX(0);
-            transition: transform 0.3s ease;
-        }
-
-        .action-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 32px rgba(46, 53, 50, 0.12);
-        }
-
-        .action-card:hover::before {
-            transform: scaleX(1);
+        .action-card:active {
+            transform: scale(0.97);
         }
 
         .action-card.primary {
-            background: linear-gradient(135deg, var(--dusty-olive) 0%, var(--dusty-olive-dark) 100%);
+            background: var(--dusty-olive);
             color: white;
             border: none;
         }
 
-        .action-card.primary::before {
-            background: var(--terracotta);
-        }
-
         .action-icon {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
+            font-size: 1.25rem;
+            flex-shrink: 0;
         }
 
         .action-title {
-            font-family: 'Crimson Pro', serif;
-            font-size: 1.375rem;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.8125rem;
             font-weight: 600;
-            margin-bottom: 0.5rem;
         }
 
         .action-desc {
-            font-size: 0.9375rem;
-            opacity: 0.8;
+            display: none;
         }
 
         /* API Status */
@@ -329,34 +443,31 @@
             margin-top: 3rem;
         }
 
-        /* Responsive */
-        @media (max-width: 1024px) {
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .actions-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
+        /* Mobile First - Base styles are for mobile */
+        .main {
+            padding: 1rem;
         }
 
-        @media (max-width: 768px) {
-            .header-content {
-                flex-direction: column;
-                text-align: center;
-                gap: 1rem;
+        .header {
+            padding: 1rem;
+        }
+
+        .actions-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        /* Tablet and up */
+        @media (min-width: 768px) {
+            .main {
+                padding: 2rem;
             }
 
-            .stats-grid {
-                grid-template-columns: 1fr;
+            .header {
+                padding: 1.5rem 2rem;
             }
 
             .actions-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .main {
-                padding: 1rem;
+                grid-template-columns: repeat(5, 1fr);
             }
         }
 
@@ -372,25 +483,24 @@
             }
         }
 
-        .stat-card {
+        .stats-row {
             animation: fadeInUp 0.4s ease backwards;
         }
 
-        .stat-card:nth-child(1) { animation-delay: 0.05s; }
-        .stat-card:nth-child(2) { animation-delay: 0.1s; }
-        .stat-card:nth-child(3) { animation-delay: 0.15s; }
-        .stat-card:nth-child(4) { animation-delay: 0.2s; }
-
         .action-card {
-            animation: fadeInUp 0.5s ease backwards;
+            animation: fadeInUp 0.4s ease backwards;
         }
 
-        .action-card:nth-child(1) { animation-delay: 0.25s; }
-        .action-card:nth-child(2) { animation-delay: 0.3s; }
-        .action-card:nth-child(3) { animation-delay: 0.35s; }
-        .action-card:nth-child(4) { animation-delay: 0.4s; }
-        .action-card:nth-child(5) { animation-delay: 0.45s; }
-        .action-card:nth-child(6) { animation-delay: 0.5s; }
+        .action-card:nth-child(1) { animation-delay: 0.1s; }
+        .action-card:nth-child(2) { animation-delay: 0.15s; }
+        .action-card:nth-child(3) { animation-delay: 0.2s; }
+        .action-card:nth-child(4) { animation-delay: 0.25s; }
+        .action-card:nth-child(5) { animation-delay: 0.3s; }
+
+        .procurement-container {
+            animation: fadeInUp 0.4s ease backwards;
+            animation-delay: 0.3s;
+        }
     </style>
 </head>
 <body>
@@ -398,7 +508,6 @@
         <div class="header-content">
             <div>
                 <div class="logo">
-                    <div class="logo-mark">🌿</div>
                     <div class="logo-text">Pratibha <span>Marketing</span></div>
                 </div>
                 <p class="header-subtitle">Fresh Vegetables Supply & Distribution</p>
@@ -411,76 +520,72 @@
     </header>
 
     <main class="main">
-        <!-- Stats Grid -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-header">
-                    <span class="stat-label">Total Orders</span>
-                    <span class="stat-icon">📦</span>
-                </div>
-                <div class="stat-value" id="totalOrders">-</div>
+        <!-- Stats -->
+        <div class="stats-row">
+            <div class="stat-card sale">
+                <div class="stat-label">Total Sale</div>
+                <div class="stat-value" id="totalSale">₹0</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-header">
-                    <span class="stat-label">Active Customers</span>
-                    <span class="stat-icon">👥</span>
-                </div>
-                <div class="stat-value" id="totalCustomers">-</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-header">
-                    <span class="stat-label">Products</span>
-                    <span class="stat-icon">🥬</span>
-                </div>
-                <div class="stat-value" id="totalProducts">-</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-header">
-                    <span class="stat-label">Pending Orders</span>
-                    <span class="stat-icon">⏳</span>
-                </div>
-                <div class="stat-value" id="pendingOrders">-</div>
+            <div class="stat-card profit">
+                <div class="stat-label">Profit</div>
+                <div class="stat-value" id="totalProfit">₹0</div>
             </div>
         </div>
 
         <!-- Quick Actions -->
-        <h2 class="section-title">Quick Actions</h2>
         <div class="actions-grid">
-            <a href="/supplier-dashboard.html" class="action-card primary">
-                <div class="action-icon">📊</div>
-                <h3 class="action-title">Supplier Dashboard</h3>
-                <p class="action-desc">Procurement planning & shopping list</p>
-            </a>
-
-            <a href="/customer-order-form.html" class="action-card">
+            <a href="/customer-order-form.html" class="action-card primary">
                 <div class="action-icon">🛒</div>
-                <h3 class="action-title">Create Order</h3>
-                <p class="action-desc">Place a new customer order</p>
+                <div class="action-content">
+                    <h3 class="action-title">Create Order</h3>
+                    <p class="action-desc">New customer order</p>
+                </div>
             </a>
 
             <a href="/customer-management.html" class="action-card">
                 <div class="action-icon">👥</div>
-                <h3 class="action-title">Customers</h3>
-                <p class="action-desc">Manage customer details</p>
-            </a>
-
-            <a href="/market-rates.html" class="action-card">
-                <div class="action-icon">📈</div>
-                <h3 class="action-title">Market Rates</h3>
-                <p class="action-desc">View and update pricing</p>
+                <div class="action-content">
+                    <h3 class="action-title">Customers</h3>
+                    <p class="action-desc">Manage details</p>
+                </div>
             </a>
 
             <a href="/products.html" class="action-card">
                 <div class="action-icon">🥕</div>
-                <h3 class="action-title">Products</h3>
-                <p class="action-desc">Manage product catalog</p>
+                <div class="action-content">
+                    <h3 class="action-title">Products</h3>
+                    <p class="action-desc">Product catalog</p>
+                </div>
             </a>
 
+            <a href="/market-rates.html" class="action-card">
+                <div class="action-icon">💰</div>
+                <div class="action-content">
+                    <h3 class="action-title">Market Rates</h3>
+                </div>
+            </a>
             <a href="/orders.html" class="action-card">
                 <div class="action-icon">📋</div>
-                <h3 class="action-title">View Orders</h3>
-                <p class="action-desc">Track all orders</p>
+                <div class="action-content">
+                    <h3 class="action-title">View Orders</h3>
+                    <p class="action-desc">Track orders</p>
+                </div>
             </a>
+        </div>
+
+        <!-- Purchase List -->
+        <div class="procurement-container">
+            <div class="procurement-header">
+                <h2>Purchase List</h2>
+                <div class="header-actions">
+                    <button class="btn-icon" onclick="printList()" title="Print">🖨️</button>
+                    <button class="btn-icon" onclick="exportCSV()" title="Export CSV">📥</button>
+                    <button class="btn-save-rates" id="saveRatesBtn" onclick="saveAllRates()">Save</button>
+                </div>
+            </div>
+            <div class="procurement-list" id="procurementList">
+                <div class="empty-state">Loading...</div>
+            </div>
         </div>
 
         <div class="api-status">
@@ -497,27 +602,259 @@
     <script src="/js/api.js"></script>
 
     <script>
+        let products = [];
+        let rates = [];
+        let procurement = [];
+        let changedRates = {};
+
+        function escapeHtml(unsafe) {
+            if (unsafe === null || unsafe === undefined) return '';
+            return String(unsafe)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
         async function loadDashboardStats() {
             try {
-                const [ordersRes, customersRes, productsRes] = await Promise.all([
+                const [ordersRes, customersRes, productsRes, ratesRes, procurementRes] = await Promise.all([
                     fetch('/api/orders', { credentials: 'include' }),
                     fetch('/api/customers', { credentials: 'include' }),
-                    fetch('/api/products', { credentials: 'include' })
+                    fetch('/api/products', { credentials: 'include' }),
+                    fetch('/api/market-rates', { credentials: 'include' }),
+                    fetch('/api/supplier/quantity-summary', { credentials: 'include' })
                 ]);
 
                 const orders = await ordersRes.json();
                 const customers = await customersRes.json();
-                const products = await productsRes.json();
+                const productsData = await productsRes.json();
+                const ratesData = await ratesRes.json();
+                const procurementData = await procurementRes.json();
 
-                document.getElementById('totalOrders').textContent = orders.count || 0;
-                document.getElementById('totalCustomers').textContent = customers.count || 0;
-                document.getElementById('totalProducts').textContent = products.count || 0;
+                products = productsData.data || [];
+                rates = ratesData.data || [];
+                procurement = procurementData.data || [];
 
-                const pending = orders.data ? orders.data.filter(o => o.status === 'pending').length : 0;
-                document.getElementById('pendingOrders').textContent = pending;
+                // Calculate Total Sale (from delivered/completed orders)
+                const ordersList = orders.data || [];
+                const totalSale = ordersList
+                    .filter(o => o.status === 'delivered' || o.paymentStatus === 'paid')
+                    .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+
+                // Calculate Profit (estimate based on 15% margin for now)
+                const profitMargin = 0.15;
+                const totalProfit = totalSale * profitMargin;
+
+                document.getElementById('totalSale').textContent = '₹' + totalSale.toLocaleString('en-IN');
+                document.getElementById('totalProfit').textContent = '₹' + totalProfit.toLocaleString('en-IN');
+
+                displayProcurementList();
             } catch (error) {
                 console.error('Error loading stats:', error);
             }
+        }
+
+        function displayProcurementList() {
+            const container = document.getElementById('procurementList');
+
+            if (!products || products.length === 0) {
+                container.innerHTML = '<div class="empty-state">No products available</div>';
+                return;
+            }
+
+            const rateMap = {};
+            rates.forEach(rate => { rateMap[rate.product] = rate; });
+
+            const procurementMap = {};
+            procurement.forEach(item => { procurementMap[item.productName] = item; });
+
+            // Show products with qty needed first, then others
+            const sortedProducts = [...products].sort((a, b) => {
+                const qtyA = procurementMap[a.name]?.totalQuantity || 0;
+                const qtyB = procurementMap[b.name]?.totalQuantity || 0;
+                return qtyB - qtyA;
+            });
+
+            container.innerHTML = sortedProducts.map(product => {
+                const rate = rateMap[product._id];
+                const currentRate = rate ? rate.rate : 0;
+                const trend = rate ? rate.trend : 'stable';
+
+                const procItem = procurementMap[product.name];
+                const qtyNeeded = procItem ? procItem.totalQuantity : 0;
+                const orderCount = procItem ? procItem.orderCount : 0;
+                const estCost = qtyNeeded > 0 ? (qtyNeeded * currentRate) : 0;
+
+                const qtyClass = qtyNeeded > 0 ? 'item-qty' : 'item-qty zero';
+                const trendText = trend === 'up' ? '↑ Up' : trend === 'down' ? '↓ Down' : '— Stable';
+
+                return `
+                    <div class="procurement-item" data-product-id="${product._id}">
+                        <div class="item-main" onclick="toggleExpand(this)">
+                            <span class="item-expand">▶</span>
+                            <span class="item-name">${escapeHtml(product.name)}</span>
+                            <span class="${qtyClass}">${qtyNeeded}</span>
+                            <span class="item-unit">${escapeHtml(product.unit)}</span>
+                            <input
+                                type="number"
+                                class="item-rate-input"
+                                data-product-id="${product._id}"
+                                data-product-name="${escapeHtml(product.name)}"
+                                data-current-rate="${currentRate}"
+                                placeholder="₹${currentRate.toFixed(0)}"
+                                step="0.01"
+                                min="0"
+                                onclick="event.stopPropagation()"
+                                onchange="handleRateChange(this)"
+                                oninput="handleRateInput(this)"
+                            >
+                        </div>
+                        <div class="item-details">
+                            <div class="detail-row">
+                                <span class="detail-label">Current Rate</span>
+                                <span class="detail-value">₹${currentRate.toFixed(2)}/${escapeHtml(product.unit)}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Orders</span>
+                                <span class="detail-value">${orderCount}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Est. Cost</span>
+                                <span class="detail-value highlight">${estCost > 0 ? '₹' + estCost.toLocaleString('en-IN') : '-'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Trend</span>
+                                <span class="detail-value">${trendText}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function toggleExpand(element) {
+            element.closest('.procurement-item').classList.toggle('expanded');
+        }
+
+        function handleRateInput(input) {
+            const currentRate = parseFloat(input.dataset.currentRate);
+            const newRate = parseFloat(input.value);
+            input.classList.toggle('changed', input.value && newRate !== currentRate);
+        }
+
+        function handleRateChange(input) {
+            const productId = input.dataset.productId;
+            const productName = input.dataset.productName;
+            const currentRate = parseFloat(input.dataset.currentRate);
+            const newRate = parseFloat(input.value);
+
+            if (input.value && newRate !== currentRate && newRate > 0) {
+                changedRates[productId] = { product: productId, productName, rate: newRate, previousRate: currentRate };
+                input.classList.add('changed');
+            } else {
+                delete changedRates[productId];
+                input.classList.remove('changed');
+            }
+
+            document.getElementById('saveRatesBtn').classList.toggle('show', Object.keys(changedRates).length > 0);
+        }
+
+        function printList() {
+            const printContent = document.getElementById('procurementList').innerHTML;
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Purchase List - Pratibha Marketing</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 20px; }
+                        h1 { font-size: 18px; margin-bottom: 10px; }
+                        .date { color: #666; margin-bottom: 20px; }
+                        .item { padding: 10px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; }
+                        .item-name { font-weight: bold; }
+                        .item-qty { font-family: monospace; }
+                        .item-details, .item-expand, .item-rate-input, button { display: none !important; }
+                    </style>
+                </head>
+                <body>
+                    <h1>Purchase List - Pratibha Marketing</h1>
+                    <div class="date">${new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                    ${printContent}
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.print();
+        }
+
+        function exportCSV() {
+            const rateMap = {};
+            rates.forEach(rate => {
+                const pid = typeof rate.product === 'object' ? rate.product._id : rate.product;
+                rateMap[pid] = rate;
+            });
+
+            const procurementMap = {};
+            procurement.forEach(item => { procurementMap[item.productName] = item; });
+
+            const headers = ['Product', 'Unit', 'Qty Needed', 'Current Rate', 'Est. Cost'];
+            const rows = products.map(product => {
+                const procItem = procurementMap[product.name];
+                const qtyNeeded = procItem?.totalQuantity || 0;
+                const rate = rateMap[product._id];
+                const currentRate = rate ? rate.rate : 0;
+                const estCost = qtyNeeded * currentRate;
+
+                return [
+                    `"${product.name}"`,
+                    product.unit,
+                    qtyNeeded,
+                    currentRate,
+                    estCost.toFixed(2)
+                ].join(',');
+            });
+
+            const csvContent = [headers.join(','), ...rows].join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `purchase-list-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        async function saveAllRates() {
+            const btn = document.getElementById('saveRatesBtn');
+            btn.textContent = 'Saving...';
+            btn.disabled = true;
+
+            for (const rateData of Object.values(changedRates)) {
+                try {
+                    await fetch('/api/market-rates', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ product: rateData.product, rate: rateData.rate, effectiveDate: new Date().toISOString() })
+                    });
+                } catch (error) {
+                    console.error('Error saving rate:', error);
+                }
+            }
+
+            changedRates = {};
+            btn.textContent = 'Save Rates';
+            btn.disabled = false;
+            btn.classList.remove('show');
+
+            document.querySelectorAll('.item-rate-input').forEach(input => {
+                input.value = '';
+                input.classList.remove('changed');
+            });
+
+            loadDashboardStats();
         }
 
         async function checkAPIHealth() {
@@ -546,16 +883,11 @@
                 });
         }
 
-        // Initialize dashboard with authentication check
         async function init() {
-            // Require admin or staff role for dashboard access
             const user = await Auth.requireAuth(['admin', 'staff']);
-            if (!user) return; // requireAuth redirects to login if not authenticated
+            if (!user) return;
 
-            // Update user badge with authenticated user's name
             document.getElementById('userBadge').textContent = user.name || user.email || 'User';
-
-            // Load dashboard data
             loadDashboardStats();
             checkAPIHealth();
         }

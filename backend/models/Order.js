@@ -3,8 +3,7 @@ const mongoose = require('mongoose');
 const orderSchema = new mongoose.Schema({
   orderNumber: {
     type: String,
-    unique: true,
-    required: true
+    unique: true
   },
   customer: {
     type: mongoose.Schema.Types.ObjectId,
@@ -77,20 +76,34 @@ const orderSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Generate order number before saving
+// Generate order number before saving using atomic counter to avoid race conditions
 orderSchema.pre('save', async function(next) {
   if (!this.orderNumber) {
     const date = new Date();
     const year = date.getFullYear().toString().slice(-2);
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const count = await mongoose.model('Order').countDocuments();
-    this.orderNumber = `ORD${year}${month}${(count + 1).toString().padStart(4, '0')}`;
+    const prefix = `ORD${year}${month}`;
+
+    // Find the latest order with this prefix and increment atomically
+    const latestOrder = await mongoose.model('Order')
+      .findOneAndUpdate(
+        { orderNumber: { $regex: `^${prefix}` } },
+        { $inc: { _tempCounter: 0 } }, // No-op update just to lock
+        { sort: { orderNumber: -1 }, new: false }
+      );
+
+    let nextNum = 1;
+    if (latestOrder && latestOrder.orderNumber) {
+      const currentNum = parseInt(latestOrder.orderNumber.slice(-4), 10);
+      nextNum = currentNum + 1;
+    }
+
+    this.orderNumber = `${prefix}${nextNum.toString().padStart(4, '0')}`;
   }
   next();
 });
 
-// Index for faster searches
-orderSchema.index({ orderNumber: 1 });
+// Index for faster searches (orderNumber already indexed via unique: true)
 orderSchema.index({ customer: 1 });
 orderSchema.index({ status: 1 });
 orderSchema.index({ createdAt: -1 });

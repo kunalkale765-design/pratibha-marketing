@@ -24,9 +24,10 @@ const generateToken = (userId) => {
 // @access  Public
 router.post('/register', [
   body('name').trim().notEmpty().withMessage('Name is required'),
-  body('email').isEmail().withMessage('Please enter a valid email'),
+  body('email').trim().notEmpty().withMessage('Username is required')
+    .isLength({ min: 3 }).withMessage('Username must be at least 3 characters'),
   body('password')
-    .isLength({ min: 12 }).withMessage('Password must be at least 12 characters')
+    .isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
     .matches(/[A-Z]/).withMessage('Password must contain at least one uppercase letter')
     .matches(/[a-z]/).withMessage('Password must contain at least one lowercase letter')
     .matches(/[0-9]/).withMessage('Password must contain at least one number'),
@@ -105,7 +106,7 @@ router.post('/register', [
 // @desc    Login user
 // @access  Public
 router.post('/login', [
-  body('email').isEmail().withMessage('Please enter a valid email'),
+  body('email').trim().notEmpty().withMessage('Username is required'),
   body('password').notEmpty().withMessage('Password is required')
 ], async (req, res, next) => {
   try {
@@ -119,8 +120,8 @@ router.post('/login', [
 
     const { email, password } = req.body;
 
-    // Find user and include password
-    const user = await User.findOne({ email }).select('+password');
+    // Find user and include password, populate customer for pricing data
+    const user = await User.findOne({ email }).select('+password').populate('customer');
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -163,7 +164,7 @@ router.post('/login', [
         name: user.name,
         email: user.email,
         role: user.role,
-        customer: user.customer
+        customer: user.customer || null  // Full customer object with pricing data
       },
       token
     });
@@ -206,7 +207,29 @@ router.get('/me', async (req, res, next) => {
     const secret = process.env.JWT_SECRET || 'dev-secret-change-in-production';
     const decoded = jwt.verify(token, secret);
 
-    // Get user
+    // Handle magic link tokens
+    if (decoded.type === 'magic' && decoded.customerId) {
+      const customer = await Customer.findById(decoded.customerId);
+      if (!customer || !customer.isActive) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid session'
+        });
+      }
+      return res.json({
+        success: true,
+        user: {
+          id: null,
+          name: customer.name,
+          email: null,
+          role: 'customer',
+          customer: customer,
+          isMagicLink: true
+        }
+      });
+    }
+
+    // Regular user token
     const user = await User.findById(decoded.id).select('-password').populate('customer');
 
     if (!user) {
@@ -219,6 +242,104 @@ router.get('/me', async (req, res, next) => {
     res.json({
       success: true,
       user
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// @route   GET /api/auth/magic/:token
+// @desc    Authenticate via magic link
+// @access  Public
+router.get('/magic/:token', async (req, res, next) => {
+  try {
+    const { token } = req.params;
+
+    if (!token || token.length !== 64) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid magic link'
+      });
+    }
+
+    // Find customer with this token
+    const customer = await Customer.findOne({
+      magicLinkToken: token,
+      isActive: true
+    });
+
+    if (!customer) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired magic link'
+      });
+    }
+
+    // Check if magic link is expired (48 hours validity)
+    const MAGIC_LINK_EXPIRY_HOURS = 48;
+    if (customer.magicLinkCreatedAt) {
+      const expiryTime = new Date(customer.magicLinkCreatedAt.getTime() + (MAGIC_LINK_EXPIRY_HOURS * 60 * 60 * 1000));
+      if (new Date() > expiryTime) {
+        return res.status(401).json({
+          success: false,
+          message: 'Magic link has expired. Please request a new one.'
+        });
+      }
+    }
+
+    // Find if there's a user account linked to this customer
+    let user = await User.findOne({ customer: customer._id, isActive: true });
+
+    // If no user exists, create a virtual session (customer-only access)
+    if (!user) {
+      // Create a temporary JWT for this customer
+      const secret = process.env.JWT_SECRET || 'dev-secret-change-in-production';
+      const sessionToken = jwt.sign(
+        { customerId: customer._id, type: 'magic' },
+        secret,
+        { expiresIn: '24h' }
+      );
+
+      res.cookie('token', sessionToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      });
+
+      return res.json({
+        success: true,
+        user: {
+          id: null,
+          name: customer.name,
+          email: null,
+          role: 'customer',
+          customer: customer
+        },
+        message: 'Magic link authenticated'
+      });
+    }
+
+    // User exists - create full session
+    const jwtToken = generateToken(user._id);
+
+    res.cookie('token', jwtToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+    });
+
+    res.json({
+      success: true,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        customer: customer
+      },
+      message: 'Magic link authenticated'
     });
   } catch (error) {
     next(error);

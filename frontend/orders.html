@@ -2,41 +2,26 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Orders - Pratibha Marketing</title>
-    <!-- PWA Meta Tags -->
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#7e9181">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Pratibha">
-    <link rel="apple-touch-icon" href="/icons/icon.svg">
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <meta name="theme-color" content="#2e3532">
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@500;600&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
     <style>
         :root {
             --gunmetal: #2e3532;
-            --gunmetal-light: #3d4542;
             --dusty-olive: #7e9181;
-            --dusty-olive-light: #97a99a;
             --dusty-olive-dark: #5d6b5f;
-            --pale-slate: #c7cedb;
-            --pale-slate-light: #e8ebf0;
             --cream: #f9f7f3;
             --cream-dark: #efe9df;
             --warm-white: #fefdfb;
             --terracotta: #c4a77d;
             --text-primary: #1f2421;
-            --text-secondary: #5a6560;
             --text-muted: #8a918c;
             --success: #5d7a5f;
-            --success-bg: rgba(93, 122, 95, 0.1);
             --warning: #b89a5a;
-            --warning-bg: rgba(184, 154, 90, 0.1);
             --error: #9a6565;
-            --error-bg: rgba(154, 101, 101, 0.1);
             --info: #6a8a9a;
-            --info-bg: rgba(106, 138, 154, 0.1);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -44,290 +29,197 @@
         body {
             font-family: 'DM Sans', sans-serif;
             background: var(--cream);
-            color: var(--text-primary);
             min-height: 100vh;
-            line-height: 1.6;
+            color: var(--text-primary);
+            -webkit-tap-highlight-color: transparent;
         }
 
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        body > * { position: relative; z-index: 1; }
-
+        /* Header */
         .header {
-            background: linear-gradient(135deg, var(--gunmetal) 0%, var(--gunmetal-light) 100%);
-            color: var(--warm-white);
-            padding: 1.25rem 1.5rem;
+            background: var(--gunmetal);
+            color: white;
+            padding: 0.875rem 1rem;
             position: sticky;
             top: 0;
             z-index: 100;
         }
 
-        .header::after {
-            content: '';
-            position: absolute;
-            bottom: 0; left: 0; right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, var(--dusty-olive), var(--terracotta), var(--dusty-olive));
-        }
-
         .header-content {
-            max-width: 1200px;
-            margin: 0 auto;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
         .logo {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            text-decoration: none;
-            color: inherit;
-        }
-
-        .logo-mark {
-            width: 42px; height: 42px;
-            background: linear-gradient(135deg, var(--dusty-olive) 0%, var(--dusty-olive-dark) 100%);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            font-family: 'Crimson Pro', serif;
             font-size: 1.25rem;
-        }
-
-        .logo-text {
-            font-family: 'Crimson Pro', serif;
-            font-size: 1.5rem;
             font-weight: 600;
-        }
-
-        .logo-text span { color: var(--dusty-olive-light); font-weight: 400; }
-
-        .header-actions { display: flex; gap: 0.75rem; }
-
-        .btn {
-            padding: 0.625rem 1.25rem;
-            border-radius: 8px;
-            font-family: 'DM Sans', sans-serif;
-            font-size: 0.875rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
             text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            border: none;
-        }
-
-        .btn-ghost {
-            background: transparent;
-            border: 1px solid rgba(255,255,255,0.3);
-            color: var(--warm-white);
-        }
-
-        .btn-ghost:hover { background: rgba(255,255,255,0.1); }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--dusty-olive) 0%, var(--dusty-olive-dark) 100%);
             color: white;
-            box-shadow: 0 2px 4px rgba(126, 145, 129, 0.3);
         }
 
-        .btn-primary:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(126, 145, 129, 0.4);
+        .logo span { font-weight: 400; opacity: 0.8; }
+
+        .header-btns {
+            display: flex;
+            gap: 0.5rem;
         }
 
-        .btn-secondary {
-            background: var(--cream);
-            color: var(--gunmetal);
-            border: 1px solid var(--pale-slate);
+        .btn-header {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: white;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.8125rem;
+            cursor: pointer;
+            text-decoration: none;
         }
 
-        .btn-secondary:hover { background: var(--pale-slate-light); }
-
-        .main {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem 1.5rem;
-        }
-
-        .page-title {
-            margin-bottom: 2rem;
-        }
-
-        .page-title h1 {
-            font-family: 'Crimson Pro', serif;
-            font-size: 2rem;
-            font-weight: 600;
-            color: var(--gunmetal);
-            margin-bottom: 0.25rem;
-        }
-
-        .page-title p {
-            color: var(--text-muted);
-            font-size: 0.9375rem;
+        .btn-header.primary {
+            background: var(--dusty-olive);
         }
 
         /* Filters */
-        .filters-card {
+        .filters-bar {
             background: var(--warm-white);
-            border-radius: 12px;
-            padding: 1.25rem;
-            border: 1px solid var(--pale-slate-light);
-            margin-bottom: 1.5rem;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--cream-dark);
+            display: flex;
+            gap: 0.5rem;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
-        .filters-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1rem;
-        }
-
-        .form-label {
-            display: block;
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: var(--text-muted);
-            margin-bottom: 0.375rem;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-        }
-
-        .form-input, .form-select {
-            width: 100%;
-            padding: 0.625rem 0.875rem;
-            font-family: 'DM Sans', sans-serif;
-            font-size: 0.9375rem;
-            border: 1.5px solid var(--pale-slate);
-            border-radius: 8px;
+        .filter-btn {
+            flex-shrink: 0;
+            padding: 0.625rem 1rem;
+            border: 1.5px solid var(--cream-dark);
+            border-radius: 20px;
             background: var(--cream);
-            color: var(--text-primary);
-            transition: all 0.2s ease;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            cursor: pointer;
+            min-height: 40px;
         }
 
-        .form-input:focus, .form-select:focus {
+        .filter-btn.active {
+            background: var(--gunmetal);
+            color: white;
+            border-color: var(--gunmetal);
+        }
+
+        /* Search */
+        .search-bar {
+            padding: 0.75rem 1rem;
+            background: var(--warm-white);
+            border-bottom: 1px solid var(--cream-dark);
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1.5px solid var(--cream-dark);
+            border-radius: 8px;
+            font-size: 1rem;
+            background: var(--cream);
+            min-height: 48px;
+        }
+
+        .search-input:focus {
             outline: none;
             border-color: var(--dusty-olive);
+            box-shadow: 0 0 0 3px rgba(126, 145, 129, 0.15);
+        }
+
+        /* Orders List */
+        .orders-list {
+            padding: 0.5rem;
+            padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+        }
+
+        .order-card {
             background: var(--warm-white);
-        }
-
-        /* Table Card */
-        .table-card {
-            background: var(--warm-white);
-            border-radius: 14px;
-            border: 1px solid var(--pale-slate-light);
-            overflow: hidden;
-        }
-
-        .orders-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .orders-table thead {
-            background: var(--cream);
-        }
-
-        .orders-table th {
-            padding: 0.875rem 1.25rem;
-            text-align: left;
-            font-size: 0.6875rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: var(--text-muted);
-            border-bottom: 2px solid var(--pale-slate-light);
-        }
-
-        .orders-table th.text-right { text-align: right; }
-        .orders-table th.text-center { text-align: center; }
-
-        .orders-table td {
-            padding: 1rem 1.25rem;
-            border-bottom: 1px solid var(--pale-slate-light);
-            vertical-align: middle;
-        }
-
-        .orders-table tbody tr {
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 0.625rem;
             cursor: pointer;
-            transition: all 0.15s ease;
+            transition: all 0.15s;
+            border: 1px solid transparent;
         }
 
-        .orders-table tbody tr:hover {
-            background: var(--cream);
+        .order-card:active {
+            transform: scale(0.98);
+            border-color: var(--dusty-olive);
+            background: rgba(126, 145, 129, 0.05);
+        }
+
+        .order-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.5rem;
         }
 
         .order-number {
             font-family: 'JetBrains Mono', monospace;
             font-weight: 600;
+            font-size: 0.9375rem;
             color: var(--gunmetal);
-        }
-
-        .customer-name {
-            font-weight: 600;
-            color: var(--text-primary);
         }
 
         .order-amount {
             font-family: 'JetBrains Mono', monospace;
-            font-weight: 700;
+            font-weight: 600;
+            font-size: 1rem;
             color: var(--gunmetal);
-            text-align: right;
         }
 
-        /* Badges */
-        .badge {
-            display: inline-flex;
+        .order-customer {
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .order-bottom {
+            display: flex;
+            justify-content: space-between;
             align-items: center;
-            padding: 0.25rem 0.625rem;
-            font-size: 0.6875rem;
-            font-weight: 700;
+        }
+
+        .order-date {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .order-badges {
+            display: flex;
+            gap: 0.375rem;
+        }
+
+        .badge {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.625rem;
+            font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.03em;
-            border-radius: 20px;
+            border-radius: 4px;
         }
 
-        .badge-pending { background: var(--warning-bg); color: #8a7340; border: 1px solid rgba(184, 154, 90, 0.3); }
-        .badge-confirmed { background: var(--info-bg); color: #4a6a7a; border: 1px solid rgba(106, 138, 154, 0.3); }
-        .badge-processing { background: rgba(138, 106, 154, 0.15); color: #6a507a; border: 1px solid rgba(138, 106, 154, 0.3); }
-        .badge-packed { background: rgba(106, 138, 154, 0.15); color: #4a6a7a; border: 1px solid rgba(106, 138, 154, 0.3); }
-        .badge-shipped { background: rgba(106, 154, 154, 0.15); color: #4a7a7a; border: 1px solid rgba(106, 154, 154, 0.3); }
-        .badge-delivered { background: var(--success-bg); color: #4a6150; border: 1px solid rgba(93, 122, 95, 0.3); }
-        .badge-cancelled { background: var(--error-bg); color: #7a5050; border: 1px solid rgba(154, 101, 101, 0.3); }
-        .badge-unpaid { background: var(--error-bg); color: #7a5050; border: 1px solid rgba(154, 101, 101, 0.3); }
-        .badge-partial { background: var(--warning-bg); color: #8a7340; border: 1px solid rgba(184, 154, 90, 0.3); }
-        .badge-paid { background: var(--success-bg); color: #4a6150; border: 1px solid rgba(93, 122, 95, 0.3); }
-
-        .btn-view {
-            padding: 0.375rem 0.75rem;
-            font-size: 0.8125rem;
-            background: var(--cream);
-            border: 1px solid var(--pale-slate);
-            border-radius: 6px;
-            color: var(--gunmetal);
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .btn-view:hover {
-            background: var(--dusty-olive);
-            color: white;
-            border-color: var(--dusty-olive);
-        }
+        .badge-pending { background: rgba(184, 154, 90, 0.15); color: #8a7340; }
+        .badge-confirmed { background: rgba(106, 138, 154, 0.15); color: #4a6a7a; }
+        .badge-processing { background: rgba(138, 106, 154, 0.15); color: #6a507a; }
+        .badge-packed { background: rgba(106, 138, 154, 0.15); color: #4a6a7a; }
+        .badge-shipped { background: rgba(106, 154, 154, 0.15); color: #4a7a7a; }
+        .badge-delivered { background: rgba(93, 122, 95, 0.15); color: #4a6150; }
+        .badge-cancelled { background: rgba(154, 101, 101, 0.15); color: #7a5050; }
+        .badge-unpaid { background: rgba(154, 101, 101, 0.15); color: #7a5050; }
+        .badge-partial { background: rgba(184, 154, 90, 0.15); color: #8a7340; }
+        .badge-paid { background: rgba(93, 122, 95, 0.15); color: #4a6150; }
 
         .empty-state {
             text-align: center;
-            padding: 4rem 2rem;
+            padding: 3rem 1rem;
             color: var(--text-muted);
         }
 
@@ -336,454 +228,620 @@
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(46, 53, 50, 0.5);
+            background: rgba(0,0,0,0.5);
             z-index: 200;
-            align-items: center;
-            justify-content: center;
+            align-items: flex-end;
         }
 
         .modal-overlay.show { display: flex; }
 
         .modal {
             background: var(--warm-white);
-            border-radius: 16px;
-            padding: 2rem;
-            max-width: 700px;
-            width: 90%;
+            width: 100%;
             max-height: 90vh;
+            border-radius: 16px 16px 0 0;
             overflow-y: auto;
-            box-shadow: 0 20px 60px rgba(46, 53, 50, 0.2);
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
         }
 
         .modal-header {
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 1.5rem;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid var(--cream-dark);
+            position: sticky;
+            top: 0;
+            background: var(--warm-white);
         }
 
-        .modal-header h2 {
+        .modal-title {
             font-family: 'Crimson Pro', serif;
-            font-size: 1.5rem;
+            font-size: 1.25rem;
             font-weight: 600;
-            color: var(--gunmetal);
-        }
-
-        .modal-header p {
-            font-size: 0.875rem;
-            color: var(--text-muted);
         }
 
         .btn-close {
-            background: none;
+            width: 32px;
+            height: 32px;
             border: none;
-            font-size: 1.5rem;
-            color: var(--text-muted);
+            background: var(--cream);
+            border-radius: 50%;
+            font-size: 1.25rem;
             cursor: pointer;
+            color: var(--text-muted);
         }
 
-        .btn-close:hover { color: var(--gunmetal); }
-
-        .order-info-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1.5rem;
-            margin-bottom: 1.5rem;
+        .modal-body {
+            padding: 1rem;
         }
 
-        .order-info-section h3 {
-            font-weight: 600;
-            color: var(--gunmetal);
-            margin-bottom: 0.5rem;
-            font-size: 0.9375rem;
-        }
-
-        .order-info-section p {
-            font-size: 0.9375rem;
-            color: var(--text-secondary);
-            margin-bottom: 0.25rem;
-        }
-
-        .products-table {
-            width: 100%;
-            border-collapse: collapse;
+        .info-section {
             margin-bottom: 1rem;
         }
 
-        .products-table th {
-            padding: 0.5rem;
-            text-align: left;
+        .info-label {
             font-size: 0.6875rem;
-            font-weight: 700;
+            font-weight: 600;
             text-transform: uppercase;
             color: var(--text-muted);
-            background: var(--cream);
+            margin-bottom: 0.25rem;
         }
 
-        .products-table td {
-            padding: 0.5rem;
-            border-bottom: 1px solid var(--pale-slate-light);
+        .info-value {
             font-size: 0.9375rem;
+            color: var(--text-primary);
         }
 
-        .products-table .text-right { text-align: right; }
+        .info-row {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
 
-        .order-total {
+        .info-row > div { flex: 1; }
+
+        .product-item {
             background: var(--cream);
             border-radius: 10px;
+            padding: 0.875rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .product-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+        }
+
+        .product-name {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .product-qty {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-top: 0.125rem;
+        }
+
+        .product-amount {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            text-align: right;
+        }
+
+        .prices-container {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .price-box {
+            flex: 1;
+            background: var(--warm-white);
+            border-radius: 8px;
+            padding: 0.625rem;
+        }
+
+        .price-label {
+            font-size: 0.625rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 0.25rem;
+        }
+
+        .price-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.125rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .price-input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 2px solid var(--cream-dark);
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.125rem;
+            font-weight: 500;
+            text-align: left;
+            background: white;
+            -webkit-appearance: none;
+            -moz-appearance: textfield;
+        }
+
+        .price-input::-webkit-inner-spin-button,
+        .price-input::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .price-input:focus {
+            outline: none;
+            border-color: var(--dusty-olive);
+            box-shadow: 0 0 0 3px rgba(126, 145, 129, 0.15);
+        }
+
+        .price-input.changed {
+            border-color: var(--dusty-olive);
+            background: rgba(126, 145, 129, 0.08);
+        }
+
+        .amount-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0.75rem;
+            padding-top: 0.625rem;
+            border-top: 1px dashed var(--cream-dark);
+        }
+
+        .amount-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .amount-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--gunmetal);
+        }
+
+        .total-section {
+            background: var(--cream);
+            border-radius: 8px;
             padding: 1rem;
             margin-top: 1rem;
         }
 
-        .order-total-row {
+        .total-row {
             display: flex;
             justify-content: space-between;
             margin-bottom: 0.5rem;
         }
 
-        .order-total-row.total {
+        .total-row:last-child { margin-bottom: 0; }
+
+        .total-row.main {
+            font-weight: 600;
             font-size: 1.125rem;
-            font-weight: 700;
             padding-top: 0.5rem;
-            border-top: 1px solid var(--pale-slate);
+            border-top: 1px solid var(--cream-dark);
         }
 
         .modal-footer {
-            display: flex;
-            gap: 0.75rem;
-            margin-top: 1.5rem;
-            padding-top: 1.5rem;
-            border-top: 1px solid var(--pale-slate-light);
+            padding: 1rem;
+            padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+            border-top: 1px solid var(--cream-dark);
+            background: var(--warm-white);
+        }
+
+        .btn-save-prices {
+            width: 100%;
+            background: var(--dusty-olive);
+            min-height: 52px;
+            padding: 1rem;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-save-prices:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn-save-prices:not(:disabled):active {
+            transform: scale(0.98);
         }
 
         /* Toast */
         .toast {
             position: fixed;
-            top: 1.5rem;
-            right: 1.5rem;
-            padding: 1rem 1.5rem;
-            border-radius: 10px;
+            top: 60px;
+            left: 1rem;
+            right: 1rem;
+            padding: 0.875rem 1rem;
+            border-radius: 8px;
             font-weight: 500;
-            display: none;
             z-index: 300;
+            transform: translateY(-100px);
+            opacity: 0;
+            transition: all 0.3s ease;
         }
 
-        .toast.show { display: block; }
-        .toast-success { background: var(--success-bg); color: #4a6150; border: 1px solid rgba(93, 122, 95, 0.3); }
-        .toast-error { background: var(--error-bg); color: #7a5050; border: 1px solid rgba(154, 101, 101, 0.3); }
-
-        @media (max-width: 900px) {
-            .filters-grid { grid-template-columns: repeat(2, 1fr); }
-            .order-info-grid { grid-template-columns: 1fr; }
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
         }
 
-        @media (max-width: 768px) {
-            .header-content { flex-direction: column; gap: 1rem; }
-            .filters-grid { grid-template-columns: 1fr; }
-            .page-title h1 { font-size: 1.5rem; }
-        }
+        .toast.success { background: var(--success); color: white; }
+        .toast.error { background: var(--error); color: white; }
     </style>
 </head>
 <body>
     <header class="header">
         <div class="header-content">
-            <a href="/" class="logo">
-                <div class="logo-mark">🌿</div>
-                <div class="logo-text">Pratibha <span>Marketing</span></div>
-            </a>
-            <div class="header-actions">
-                <a href="/customer-order-form.html" class="btn btn-primary">+ New Order</a>
-                <a href="/" class="btn btn-ghost">Dashboard</a>
+            <a href="/" class="logo">Pratibha <span>Marketing</span></a>
+            <div class="header-btns">
+                <a href="/customer-order-form.html" class="btn-header primary">+ New</a>
+                <a href="/" class="btn-header">Home</a>
             </div>
         </div>
     </header>
 
-    <main class="main">
-        <div class="page-title">
-            <h1>Orders Management</h1>
-            <p>Track and manage all orders</p>
-        </div>
+    <div class="filters-bar" id="filtersBar">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="pending">Pending</button>
+        <button class="filter-btn" data-filter="confirmed">Confirmed</button>
+        <button class="filter-btn" data-filter="delivered">Delivered</button>
+        <button class="filter-btn" data-filter="cancelled">Cancelled</button>
+    </div>
 
-        <!-- Filters -->
-        <div class="filters-card">
-            <div class="filters-grid">
-                <div>
-                    <label class="form-label">Status</label>
-                    <select id="statusFilter" class="form-select" onchange="filterOrders()">
-                        <option value="">All Statuses</option>
-                        <option value="pending">Pending</option>
-                        <option value="confirmed">Confirmed</option>
-                        <option value="processing">Processing</option>
-                        <option value="packed">Packed</option>
-                        <option value="shipped">Shipped</option>
-                        <option value="delivered">Delivered</option>
-                        <option value="cancelled">Cancelled</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="form-label">Payment Status</label>
-                    <select id="paymentFilter" class="form-select" onchange="filterOrders()">
-                        <option value="">All Payments</option>
-                        <option value="unpaid">Unpaid</option>
-                        <option value="partial">Partial</option>
-                        <option value="paid">Paid</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="form-label">Search</label>
-                    <input id="searchInput" type="text" placeholder="Order #, customer..." class="form-input" oninput="filterOrders()">
-                </div>
-                <div style="display: flex; align-items: flex-end;">
-                    <button onclick="clearFilters()" class="btn btn-secondary" style="width: 100%;">Clear Filters</button>
-                </div>
-            </div>
-        </div>
+    <div class="search-bar">
+        <input type="text" class="search-input" placeholder="Search order or customer..." id="searchInput">
+    </div>
 
-        <!-- Orders Table -->
-        <div class="table-card">
-            <table class="orders-table">
-                <thead>
-                    <tr>
-                        <th>Order #</th>
-                        <th>Customer</th>
-                        <th>Date</th>
-                        <th class="text-right">Amount</th>
-                        <th class="text-center">Status</th>
-                        <th class="text-center">Payment</th>
-                        <th class="text-center">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="ordersTableBody">
-                    <tr>
-                        <td colspan="7" class="empty-state">Loading orders...</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </main>
+    <div id="toast" class="toast"></div>
+
+    <div class="orders-list" id="ordersList">
+        <div class="empty-state">Loading orders...</div>
+    </div>
 
     <!-- Order Detail Modal -->
     <div id="orderModal" class="modal-overlay">
         <div class="modal">
             <div class="modal-header">
-                <div>
-                    <h2>Order Details</h2>
-                    <p id="orderNumber"></p>
-                </div>
-                <button onclick="closeModal()" class="btn-close">×</button>
+                <div class="modal-title" id="modalTitle">Order Details</div>
+                <button class="btn-close" onclick="closeModal()">×</button>
             </div>
-            <div id="orderDetails"></div>
-            <div class="modal-footer">
-                <select id="statusUpdate" class="form-select" style="flex: 1;">
-                    <option value="">Change Status</option>
-                    <option value="pending">Pending</option>
-                    <option value="confirmed">Confirmed</option>
-                    <option value="processing">Processing</option>
-                    <option value="packed">Packed</option>
-                    <option value="shipped">Shipped</option>
-                    <option value="delivered">Delivered</option>
-                    <option value="cancelled">Cancelled</option>
-                </select>
-                <button onclick="updateOrderStatus()" class="btn btn-primary">Update Status</button>
+            <div class="modal-body" id="modalBody"></div>
+            <div class="modal-footer" id="modalFooter">
+                <button class="btn-save-prices" id="savePricesBtn" onclick="savePrices()">Save Changes</button>
             </div>
         </div>
     </div>
 
-    <!-- Toast Messages -->
-    <div id="successMessage" class="toast toast-success"></div>
-    <div id="errorMessage" class="toast toast-error"></div>
-
     <script src="/js/auth.js"></script>
     <script src="/js/api.js"></script>
-
     <script>
-        let allOrders = [];
+        let orders = [];
+        let marketRates = {};
+        let currentFilter = 'all';
         let currentOrderId = null;
+        let currentOrder = null;
         let currentUser = null;
+        let priceChanges = {};
 
-        // XSS Prevention Utility
-        function escapeHtml(unsafe) {
-            if (unsafe === null || unsafe === undefined) return '';
-            return String(unsafe)
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
+        async function init() {
+            currentUser = await Auth.requireAuth();
+            if (!currentUser) return;
+
+            // Hide status controls for customers
+            if (currentUser.role === 'customer') {
+                document.getElementById('modalFooter').style.display = 'none';
+            }
+
+            await Promise.all([loadOrders(), loadMarketRates()]);
+            setupFilters();
+            setupSearch();
+        }
+
+        async function loadMarketRates() {
+            try {
+                const res = await fetch('/api/market-rates', { credentials: 'include' });
+                const data = await res.json();
+                (data.data || []).forEach(r => {
+                    const pid = typeof r.product === 'object' ? r.product._id : r.product;
+                    marketRates[pid] = r.rate;
+                });
+            } catch (e) {
+                console.error('Failed to load market rates');
+            }
         }
 
         async function loadOrders() {
             try {
-                const response = await fetch('/api/orders?limit=100', { credentials: 'include' });
-                const data = await response.json();
-                allOrders = data.data;
-                displayOrders(allOrders);
-            } catch (error) {
-                console.error('Error loading orders:', error);
-                showError('Failed to load orders');
+                const res = await fetch('/api/orders?limit=100', { credentials: 'include' });
+                const data = await res.json();
+                orders = data.data || [];
+                renderOrders();
+            } catch (e) {
+                showToast('Failed to load orders', true);
             }
         }
 
-        function displayOrders(orders) {
-            const tbody = document.getElementById('ordersTableBody');
-
-            if (!orders || orders.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No orders found</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = orders.map(order => {
-                const customerName = escapeHtml(order.customer?.name || 'Unknown');
-                const orderDate = new Date(order.createdAt).toLocaleDateString();
-
-                return `
-                    <tr onclick="viewOrder('${escapeHtml(order._id)}')">
-                        <td><span class="order-number">${escapeHtml(order.orderNumber)}</span></td>
-                        <td><span class="customer-name">${customerName}</span></td>
-                        <td>${orderDate}</td>
-                        <td class="order-amount">₹${escapeHtml(order.totalAmount)}</td>
-                        <td class="text-center"><span class="badge badge-${escapeHtml(order.status)}">${escapeHtml(order.status)}</span></td>
-                        <td class="text-center"><span class="badge badge-${escapeHtml(order.paymentStatus)}">${escapeHtml(order.paymentStatus)}</span></td>
-                        <td class="text-center">
-                            <button onclick="event.stopPropagation(); viewOrder('${escapeHtml(order._id)}')" class="btn-view">View</button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        function filterOrders() {
-            const status = document.getElementById('statusFilter').value;
-            const payment = document.getElementById('paymentFilter').value;
+        function renderOrders() {
+            const container = document.getElementById('ordersList');
             const search = document.getElementById('searchInput').value.toLowerCase();
 
-            const filtered = allOrders.filter(order => {
-                const matchesStatus = !status || order.status === status;
-                const matchesPayment = !payment || order.paymentStatus === payment;
-                const matchesSearch = !search ||
-                    order.orderNumber.toLowerCase().includes(search) ||
-                    (order.customer?.name || '').toLowerCase().includes(search);
+            let filtered = orders;
 
-                return matchesStatus && matchesPayment && matchesSearch;
-            });
-
-            displayOrders(filtered);
-        }
-
-        function clearFilters() {
-            document.getElementById('statusFilter').value = '';
-            document.getElementById('paymentFilter').value = '';
-            document.getElementById('searchInput').value = '';
-            filterOrders();
-        }
-
-        async function viewOrder(orderId) {
-            try {
-                const response = await fetch(`/api/orders/${orderId}`);
-                const data = await response.json();
-                const order = data.data;
-
-                currentOrderId = orderId;
-
-                document.getElementById('orderNumber').textContent = `Order #${order.orderNumber}`;
-                document.getElementById('statusUpdate').value = order.status;
-
-                const details = `
-                    <div class="order-info-grid">
-                        <div class="order-info-section">
-                            <h3>Customer Information</h3>
-                            <p><strong>Name:</strong> ${escapeHtml(order.customer.name)}</p>
-                            <p><strong>Phone:</strong> ${escapeHtml(order.customer.phone)}</p>
-                            ${order.deliveryAddress ? `<p><strong>Address:</strong> ${escapeHtml(order.deliveryAddress)}</p>` : ''}
-                        </div>
-                        <div class="order-info-section">
-                            <h3>Order Information</h3>
-                            <p><strong>Date:</strong> ${new Date(order.createdAt).toLocaleString()}</p>
-                            <p><strong>Status:</strong> <span class="badge badge-${escapeHtml(order.status)}">${escapeHtml(order.status)}</span></p>
-                            <p><strong>Payment:</strong> <span class="badge badge-${escapeHtml(order.paymentStatus)}">${escapeHtml(order.paymentStatus)}</span></p>
-                        </div>
-                    </div>
-
-                    <h3 style="margin-bottom: 0.75rem; font-weight: 600;">Products</h3>
-                    <table class="products-table">
-                        <thead>
-                            <tr>
-                                <th>Product</th>
-                                <th class="text-right">Qty</th>
-                                <th class="text-right">Rate</th>
-                                <th class="text-right">Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${order.products.map(item => `
-                                <tr>
-                                    <td>${escapeHtml(item.productName)}</td>
-                                    <td class="text-right">${escapeHtml(item.quantity)} ${escapeHtml(item.unit)}</td>
-                                    <td class="text-right">₹${escapeHtml(item.rate)}</td>
-                                    <td class="text-right" style="font-weight: 600;">₹${escapeHtml(item.amount)}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-
-                    <div class="order-total">
-                        <div class="order-total-row total">
-                            <span>Total Amount:</span>
-                            <span>₹${escapeHtml(order.totalAmount)}</span>
-                        </div>
-                        <div class="order-total-row">
-                            <span>Paid Amount:</span>
-                            <span>₹${escapeHtml(order.paidAmount || 0)}</span>
-                        </div>
-                        <div class="order-total-row" style="color: var(--error);">
-                            <span>Balance:</span>
-                            <span>₹${order.totalAmount - (order.paidAmount || 0)}</span>
-                        </div>
-                    </div>
-
-                    ${order.notes ? `
-                        <div style="margin-top: 1rem;">
-                            <h3 style="font-weight: 600; margin-bottom: 0.5rem;">Notes</h3>
-                            <p style="color: var(--text-secondary);">${escapeHtml(order.notes)}</p>
-                        </div>
-                    ` : ''}
-                `;
-
-                document.getElementById('orderDetails').innerHTML = details;
-                document.getElementById('orderModal').classList.add('show');
-
-            } catch (error) {
-                console.error('Error loading order:', error);
-                showError('Failed to load order details');
+            // Filter by status
+            if (currentFilter !== 'all') {
+                filtered = filtered.filter(o => o.status === currentFilter);
             }
-        }
 
-        async function updateOrderStatus() {
-            const newStatus = document.getElementById('statusUpdate').value;
-            if (!newStatus) {
-                showError('Please select a status');
+            // Filter by search
+            if (search) {
+                filtered = filtered.filter(o =>
+                    o.orderNumber?.toLowerCase().includes(search) ||
+                    o.customer?.name?.toLowerCase().includes(search)
+                );
+            }
+
+            if (!filtered.length) {
+                container.innerHTML = '<div class="empty-state">No orders found</div>';
                 return;
             }
 
+            container.innerHTML = filtered.map(o => `
+                <div class="order-card" onclick="viewOrder('${o._id}')">
+                    <div class="order-top">
+                        <div class="order-number">#${escapeHtml(o.orderNumber)}</div>
+                        <div class="order-amount">₹${(o.totalAmount || 0).toLocaleString('en-IN')}</div>
+                    </div>
+                    <div class="order-customer">${escapeHtml(o.customer?.name || 'Unknown')}</div>
+                    <div class="order-bottom">
+                        <div class="order-date">${new Date(o.createdAt).toLocaleDateString('en-IN')}</div>
+                        <div class="order-badges">
+                            <span class="badge badge-${o.status}">${o.status}</span>
+                            <span class="badge badge-${o.paymentStatus}">${o.paymentStatus}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function setupFilters() {
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.onclick = () => {
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentFilter = btn.dataset.filter;
+                    renderOrders();
+                };
+            });
+        }
+
+        function setupSearch() {
+            document.getElementById('searchInput').addEventListener('input', renderOrders);
+        }
+
+        async function viewOrder(id) {
             try {
-                const response = await fetch(`/api/orders/${currentOrderId}/status`, {
+                const res = await fetch(`/api/orders/${id}`, { credentials: 'include' });
+                const data = await res.json();
+                const order = data.data;
+
+                currentOrderId = id;
+                currentOrder = order;
+                priceChanges = {};
+                document.getElementById('modalTitle').textContent = `#${order.orderNumber}`;
+                document.getElementById('savePricesBtn').disabled = true;
+
+                const isStaff = currentUser.role === 'admin' || currentUser.role === 'staff';
+
+                const body = `
+                    <div class="info-row">
+                        <div>
+                            <div class="info-label">Customer</div>
+                            <div class="info-value">${escapeHtml(order.customer?.name)}</div>
+                        </div>
+                        <div>
+                            <div class="info-label">Phone</div>
+                            <div class="info-value">${escapeHtml(order.customer?.phone || '-')}</div>
+                        </div>
+                    </div>
+                    <div class="info-row">
+                        <div>
+                            <div class="info-label">Date</div>
+                            <div class="info-value">${new Date(order.createdAt).toLocaleDateString('en-IN')}</div>
+                        </div>
+                        <div>
+                            <div class="info-label">Status</div>
+                            <div class="info-value"><span class="badge badge-${order.status}">${order.status}</span></div>
+                        </div>
+                    </div>
+
+                    <div class="info-section">
+                        <div class="info-label">Products</div>
+                        ${order.products.map((p, idx) => {
+                            const productId = typeof p.product === 'object' ? p.product._id : p.product;
+                            const purchasePrice = marketRates[productId] || p.rate;
+                            return `
+                            <div class="product-item" data-idx="${idx}">
+                                <div class="product-top">
+                                    <div>
+                                        <div class="product-name">${escapeHtml(p.productName)}</div>
+                                        <div class="product-qty">${p.quantity} ${escapeHtml(p.unit)}</div>
+                                    </div>
+                                </div>
+                                <div class="prices-container">
+                                    <div class="price-box">
+                                        <div class="price-label">Purchase</div>
+                                        <div class="price-value">₹${purchasePrice}</div>
+                                    </div>
+                                    <div class="price-box">
+                                        <div class="price-label">Selling</div>
+                                        ${isStaff ? `
+                                            <input type="number" class="price-input"
+                                                id="price-${idx}"
+                                                data-idx="${idx}"
+                                                data-original="${p.rate}"
+                                                data-qty="${p.quantity}"
+                                                value="${p.rate}"
+                                                min="0" step="0.01"
+                                                onfocus="clearZero(this)"
+                                                onblur="restoreValue(this)"
+                                                onchange="handlePriceChange(${idx})"
+                                                oninput="handlePriceInput(${idx})">
+                                        ` : `<div class="price-value">₹${p.rate}</div>`}
+                                    </div>
+                                </div>
+                                <div class="amount-row">
+                                    <span class="amount-label">Amount</span>
+                                    <span class="amount-display" id="amount-${idx}">₹${p.amount}</span>
+                                </div>
+                            </div>
+                        `}).join('')}
+                    </div>
+
+                    <div class="total-section">
+                        <div class="total-row">
+                            <span>Total</span>
+                            <span id="orderTotal">₹${order.totalAmount}</span>
+                        </div>
+                        <div class="total-row">
+                            <span>Paid</span>
+                            <span>₹${order.paidAmount || 0}</span>
+                        </div>
+                        <div class="total-row main">
+                            <span>Balance</span>
+                            <span id="orderBalance">₹${order.totalAmount - (order.paidAmount || 0)}</span>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('modalBody').innerHTML = body;
+                document.getElementById('orderModal').classList.add('show');
+            } catch (e) {
+                showToast('Failed to load order', true);
+            }
+        }
+
+        function clearZero(input) {
+            input.dataset.prevValue = input.value;
+            input.value = '';
+            input.select();
+        }
+
+        function restoreValue(input) {
+            if (input.value === '') {
+                input.value = input.dataset.prevValue || input.dataset.original;
+            }
+            const idx = parseInt(input.dataset.idx);
+            handlePriceChange(idx);
+        }
+
+        function handlePriceInput(idx) {
+            const input = document.getElementById(`price-${idx}`);
+            const original = parseFloat(input.dataset.original);
+            const current = parseFloat(input.value) || 0;
+            const qty = parseFloat(input.dataset.qty);
+
+            input.classList.toggle('changed', current !== original);
+
+            // Update amount display
+            const amount = current * qty;
+            document.getElementById(`amount-${idx}`).textContent = `₹${amount.toFixed(0)}`;
+
+            // Update total
+            updateOrderTotal();
+        }
+
+        function handlePriceChange(idx) {
+            const input = document.getElementById(`price-${idx}`);
+            const original = parseFloat(input.dataset.original);
+            const current = parseFloat(input.value) || 0;
+
+            if (current !== original && current > 0) {
+                priceChanges[idx] = current;
+            } else {
+                delete priceChanges[idx];
+            }
+
+            // Enable/disable save button
+            const hasChanges = Object.keys(priceChanges).length > 0;
+            document.getElementById('savePricesBtn').disabled = !hasChanges;
+        }
+
+        function updateOrderTotal() {
+            if (!currentOrder) return;
+
+            let total = 0;
+            currentOrder.products.forEach((p, idx) => {
+                const input = document.getElementById(`price-${idx}`);
+                const rate = input ? (parseFloat(input.value) || 0) : p.rate;
+                total += rate * p.quantity;
+            });
+
+            document.getElementById('orderTotal').textContent = `₹${total.toFixed(0)}`;
+            document.getElementById('orderBalance').textContent = `₹${(total - (currentOrder.paidAmount || 0)).toFixed(0)}`;
+        }
+
+        async function savePrices() {
+            if (!currentOrderId || !currentOrder || Object.keys(priceChanges).length === 0) return;
+
+            const btn = document.getElementById('savePricesBtn');
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+
+            try {
+                // Build updated products array
+                const updatedProducts = currentOrder.products.map((p, idx) => ({
+                    product: typeof p.product === 'object' ? p.product._id : p.product,
+                    quantity: p.quantity,
+                    priceAtTime: priceChanges[idx] !== undefined ? priceChanges[idx] : p.rate
+                }));
+
+                const res = await fetch(`/api/orders/${currentOrderId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status: newStatus })
+                    credentials: 'include',
+                    body: JSON.stringify({ products: updatedProducts })
                 });
 
-                if (response.ok) {
-                    showSuccess('Order status updated');
-                    closeModal();
+                if (res.ok) {
+                    showToast('Prices saved');
+                    priceChanges = {};
+                    btn.disabled = true;
                     loadOrders();
+                    // Refresh the modal
+                    viewOrder(currentOrderId);
                 } else {
-                    const data = await response.json();
-                    showError(data.message || 'Failed to update status');
+                    const err = await res.json();
+                    showToast(err.message || 'Failed to update', true);
                 }
-            } catch (error) {
-                console.error('Error:', error);
-                showError('Network error');
+            } catch (e) {
+                showToast('Network error', true);
             }
+
+            btn.textContent = 'Save Changes';
         }
 
         function closeModal() {
@@ -791,42 +849,26 @@
             currentOrderId = null;
         }
 
-        function showSuccess(message) {
-            const div = document.getElementById('successMessage');
-            div.textContent = message;
-            div.classList.add('show');
-            setTimeout(() => div.classList.remove('show'), 3000);
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/[&<>"']/g, m => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[m]));
         }
 
-        function showError(message) {
-            const div = document.getElementById('errorMessage');
-            div.textContent = message;
-            div.classList.add('show');
-            setTimeout(() => div.classList.remove('show'), 3000);
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.className = 'toast show ' + (isError ? 'error' : 'success');
+            setTimeout(() => toast.classList.remove('show'), 3000);
         }
 
-        // Initialize with authentication check - All logged-in users
-        async function init() {
-            currentUser = await Auth.requireAuth();
-            if (!currentUser) return;
+        // Close modal on overlay click
+        document.getElementById('orderModal').onclick = (e) => {
+            if (e.target.id === 'orderModal') closeModal();
+        };
 
-            // Hide status update controls for customers
-            if (currentUser.role === 'customer') {
-                const modalFooter = document.querySelector('.modal-footer');
-                if (modalFooter) modalFooter.style.display = 'none';
-            }
-
-            loadOrders();
-        }
         init();
-
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js')
-                    .then(reg => console.log('Service Worker registered:', reg.scope))
-                    .catch(err => console.error('Service Worker registration failed:', err));
-            });
-        }
     </script>
 </body>
 </html>

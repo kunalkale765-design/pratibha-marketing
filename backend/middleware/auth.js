@@ -1,9 +1,11 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Customer = require('../models/Customer');
 
 /**
  * Authentication Middleware
  * Verifies JWT token and attaches user to request
+ * Supports both regular user tokens and magic link tokens
  */
 const protect = async (req, res, next) => {
   try {
@@ -29,7 +31,28 @@ const protect = async (req, res, next) => {
     const secret = process.env.JWT_SECRET || 'dev-secret-change-in-production';
     const decoded = jwt.verify(token, secret);
 
-    // Get user from token
+    // Handle magic link tokens (customer-only access)
+    if (decoded.type === 'magic' && decoded.customerId) {
+      const customer = await Customer.findById(decoded.customerId);
+      if (!customer || !customer.isActive) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid session. Please use a new magic link.'
+        });
+      }
+      // Create a virtual user object for magic link sessions
+      req.user = {
+        _id: null,
+        name: customer.name,
+        role: 'customer',
+        customer: customer._id,
+        isMagicLink: true
+      };
+      req.customer = customer;
+      return next();
+    }
+
+    // Regular user token
     const user = await User.findById(decoded.id).select('-password');
 
     if (!user) {

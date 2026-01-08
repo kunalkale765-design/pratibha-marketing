@@ -2,39 +2,24 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Place Order - Pratibha Marketing</title>
-    <!-- PWA Meta Tags -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Order - Pratibha Marketing</title>
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#7e9181">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Pratibha">
-    <link rel="apple-touch-icon" href="/icons/icon.svg">
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <meta name="theme-color" content="#2e3532">
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@500;600&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
     <style>
         :root {
             --gunmetal: #2e3532;
-            --gunmetal-light: #3d4542;
             --dusty-olive: #7e9181;
-            --dusty-olive-light: #97a99a;
             --dusty-olive-dark: #5d6b5f;
-            --pale-slate: #c7cedb;
-            --pale-slate-light: #e8ebf0;
             --cream: #f9f7f3;
             --cream-dark: #efe9df;
             --warm-white: #fefdfb;
             --terracotta: #c4a77d;
             --text-primary: #1f2421;
-            --text-secondary: #5a6560;
             --text-muted: #8a918c;
-            --success: #6b8f71;
-            --success-bg: rgba(107, 143, 113, 0.1);
-            --warning: #c4a77d;
-            --warning-bg: rgba(196, 167, 125, 0.15);
+            --success: #5d7a5f;
             --error: #9a6565;
-            --error-bg: rgba(154, 101, 101, 0.1);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -44,422 +29,235 @@
             background: var(--cream);
             min-height: 100vh;
             color: var(--text-primary);
+            -webkit-tap-highlight-color: transparent;
         }
 
         /* Header */
         .header {
-            background: linear-gradient(135deg, var(--gunmetal) 0%, var(--gunmetal-light) 100%);
-            color: var(--warm-white);
-            padding: 1rem 1.5rem;
+            background: var(--gunmetal);
+            color: white;
+            padding: 0.875rem 1rem;
             position: sticky;
             top: 0;
             z-index: 100;
         }
 
-        .header::after {
-            content: '';
-            position: absolute;
-            bottom: 0; left: 0; right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, var(--dusty-olive), var(--terracotta), var(--dusty-olive));
-        }
-
         .header-content {
-            max-width: 1000px;
-            margin: 0 auto;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
         .logo {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            text-decoration: none;
-            color: inherit;
-        }
-
-        .logo-mark {
-            width: 38px; height: 38px;
-            background: linear-gradient(135deg, var(--dusty-olive) 0%, var(--dusty-olive-dark) 100%);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-        }
-
-        .logo-text {
             font-family: 'Crimson Pro', serif;
             font-size: 1.25rem;
             font-weight: 600;
+            text-decoration: none;
+            color: white;
         }
 
-        .user-menu {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .user-badge {
-            background: rgba(255,255,255,0.15);
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 13px;
-        }
+        .logo span { font-weight: 400; opacity: 0.8; }
 
         .btn-logout {
-            background: transparent;
-            border: 1px solid rgba(255,255,255,0.3);
-            color: white;
-            padding: 6px 14px;
-            border-radius: 6px;
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-logout:hover {
             background: rgba(255,255,255,0.1);
-        }
-
-        /* Main Content */
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 24px 16px;
-        }
-
-        .page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 24px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid var(--cream-dark);
-        }
-
-        .page-title {
-            font-family: 'Crimson Pro', serif;
-            font-size: 28px;
-            font-weight: 600;
-            color: var(--gunmetal);
-        }
-
-        .page-subtitle {
-            font-size: 14px;
-            color: var(--text-muted);
-            margin-top: 4px;
-        }
-
-        .customer-info {
-            text-align: right;
-        }
-
-        .customer-name {
-            font-weight: 600;
-            color: var(--gunmetal);
-        }
-
-        .customer-type {
-            font-size: 12px;
-            color: var(--dusty-olive);
-            background: var(--success-bg);
-            padding: 2px 10px;
-            border-radius: 12px;
-            margin-top: 4px;
-            display: inline-block;
-        }
-
-        /* Customer selector for staff */
-        .customer-selector {
-            background: var(--warm-white);
-            border: 1px solid var(--cream-dark);
-            border-radius: 10px;
-            padding: 16px;
-            margin-bottom: 20px;
-        }
-
-        .customer-selector label {
-            display: block;
-            font-size: 13px;
-            font-weight: 500;
-            color: var(--text-secondary);
-            margin-bottom: 8px;
-        }
-
-        .customer-selector select {
-            width: 100%;
-            padding: 10px 14px;
-            border: 1px solid var(--cream-dark);
-            border-radius: 8px;
-            font-size: 14px;
-            background: var(--warm-white);
+            border: none;
+            color: white;
+            padding: 0.5rem 0.875rem;
+            border-radius: 6px;
+            font-size: 0.8125rem;
             cursor: pointer;
+            min-height: 44px;
+            display: flex;
+            align-items: center;
         }
 
-        .customer-selector select:focus {
+        /* Customer Selector */
+        .customer-bar {
+            background: var(--warm-white);
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--cream-dark);
+            display: none;
+        }
+
+        .customer-bar.show { display: block; }
+
+        .customer-select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1.5px solid var(--cream-dark);
+            border-radius: 8px;
+            font-size: 1rem;
+            background: var(--cream);
+            min-height: 48px;
+        }
+
+        .customer-select:focus {
             outline: none;
             border-color: var(--dusty-olive);
         }
 
         /* Search */
-        .controls-bar {
+        .search-bar {
+            padding: 0.75rem 1rem;
+            background: var(--warm-white);
+            border-bottom: 1px solid var(--cream-dark);
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1.5px solid var(--cream-dark);
+            border-radius: 8px;
+            font-size: 1rem;
+            background: var(--cream);
+            min-height: 48px;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--dusty-olive);
+        }
+
+        /* Category Pills */
+        .category-pills {
             display: flex;
-            gap: 12px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
+            gap: 0.5rem;
+            padding: 0.75rem 1rem;
+            background: var(--warm-white);
+            border-bottom: 1px solid var(--cream-dark);
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .category-pills::-webkit-scrollbar { display: none; }
+
+        .cat-pill {
+            flex-shrink: 0;
+            padding: 0.5rem 1rem;
+            border: 1.5px solid var(--cream-dark);
+            border-radius: 20px;
+            background: var(--cream);
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            cursor: pointer;
+            min-height: 40px;
+            display: flex;
             align-items: center;
         }
 
-        .search-box {
-            flex: 1;
-            min-width: 200px;
-            max-width: 300px;
-            position: relative;
-        }
-
-        .search-box input {
-            width: 100%;
-            padding: 10px 14px 10px 40px;
-            border: 1px solid var(--cream-dark);
-            border-radius: 8px;
-            font-size: 14px;
-            background: var(--warm-white);
-            transition: all 0.2s;
-        }
-
-        .search-box input:focus {
-            outline: none;
-            border-color: var(--dusty-olive);
-            box-shadow: 0 0 0 3px var(--success-bg);
-        }
-
-        .search-box::before {
-            content: '🔍';
-            position: absolute;
-            left: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 14px;
-            opacity: 0.5;
-        }
-
-        .category-tabs {
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-        }
-
-        .tab-btn {
-            padding: 8px 14px;
-            border: 1px solid var(--cream-dark);
-            border-radius: 6px;
-            background: var(--warm-white);
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.2s;
-            color: var(--text-secondary);
-        }
-
-        .tab-btn:hover {
-            border-color: var(--dusty-olive-light);
-        }
-
-        .tab-btn.active {
+        .cat-pill.active {
             background: var(--gunmetal);
             color: white;
             border-color: var(--gunmetal);
         }
 
-        /* Table */
-        .order-table-wrapper {
-            background: var(--warm-white);
-            border-radius: 12px;
-            border: 1px solid var(--cream-dark);
-            overflow: hidden;
-            margin-bottom: 24px;
+        /* Product List */
+        .product-list {
+            padding: 0.5rem;
+            padding-bottom: calc(100px + env(safe-area-inset-bottom));
         }
 
-        .order-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .order-table thead {
-            background: var(--cream);
-        }
-
-        .order-table th {
-            padding: 14px 16px;
-            text-align: left;
-            font-size: 11px;
+        .category-header {
+            padding: 0.75rem 0.5rem 0.5rem;
+            font-family: 'Crimson Pro', serif;
+            font-size: 0.875rem;
             font-weight: 600;
+            color: var(--text-muted);
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            color: var(--text-muted);
-            border-bottom: 1px solid var(--cream-dark);
         }
 
-        .order-table th.qty-col,
-        .order-table th.amount-col {
-            text-align: center;
-        }
-
-        .order-table tbody tr {
-            border-bottom: 1px solid var(--cream-dark);
-            transition: all 0.15s;
-        }
-
-        .order-table tbody tr:last-child {
-            border-bottom: none;
-        }
-
-        .order-table tbody tr:hover {
-            background: var(--cream);
-        }
-
-        .order-table tbody tr.has-quantity {
-            background: var(--success-bg);
-        }
-
-        .order-table tbody tr.has-quantity:hover {
-            background: rgba(107, 143, 113, 0.15);
-        }
-
-        .order-table td {
-            padding: 12px 16px;
-            vertical-align: middle;
-        }
-
-        /* Product cell */
-        .product-cell {
+        .product-item {
+            background: var(--warm-white);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
             display: flex;
             align-items: center;
-            gap: 12px;
+            justify-content: space-between;
+            gap: 0.75rem;
+            border: 2px solid transparent;
         }
 
-        .product-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
-            background: var(--cream);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            flex-shrink: 0;
+        .product-item.has-qty {
+            background: rgba(126, 145, 129, 0.1);
+            border-color: var(--dusty-olive);
         }
+
+        .product-info { flex: 1; min-width: 0; }
 
         .product-name {
             font-weight: 600;
-            font-size: 14px;
+            font-size: 1rem;
             color: var(--gunmetal);
         }
 
-        .product-hindi {
-            font-size: 12px;
+        .product-meta {
+            font-size: 0.8125rem;
             color: var(--text-muted);
+            margin-top: 0.125rem;
         }
 
-        .unit-cell {
-            font-size: 13px;
-            color: var(--text-secondary);
-        }
-
-        .price-cell {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 14px;
-            color: var(--dusty-olive-dark);
-            font-weight: 500;
-        }
-
-        /* Quantity input */
-        .qty-cell {
-            text-align: center;
-        }
-
-        .qty-input-wrapper {
-            display: inline-flex;
+        /* Quantity Controls */
+        .qty-controls {
+            display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 0.375rem;
         }
 
         .qty-btn {
-            width: 32px;
-            height: 32px;
-            border: 1px solid var(--cream-dark);
-            border-radius: 6px;
+            width: 44px;
+            height: 44px;
+            border: none;
+            border-radius: 10px;
             background: var(--cream);
-            font-size: 18px;
+            font-size: 1.5rem;
+            font-weight: 500;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.15s;
-            color: var(--text-secondary);
-        }
-
-        .qty-btn:hover {
-            background: var(--dusty-olive);
-            color: white;
-            border-color: var(--dusty-olive);
+            color: var(--gunmetal);
         }
 
         .qty-btn:active {
-            transform: scale(0.95);
+            background: var(--dusty-olive);
+            color: white;
         }
 
         .qty-input {
-            width: 60px;
+            width: 56px;
+            height: 44px;
             text-align: center;
-            padding: 8px 4px;
-            border: 1px solid var(--cream-dark);
-            border-radius: 6px;
+            border: 2px solid var(--cream-dark);
+            border-radius: 8px;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 15px;
-            font-weight: 500;
-            background: var(--warm-white);
+            font-size: 1.125rem;
+            font-weight: 600;
+            background: white;
+            color: var(--gunmetal);
+            -moz-appearance: textfield;
+        }
+
+        .qty-input::-webkit-outer-spin-button,
+        .qty-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
         }
 
         .qty-input:focus {
             outline: none;
             border-color: var(--dusty-olive);
-            box-shadow: 0 0 0 3px var(--success-bg);
         }
 
         .qty-input.has-value {
-            background: var(--success-bg);
+            background: var(--dusty-olive);
+            color: white;
             border-color: var(--dusty-olive);
-            color: var(--gunmetal);
         }
 
-        .amount-cell {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--gunmetal);
-            text-align: right;
-            min-width: 80px;
-        }
-
-        .amount-cell.empty {
-            color: var(--text-muted);
-            font-weight: 400;
-        }
-
-        /* Category separator row */
-        .category-row td {
-            background: var(--cream-dark);
-            padding: 10px 16px;
-            font-family: 'Crimson Pro', serif;
-            font-size: 15px;
-            font-weight: 600;
-            color: var(--gunmetal);
-        }
-
-        /* Order Summary - Fixed Bottom */
+        /* Bottom Summary */
         .order-summary {
             position: fixed;
             bottom: 0;
@@ -467,292 +265,122 @@
             right: 0;
             background: var(--gunmetal);
             color: white;
-            padding: 16px 24px;
+            padding: 1rem;
+            padding-bottom: calc(1rem + env(safe-area-inset-bottom));
             display: flex;
             justify-content: space-between;
             align-items: center;
             z-index: 100;
-            box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
         }
 
-        .summary-left {
+        .summary-info {
             display: flex;
-            align-items: center;
-            gap: 32px;
-        }
-
-        .summary-stat {
-            text-align: center;
+            gap: 1.5rem;
         }
 
         .summary-stat .value {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 22px;
+            font-size: 1.5rem;
             font-weight: 600;
         }
 
         .summary-stat .label {
-            font-size: 11px;
+            font-size: 0.6875rem;
             opacity: 0.7;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
 
-        .summary-divider {
-            width: 1px;
-            height: 40px;
-            background: rgba(255,255,255,0.2);
-        }
-
-        .btn-place-order {
+        .btn-order {
             background: var(--dusty-olive);
             color: white;
             border: none;
-            padding: 14px 36px;
-            border-radius: 8px;
-            font-size: 15px;
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+            min-height: 52px;
         }
 
-        .btn-place-order:hover {
-            background: var(--dusty-olive-dark);
-            transform: translateY(-1px);
-        }
-
-        .btn-place-order:disabled {
-            opacity: 0.5;
+        .btn-order:disabled {
+            opacity: 0.4;
             cursor: not-allowed;
-            transform: none;
         }
 
-        .bottom-spacer {
-            height: 90px;
-        }
-
-        /* Loading state */
-        .loading {
-            text-align: center;
-            padding: 60px 20px;
-            color: var(--text-muted);
-        }
-
-        .loading-spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid var(--cream-dark);
-            border-top-color: var(--dusty-olive);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 16px;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* Messages */
-        .message {
-            padding: 14px 18px;
+        /* Toast */
+        .toast {
+            position: fixed;
+            top: 60px;
+            left: 1rem;
+            right: 1rem;
+            padding: 0.875rem 1rem;
             border-radius: 8px;
-            margin-bottom: 20px;
-            display: none;
+            font-weight: 500;
+            z-index: 200;
+            transform: translateY(-100px);
+            opacity: 0;
+            transition: all 0.3s ease;
         }
 
-        .message.show { display: block; }
-
-        .message.success {
-            background: var(--success-bg);
-            color: var(--success);
-            border: 1px solid var(--success);
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
         }
 
-        .message.error {
-            background: var(--error-bg);
-            color: var(--error);
-            border: 1px solid var(--error);
-        }
+        .toast.success { background: var(--success); color: white; }
+        .toast.error { background: var(--error); color: white; }
 
-        /* Hide rate column for market pricing */
-        .hide-rates .rate-col { display: none; }
-
-        /* Mobile responsive */
-        @media (max-width: 768px) {
-            .order-table th.unit-col,
-            .order-table td.unit-col {
-                display: none;
-            }
-
-            .product-icon {
-                width: 32px;
-                height: 32px;
-                font-size: 16px;
-            }
-
-            .qty-btn {
-                width: 28px;
-                height: 28px;
-                font-size: 16px;
-            }
-
-            .qty-input {
-                width: 50px;
-                padding: 6px 2px;
-                font-size: 14px;
-            }
-
-            .order-summary {
-                flex-direction: column;
-                gap: 12px;
-                padding: 14px 16px;
-            }
-
-            .summary-left {
-                width: 100%;
-                justify-content: space-around;
-                gap: 16px;
-            }
-
-            .btn-place-order {
-                width: 100%;
-                justify-content: center;
-            }
-
-            .bottom-spacer {
-                height: 140px;
-            }
-
-            .page-header {
-                flex-direction: column;
-                gap: 12px;
-            }
-
-            .customer-info {
-                text-align: left;
-            }
-
-            .controls-bar {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .search-box {
-                max-width: none;
-            }
-
-            .category-tabs {
-                overflow-x: auto;
-                padding-bottom: 4px;
-            }
-        }
-
-        /* Animation */
-        @keyframes rowHighlight {
-            0% { background: var(--success-bg); }
-            50% { background: rgba(107, 143, 113, 0.25); }
-            100% { background: var(--success-bg); }
-        }
-
-        .order-table tbody tr.just-added {
-            animation: rowHighlight 0.3s ease;
+        /* States */
+        .loading, .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-muted);
         }
     </style>
 </head>
 <body>
     <header class="header">
         <div class="header-content">
-            <a href="/" class="logo">
-                <div class="logo-mark">🥬</div>
-                <span class="logo-text">Pratibha</span>
-            </a>
-            <div class="user-menu">
-                <span class="user-badge" id="userBadge">Loading...</span>
-                <button class="btn-logout" onclick="logout()">Logout</button>
-            </div>
+            <a href="/" class="logo">Pratibha <span>Marketing</span></a>
+            <button class="btn-logout" onclick="logout()">Logout</button>
         </div>
     </header>
 
-    <div class="container">
-        <header class="page-header">
-            <div>
-                <h1 class="page-title">Place Order</h1>
-                <p class="page-subtitle">Enter quantities for items you need</p>
-            </div>
-            <div class="customer-info" id="customerInfo">
-                <div class="customer-name" id="customerName">Loading...</div>
-                <span class="customer-type" id="customerType">-</span>
-            </div>
-        </header>
-
-        <!-- Customer selector (for staff only) -->
-        <div class="customer-selector" id="customerSelector" style="display: none;">
-            <label for="selectCustomer">Select Customer</label>
-            <select id="selectCustomer" onchange="onCustomerChange()">
-                <option value="">-- Select a customer --</option>
-            </select>
-        </div>
-
-        <div id="successMessage" class="message success"></div>
-        <div id="errorMessage" class="message error"></div>
-
-        <div class="controls-bar">
-            <div class="search-box">
-                <input type="text" placeholder="Search products..." id="searchInput">
-            </div>
-            <div class="category-tabs" id="categoryTabs">
-                <button class="tab-btn active" data-category="all">All</button>
-            </div>
-        </div>
-
-        <div class="order-table-wrapper" id="tableWrapper">
-            <div class="loading" id="loadingState">
-                <div class="loading-spinner"></div>
-                <p>Loading products...</p>
-            </div>
-            <table class="order-table" id="orderTable" style="display: none;">
-                <thead>
-                    <tr>
-                        <th>Product</th>
-                        <th class="unit-col">Unit</th>
-                        <th class="rate-col">Rate</th>
-                        <th class="qty-col">Quantity</th>
-                        <th class="amount-col">Amount</th>
-                    </tr>
-                </thead>
-                <tbody id="productsBody">
-                </tbody>
-            </table>
-        </div>
-
-        <div class="bottom-spacer"></div>
+    <div class="customer-bar" id="customerBar">
+        <select id="customerSelect" class="customer-select" onchange="onCustomerChange()">
+            <option value="">Select Customer</option>
+        </select>
     </div>
 
-    <!-- Fixed Order Summary Bar -->
-    <div class="order-summary" id="orderSummary">
-        <div class="summary-left">
+    <div class="search-bar">
+        <input type="text" class="search-input" placeholder="Search products..." id="searchInput">
+    </div>
+
+    <div class="category-pills" id="categoryPills">
+        <button class="cat-pill active" data-cat="all">All</button>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <div class="product-list" id="productList">
+        <div class="loading">Loading products...</div>
+    </div>
+
+    <div class="order-summary">
+        <div class="summary-info">
             <div class="summary-stat">
                 <div class="value" id="itemCount">0</div>
                 <div class="label">Items</div>
             </div>
-            <div class="summary-divider"></div>
-            <div class="summary-stat">
-                <div class="value" id="totalAmount">₹0</div>
-                <div class="label">Total</div>
-            </div>
         </div>
-        <button class="btn-place-order" id="placeOrderBtn" disabled onclick="placeOrder()">
-            Place Order →
+        <button class="btn-order" id="orderBtn" disabled onclick="placeOrder()">
+            Place Order
         </button>
     </div>
 
     <script src="/js/auth.js"></script>
     <script src="/js/api.js"></script>
     <script>
-        // State
         let currentUser = null;
         let selectedCustomer = null;
         let products = [];
@@ -760,57 +388,64 @@
         let customers = [];
         let isStaff = false;
 
-        // Product emoji mapping
-        const productEmojis = {
-            'potato': '🥔', 'tomato': '🍅', 'onion': '🧅', 'carrot': '🥕',
-            'cabbage': '🥬', 'cauliflower': '🥦', 'beans': '🫛', 'spinach': '🥬',
-            'coriander': '🌿', 'mint': '🌱', 'fenugreek': '🌿', 'lemon': '🍋',
-            'banana': '🍌', 'coconut': '🥥', 'ginger': '🫚', 'garlic': '🧄',
-            'chili': '🌶️', 'capsicum': '🫑', 'cucumber': '🥒', 'brinjal': '🍆',
-            'ladyfinger': '🥒', 'peas': '🫛', 'corn': '🌽', 'radish': '🥕',
-            'beetroot': '🥕', 'pumpkin': '🎃', 'bottle': '🥒', 'bitter': '🥒',
-            'ridge': '🥒', 'snake': '🥒', 'drumstick': '🥢', 'mushroom': '🍄',
-            'default': '🥬'
-        };
-
-        function getProductEmoji(name) {
-            const lower = name.toLowerCase();
-            for (const [key, emoji] of Object.entries(productEmojis)) {
-                if (lower.includes(key)) return emoji;
-            }
-            return productEmojis.default;
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/[&<>"']/g, m => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[m]));
         }
 
-        // Initialize
         async function init() {
-            // Check auth
-            currentUser = await Auth.verify();
-            if (!currentUser) {
-                window.location.href = '/login.html';
-                return;
+            // Check for magic link token in URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const magicToken = urlParams.get('token');
+
+            if (magicToken) {
+                // Authenticate via magic link
+                try {
+                    const res = await fetch(`/api/auth/magic/${magicToken}`, {
+                        credentials: 'include'
+                    });
+                    const data = await res.json();
+
+                    if (res.ok && data.user) {
+                        currentUser = data.user;
+                        Auth.setUser(data.user);
+                        // Remove token from URL for cleaner bookmarking
+                        window.history.replaceState({}, '', window.location.pathname);
+                    } else {
+                        showToast(data.message || 'Invalid magic link', true);
+                        window.location.href = '/login.html';
+                        return;
+                    }
+                } catch (e) {
+                    showToast('Failed to authenticate', true);
+                    window.location.href = '/login.html';
+                    return;
+                }
+            } else {
+                // Normal authentication
+                currentUser = await Auth.verify();
+                if (!currentUser) {
+                    window.location.href = '/login.html';
+                    return;
+                }
             }
 
-            document.getElementById('userBadge').textContent = currentUser.name || currentUser.email;
             isStaff = currentUser.role === 'admin' || currentUser.role === 'staff';
-
-            // Load data
             await loadData();
 
-            // Setup for staff or customer
             if (isStaff) {
-                document.getElementById('customerSelector').style.display = 'block';
-                populateCustomerDropdown();
+                document.getElementById('customerBar').classList.add('show');
+                populateCustomers();
             } else {
-                // Customer user - find their customer record
                 if (currentUser.customer) {
-                    const custId = typeof currentUser.customer === 'object' ? currentUser.customer._id : currentUser.customer;
-                    selectedCustomer = customers.find(c => c._id === custId);
-                }
-                if (selectedCustomer) {
-                    updateCustomerDisplay();
+                    selectedCustomer = typeof currentUser.customer === 'object'
+                        ? currentUser.customer
+                        : { _id: currentUser.customer, pricingType: 'market' };
                     renderProducts();
                 } else {
-                    showError('Customer account not linked. Please contact support.');
+                    document.getElementById('productList').innerHTML = '<div class="empty-state">Account not linked. Contact support.</div>';
                 }
             }
         }
@@ -825,307 +460,227 @@
 
                 if (productsRes.ok) {
                     const data = await productsRes.json();
-                    products = data.data.filter(p => p.isActive);
+                    products = data.data.filter(p => p.isActive !== false);
                 }
 
                 if (ratesRes.ok) {
                     const data = await ratesRes.json();
                     data.data.forEach(rate => {
-                        const productId = typeof rate.product === 'object' ? rate.product._id : rate.product;
-                        marketRates[productId] = rate.rate;
+                        const pid = typeof rate.product === 'object' ? rate.product._id : rate.product;
+                        marketRates[pid] = rate.rate;
                     });
                 }
 
                 if (customersRes.ok) {
                     const data = await customersRes.json();
-                    customers = data.data.filter(c => c.isActive);
+                    customers = data.data.filter(c => c.isActive !== false);
                 }
-
-                // Build category tabs
-                buildCategoryTabs();
-
-            } catch (error) {
-                console.error('Error loading data:', error);
-                showError('Failed to load products');
+            } catch (e) {
+                console.error(e);
+                showToast('Failed to load data', true);
             }
         }
 
-        function buildCategoryTabs() {
-            const categories = [...new Set(products.map(p => p.category).filter(Boolean))];
-            const tabsContainer = document.getElementById('categoryTabs');
-
-            categories.forEach(cat => {
-                const btn = document.createElement('button');
-                btn.className = 'tab-btn';
-                btn.dataset.category = cat;
-                btn.textContent = cat.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                btn.onclick = () => filterByCategory(cat);
-                tabsContainer.appendChild(btn);
-            });
-        }
-
-        function populateCustomerDropdown() {
-            const select = document.getElementById('selectCustomer');
-            customers.forEach(cust => {
-                const option = document.createElement('option');
-                option.value = cust._id;
-                option.textContent = `${cust.name} (${cust.pricingType || 'market'})`;
-                select.appendChild(option);
+        function populateCustomers() {
+            const select = document.getElementById('customerSelect');
+            customers.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c._id;
+                opt.textContent = c.name;
+                select.appendChild(opt);
             });
         }
 
         function onCustomerChange() {
-            const customerId = document.getElementById('selectCustomer').value;
-            if (!customerId) {
-                selectedCustomer = null;
-                document.getElementById('orderTable').style.display = 'none';
-                document.getElementById('loadingState').innerHTML = '<p>Select a customer to start ordering</p>';
-                document.getElementById('loadingState').style.display = 'block';
-                return;
-            }
-
-            selectedCustomer = customers.find(c => c._id === customerId);
-            updateCustomerDisplay();
-            renderProducts();
-        }
-
-        function updateCustomerDisplay() {
-            if (!selectedCustomer) return;
-
-            document.getElementById('customerName').textContent = selectedCustomer.name;
-
-            const pricingType = selectedCustomer.pricingType || 'market';
-            const typeLabels = {
-                'contract': 'Contract Pricing',
-                'markup': `Markup (${selectedCustomer.markupPercentage || 0}%)`,
-                'market': 'Market Rate'
-            };
-            document.getElementById('customerType').textContent = typeLabels[pricingType];
-
-            // Show/hide rate column based on pricing type
-            const wrapper = document.getElementById('tableWrapper');
-            if (pricingType === 'contract') {
-                wrapper.classList.remove('hide-rates');
+            const id = document.getElementById('customerSelect').value;
+            selectedCustomer = customers.find(c => c._id === id) || null;
+            if (selectedCustomer) {
+                renderProducts();
             } else {
-                wrapper.classList.add('hide-rates');
+                document.getElementById('productList').innerHTML = '<div class="empty-state">Select a customer to start</div>';
             }
+            updateSummary();
         }
 
-        function getProductPrice(product) {
-            if (!selectedCustomer) return product.basePrice;
-
-            const pricingType = selectedCustomer.pricingType || 'market';
-
-            switch (pricingType) {
-                case 'contract':
-                    const contractPrice = selectedCustomer.contractPrices?.[product._id];
-                    return contractPrice || product.basePrice;
-
-                case 'markup':
-                    const marketRate = marketRates[product._id] || product.basePrice;
-                    const markup = selectedCustomer.markupPercentage || 0;
-                    return Math.round(marketRate * (1 + markup / 100));
-
-                case 'market':
-                default:
-                    return marketRates[product._id] || product.basePrice;
+        function getPrice(product) {
+            if (!selectedCustomer) return marketRates[product._id] || 0;
+            const type = selectedCustomer.pricingType || 'market';
+            if (type === 'contract') {
+                return selectedCustomer.contractPrices?.[product._id] || marketRates[product._id] || 0;
+            } else if (type === 'markup') {
+                const rate = marketRates[product._id] || 0;
+                return Math.round(rate * (1 + (selectedCustomer.markupPercentage || 0) / 100));
             }
+            return marketRates[product._id] || 0;
+        }
+
+        function buildCategoryPills() {
+            const categories = [...new Set(products.map(p => p.category || 'Other'))];
+            const container = document.getElementById('categoryPills');
+            container.innerHTML = '<button class="cat-pill active" data-cat="all">All</button>';
+
+            categories.forEach(cat => {
+                const btn = document.createElement('button');
+                btn.className = 'cat-pill';
+                btn.dataset.cat = cat;
+                btn.textContent = cat;
+                btn.onclick = () => filterByCategory(cat);
+                container.appendChild(btn);
+            });
+
+            container.querySelector('[data-cat="all"]').onclick = () => filterByCategory('all');
+        }
+
+        function filterByCategory(cat) {
+            document.querySelectorAll('.cat-pill').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.cat-pill[data-cat="${cat}"]`).classList.add('active');
+
+            document.querySelectorAll('.product-item').forEach(item => {
+                item.style.display = (cat === 'all' || item.dataset.category === cat) ? '' : 'none';
+            });
+
+            document.querySelectorAll('.category-header').forEach(header => {
+                header.style.display = (cat === 'all' || header.dataset.category === cat) ? '' : 'none';
+            });
         }
 
         function renderProducts() {
-            document.getElementById('loadingState').style.display = 'none';
-            document.getElementById('orderTable').style.display = 'table';
+            const container = document.getElementById('productList');
 
-            const tbody = document.getElementById('productsBody');
-            tbody.innerHTML = '';
+            if (!products.length) {
+                container.innerHTML = '<div class="empty-state">No products available</div>';
+                return;
+            }
 
-            // Group by category
+            buildCategoryPills();
+
             const grouped = {};
             products.forEach(p => {
-                const cat = p.category || 'other';
+                const cat = p.category || 'Other';
                 if (!grouped[cat]) grouped[cat] = [];
                 grouped[cat].push(p);
             });
 
-            const showRates = selectedCustomer?.pricingType === 'contract';
+            let html = '';
+            for (const [cat, prods] of Object.entries(grouped)) {
+                html += `<div class="category-header" data-category="${cat}">${escapeHtml(cat)}</div>`;
 
-            for (const [category, prods] of Object.entries(grouped)) {
-                // Category header
-                const catRow = document.createElement('tr');
-                catRow.className = 'category-row';
-                catRow.dataset.category = category;
-                catRow.innerHTML = `<td colspan="${showRates ? 5 : 4}">${getProductEmoji(prods[0]?.name || '')} ${category.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</td>`;
-                tbody.appendChild(catRow);
-
-                // Product rows
-                prods.forEach(product => {
-                    const price = getProductPrice(product);
-                    const row = document.createElement('tr');
-                    row.dataset.product = product._id;
-                    row.dataset.category = category;
-                    row.innerHTML = `
-                        <td>
-                            <div class="product-cell">
-                                <div class="product-icon">${getProductEmoji(product.name)}</div>
-                                <div>
-                                    <div class="product-name">${product.name}</div>
-                                    <div class="product-hindi">${product.hindiName || ''}</div>
-                                </div>
+                prods.forEach(p => {
+                    const price = getPrice(p);
+                    html += `
+                        <div class="product-item" data-id="${p._id}" data-category="${cat}" data-price="${price}">
+                            <div class="product-info">
+                                <div class="product-name">${escapeHtml(p.name)}</div>
+                                <div class="product-meta">₹${price}/${escapeHtml(p.unit)}</div>
                             </div>
-                        </td>
-                        <td class="unit-cell unit-col">${product.unit}</td>
-                        <td class="price-cell rate-col">₹${price}</td>
-                        <td class="qty-cell">
-                            <div class="qty-input-wrapper">
-                                <button class="qty-btn" onclick="changeQty(this, -1)">−</button>
-                                <input type="number" class="qty-input" value="0" min="0"
-                                    data-price="${price}" data-product-id="${product._id}"
-                                    onfocus="clearZero(this)" onblur="restoreZero(this)" onchange="updateRow(this)">
-                                <button class="qty-btn" onclick="changeQty(this, 1)">+</button>
+                            <div class="qty-controls">
+                                <button class="qty-btn" onclick="changeQty('${p._id}', -1)">−</button>
+                                <input type="number" class="qty-input" id="qty-${p._id}"
+                                    value="0" min="0" inputmode="numeric"
+                                    onfocus="clearZero(this)" onblur="restoreZero(this)"
+                                    onchange="updateFromInput('${p._id}')">
+                                <button class="qty-btn" onclick="changeQty('${p._id}', 1)">+</button>
                             </div>
-                        </td>
-                        <td class="amount-cell empty">—</td>
+                        </div>
                     `;
-                    tbody.appendChild(row);
                 });
             }
+
+            container.innerHTML = html;
         }
 
-        // Clear zero when input is focused
         function clearZero(input) {
-            if (input.value === '0' || input.value === '') {
-                input.value = '';
-            }
+            if (input.value === '0') input.value = '';
             input.select();
         }
 
-        // Restore zero if empty on blur
         function restoreZero(input) {
-            if (input.value === '' || input.value === null) {
-                input.value = '0';
-            }
-            updateRow(input);
+            if (input.value === '') input.value = '0';
+            updateFromInput(input.id.replace('qty-', ''));
         }
 
-        // Change quantity with +/- buttons
-        function changeQty(btn, delta) {
-            const input = btn.parentElement.querySelector('.qty-input');
-            let value = parseInt(input.value) || 0;
-            value = Math.max(0, value + delta);
-            input.value = value;
-            updateRow(input);
+        function changeQty(id, delta) {
+            const input = document.getElementById('qty-' + id);
+            let val = parseInt(input.value) || 0;
+            val = Math.max(0, val + delta);
+            input.value = val;
+            updateItem(id, val);
         }
 
-        // Update single row
-        function updateRow(input) {
-            const row = input.closest('tr');
-            const qty = parseInt(input.value) || 0;
-            const price = parseFloat(input.dataset.price) || 0;
-            const amountCell = row.querySelector('.amount-cell');
+        function updateFromInput(id) {
+            const input = document.getElementById('qty-' + id);
+            const val = Math.max(0, parseInt(input.value) || 0);
+            input.value = val;
+            updateItem(id, val);
+        }
+
+        function updateItem(id, qty) {
+            const item = document.querySelector(`.product-item[data-id="${id}"]`);
+            const input = document.getElementById('qty-' + id);
 
             if (qty > 0) {
-                const amount = qty * price;
-                amountCell.textContent = '₹' + amount.toLocaleString('en-IN');
-                amountCell.classList.remove('empty');
-                row.classList.add('has-quantity');
+                item.classList.add('has-qty');
                 input.classList.add('has-value');
-
-                row.classList.add('just-added');
-                setTimeout(() => row.classList.remove('just-added'), 300);
             } else {
-                amountCell.textContent = '—';
-                amountCell.classList.add('empty');
-                row.classList.remove('has-quantity');
+                item.classList.remove('has-qty');
                 input.classList.remove('has-value');
             }
 
             updateSummary();
         }
 
-        // Update order summary
         function updateSummary() {
-            const inputs = document.querySelectorAll('.qty-input');
-            let totalItems = 0;
-            let totalAmount = 0;
+            let items = 0;
 
-            inputs.forEach(input => {
-                const qty = parseInt(input.value) || 0;
-                const price = parseFloat(input.dataset.price) || 0;
-                if (qty > 0) {
-                    totalItems++;
-                    totalAmount += qty * price;
-                }
+            document.querySelectorAll('.product-item').forEach(item => {
+                const id = item.dataset.id;
+                const input = document.getElementById('qty-' + id);
+                const qty = parseInt(input?.value) || 0;
+                if (qty > 0) items++;
             });
 
-            document.getElementById('itemCount').textContent = totalItems;
-            document.getElementById('totalAmount').textContent = '₹' + totalAmount.toLocaleString('en-IN');
-
-            const placeBtn = document.getElementById('placeOrderBtn');
-            placeBtn.disabled = totalItems === 0 || !selectedCustomer;
+            document.getElementById('itemCount').textContent = items;
+            document.getElementById('orderBtn').disabled = items === 0 || !selectedCustomer;
         }
 
-        // Search functionality
+        // Search
         document.getElementById('searchInput').addEventListener('input', (e) => {
-            const query = e.target.value.toLowerCase();
-            document.querySelectorAll('tr[data-product]').forEach(row => {
-                const name = row.querySelector('.product-name').textContent.toLowerCase();
-                const hindi = row.querySelector('.product-hindi')?.textContent.toLowerCase() || '';
-                const matches = name.includes(query) || hindi.includes(query);
-                row.style.display = matches ? '' : 'none';
+            const q = e.target.value.toLowerCase();
+
+            document.querySelectorAll('.product-item').forEach(item => {
+                const name = item.querySelector('.product-name').textContent.toLowerCase();
+                item.style.display = name.includes(q) ? '' : 'none';
             });
 
-            // Hide empty category headers
-            document.querySelectorAll('.category-row').forEach(catRow => {
-                const category = catRow.dataset.category;
-                const hasVisible = [...document.querySelectorAll(`tr[data-category="${category}"]:not(.category-row)`)].some(r => r.style.display !== 'none');
-                catRow.style.display = hasVisible ? '' : 'none';
+            document.querySelectorAll('.category-header').forEach(header => {
+                const cat = header.dataset.category;
+                const hasVisible = [...document.querySelectorAll(`.product-item[data-category="${cat}"]`)]
+                    .some(i => i.style.display !== 'none');
+                header.style.display = hasVisible ? '' : 'none';
             });
         });
 
-        // Category filter
-        function filterByCategory(category) {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            event.target.classList.add('active');
-
-            document.querySelectorAll('tr[data-product], tr.category-row').forEach(row => {
-                if (category === 'all') {
-                    row.style.display = '';
-                } else {
-                    row.style.display = row.dataset.category === category ? '' : 'none';
-                }
-            });
-        }
-
-        // Place order
         async function placeOrder() {
-            if (!selectedCustomer) {
-                showError('Please select a customer');
-                return;
-            }
+            if (!selectedCustomer) return;
 
             const orderProducts = [];
-            document.querySelectorAll('.qty-input').forEach(input => {
-                const qty = parseInt(input.value) || 0;
+            document.querySelectorAll('.product-item').forEach(item => {
+                const id = item.dataset.id;
+                const qty = parseInt(document.getElementById('qty-' + id)?.value) || 0;
+                const price = parseFloat(item.dataset.price) || 0;
                 if (qty > 0) {
-                    orderProducts.push({
-                        product: input.dataset.productId,
-                        quantity: qty,
-                        rate: parseFloat(input.dataset.price)
-                    });
+                    orderProducts.push({ product: id, quantity: qty, rate: price });
                 }
             });
 
-            if (orderProducts.length === 0) {
-                showError('Please add at least one item');
-                return;
-            }
+            if (!orderProducts.length) return;
 
-            const placeBtn = document.getElementById('placeOrderBtn');
-            placeBtn.disabled = true;
-            placeBtn.textContent = 'Placing Order...';
+            const btn = document.getElementById('orderBtn');
+            btn.disabled = true;
+            btn.textContent = 'Placing...';
 
             try {
-                const response = await fetch('/api/orders', {
+                const res = await fetch('/api/orders', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
@@ -1135,53 +690,42 @@
                     })
                 });
 
-                const data = await response.json();
+                const data = await res.json();
 
-                if (response.ok) {
-                    showSuccess(`Order placed successfully! Order #${data.data.orderNumber}`);
-                    // Reset quantities
+                if (res.ok) {
+                    showToast(`Order placed! #${data.data.orderNumber}`);
                     document.querySelectorAll('.qty-input').forEach(input => {
                         input.value = '0';
-                        updateRow(input);
+                        input.classList.remove('has-value');
                     });
+                    document.querySelectorAll('.product-item').forEach(item => {
+                        item.classList.remove('has-qty');
+                    });
+                    updateSummary();
                 } else {
-                    showError(data.message || 'Failed to place order');
+                    showToast(data.message || 'Failed to place order', true);
                 }
-            } catch (error) {
-                console.error('Error:', error);
-                showError('Network error. Please try again.');
+            } catch (e) {
+                showToast('Network error', true);
             } finally {
-                placeBtn.disabled = false;
-                placeBtn.textContent = 'Place Order →';
+                btn.disabled = false;
+                btn.textContent = 'Place Order';
                 updateSummary();
             }
         }
 
-        function showSuccess(message) {
-            const el = document.getElementById('successMessage');
-            el.textContent = message;
-            el.classList.add('show');
-            setTimeout(() => el.classList.remove('show'), 5000);
-        }
-
-        function showError(message) {
-            const el = document.getElementById('errorMessage');
-            el.textContent = message;
-            el.classList.add('show');
-            setTimeout(() => el.classList.remove('show'), 5000);
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.className = 'toast show ' + (isError ? 'error' : 'success');
+            setTimeout(() => toast.classList.remove('show'), 4000);
         }
 
         function logout() {
             Auth.logout();
         }
 
-        // Initialize
         init();
-
-        // Service Worker
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/service-worker.js').catch(console.error);
-        }
     </script>
 </body>
 </html>

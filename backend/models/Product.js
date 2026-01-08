@@ -12,33 +12,12 @@ const productSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Unit is required'],
     enum: ['quintal', 'bag', 'kg', 'piece', 'ton'],
-    default: 'quintal'
-  },
-  basePrice: {
-    type: Number,
-    required: [true, 'Base price is required'],
-    min: [0, 'Price cannot be negative']
+    default: 'kg'
   },
   category: {
     type: String,
     trim: true,
-    enum: ['leafy-greens', 'root', 'fruiting', 'gourd', 'grain', 'seed', 'fertilizer', 'pesticide', 'equipment', 'other'],
-    default: 'other'
-  },
-  description: {
-    type: String,
-    trim: true,
-    maxlength: [500, 'Description cannot exceed 500 characters']
-  },
-  stockQuantity: {
-    type: Number,
-    default: 0,
-    min: [0, 'Stock quantity cannot be negative']
-  },
-  minStockLevel: {
-    type: Number,
-    default: 0,
-    min: [0, 'Minimum stock level cannot be negative']
+    default: 'Other'
   },
   isActive: {
     type: Boolean,
@@ -48,13 +27,7 @@ const productSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index for faster searches
-productSchema.index({ name: 1 });
+// Index for faster searches (name already indexed via unique: true)
 productSchema.index({ category: 1 });
-
-// Virtual for checking if stock is low
-productSchema.virtual('isLowStock').get(function() {
-  return this.stockQuantity <= this.minStockLevel;
-});
 
 module.exports = mongoose.model('Product', productSchema);

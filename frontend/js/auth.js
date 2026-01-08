@@ -158,8 +158,8 @@ const Auth = {
             if (user.role === 'customer') {
                 window.location.href = '/customer-order-form.html';
             } else {
-                // Staff/admin go to market rates first (daily workflow)
-                window.location.href = '/market-rates.html';
+                // Staff/admin go to dashboard
+                window.location.href = '/index.html';
             }
             return null;
         }
@@ -177,8 +177,8 @@ const Auth = {
             if (user.role === 'customer') {
                 window.location.href = '/customer-order-form.html';
             } else {
-                // Staff/admin go to market rates first (daily workflow)
-                window.location.href = '/market-rates.html';
+                // Staff/admin go to dashboard
+                window.location.href = '/index.html';
             }
             return true;
         }

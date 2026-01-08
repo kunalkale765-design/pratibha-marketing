@@ -31,21 +31,20 @@ async function calculatePrice(customer, product, requestedRate = null) {
       if (contractPrice) {
         return contractPrice;
       }
-      // Fall back to product base price if no contract price set
-      return product.basePrice;
+      // Fall back to market rate if no contract price set
+      return await getMarketRate(product._id) || 0;
 
     case 'markup':
       // Get market rate and apply markup
-      const marketRate = await getMarketRate(product._id);
-      const baseRate = marketRate || product.basePrice;
+      const marketRate = await getMarketRate(product._id) || 0;
       const markup = customer.markupPercentage || 0;
-      return baseRate * (1 + markup / 100);
+      return marketRate * (1 + markup / 100);
 
     case 'market':
     default:
-      // Use current market rate or product base price
+      // Use current market rate
       const currentRate = await getMarketRate(product._id);
-      return currentRate || product.basePrice;
+      return currentRate || 0;
   }
 }
 
@@ -159,6 +158,20 @@ router.get('/:id', protect, async (req, res, next) => {
 // @access  Private
 router.get('/customer/:customerId', protect, async (req, res, next) => {
   try {
+    // SECURITY: Customers can only view their own orders
+    if (req.user.role === 'customer') {
+      const userCustomerId = typeof req.user.customer === 'object'
+        ? req.user.customer._id.toString()
+        : req.user.customer?.toString();
+
+      if (userCustomerId !== req.params.customerId) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. You can only view your own orders.'
+        });
+      }
+    }
+
     const orders = await Order.find({ customer: req.params.customerId })
       .populate('products.product', 'name unit')
       .select('-__v')
@@ -241,6 +254,67 @@ router.post('/', protect, validateOrder, async (req, res, next) => {
       .populate('products.product', 'name unit');
 
     res.status(201).json({
+      success: true,
+      data: populatedOrder
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// @route   PUT /api/orders/:id
+// @desc    Update order products/prices
+// @access  Private (Admin, Staff)
+router.put('/:id', protect, authorize('admin', 'staff'), async (req, res, next) => {
+  try {
+    const order = await Order.findById(req.params.id);
+
+    if (!order) {
+      res.status(404);
+      throw new Error('Order not found');
+    }
+
+    // Update products with new prices
+    if (req.body.products && Array.isArray(req.body.products)) {
+      let totalAmount = 0;
+      const updatedProducts = await Promise.all(
+        req.body.products.map(async (item) => {
+          const product = await Product.findById(item.product);
+          if (!product) {
+            throw new Error(`Product ${item.product} not found`);
+          }
+
+          const rate = item.priceAtTime || item.rate || 0;
+          const amount = item.quantity * rate;
+          totalAmount += amount;
+
+          return {
+            product: item.product,
+            productName: product.name,
+            quantity: item.quantity,
+            unit: product.unit,
+            rate: rate,
+            amount: amount
+          };
+        })
+      );
+
+      order.products = updatedProducts;
+      order.totalAmount = totalAmount;
+    }
+
+    // Update notes if provided
+    if (req.body.notes !== undefined) {
+      order.notes = req.body.notes;
+    }
+
+    await order.save();
+
+    const populatedOrder = await Order.findById(order._id)
+      .populate('customer', 'name phone')
+      .populate('products.product', 'name unit');
+
+    res.json({
       success: true,
       data: populatedOrder
     });

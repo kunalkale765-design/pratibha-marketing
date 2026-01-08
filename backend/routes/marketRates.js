@@ -14,8 +14,8 @@ const validateMarketRate = [
 
 // @route   GET /api/market-rates
 // @desc    Get current market rates
-// @access  Public
-router.get('/', async (req, res, next) => {
+// @access  Private (All authenticated users)
+router.get('/', protect, async (req, res, next) => {
   try {
     const { search, startDate, endDate } = req.query;
     const filter = {};
@@ -56,8 +56,8 @@ router.get('/', async (req, res, next) => {
 
 // @route   GET /api/market-rates/all
 // @desc    Get all market rate records
-// @access  Public
-router.get('/all', async (req, res, next) => {
+// @access  Private (All authenticated users)
+router.get('/all', protect, async (req, res, next) => {
   try {
     const { limit = 100 } = req.query;
 
@@ -79,8 +79,8 @@ router.get('/all', async (req, res, next) => {
 
 // @route   GET /api/market-rates/history/:productId
 // @desc    Get rate history for a product
-// @access  Public
-router.get('/history/:productId', async (req, res, next) => {
+// @access  Private (All authenticated users)
+router.get('/history/:productId', protect, async (req, res, next) => {
   try {
     const { limit = 30 } = req.query;
 
@@ -106,8 +106,8 @@ router.get('/history/:productId', async (req, res, next) => {
 
 // @route   GET /api/market-rates/:id
 // @desc    Get single market rate
-// @access  Public
-router.get('/:id', async (req, res, next) => {
+// @access  Private (All authenticated users)
+router.get('/:id', protect, async (req, res, next) => {
   try {
     const rate = await MarketRate.findById(req.params.id)
       .populate('product', 'name unit')
@@ -164,10 +164,6 @@ router.post('/', protect, authorize('admin', 'staff'), validateMarketRate, async
     };
 
     const marketRate = await MarketRate.create(rateData);
-
-    // Update product base price
-    product.basePrice = req.body.rate;
-    await product.save();
 
     res.status(201).json({
       success: true,

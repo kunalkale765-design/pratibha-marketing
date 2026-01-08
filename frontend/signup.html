@@ -284,18 +284,6 @@
             margin-bottom: 3rem;
         }
 
-        .logo-mark {
-            width: 56px;
-            height: 56px;
-            background: rgba(255,255,255,0.15);
-            border-radius: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.75rem;
-            backdrop-filter: blur(10px);
-        }
-
         .logo-text {
             font-family: 'Crimson Pro', serif;
             font-size: 2rem;
@@ -399,8 +387,8 @@
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label" for="email">Email Address *</label>
-                        <input type="email" id="email" class="form-input" placeholder="you@example.com" required autocomplete="email">
+                        <label class="form-label" for="email">Username *</label>
+                        <input type="text" id="email" class="form-input" placeholder="Enter your username" required autocomplete="username">
                     </div>
 
                     <div class="form-group">
@@ -411,9 +399,9 @@
 
                     <div class="form-group">
                         <label class="form-label" for="password">Password *</label>
-                        <input type="password" id="password" class="form-input" placeholder="Min 12 characters" required autocomplete="new-password" minlength="12">
+                        <input type="password" id="password" class="form-input" placeholder="Min 6 characters" required autocomplete="new-password" minlength="6">
                         <div class="password-requirements">
-                            <div class="requirement" id="req-length">◯ At least 12 characters</div>
+                            <div class="requirement" id="req-length">◯ At least 6 characters</div>
                             <div class="requirement" id="req-upper">◯ One uppercase letter</div>
                             <div class="requirement" id="req-number">◯ One number</div>
                         </div>
@@ -421,7 +409,7 @@
 
                     <div class="form-group">
                         <label class="form-label" for="confirmPassword">Confirm Password *</label>
-                        <input type="password" id="confirmPassword" class="form-input" placeholder="Re-enter password" required autocomplete="new-password" minlength="12">
+                        <input type="password" id="confirmPassword" class="form-input" placeholder="Re-enter password" required autocomplete="new-password" minlength="6">
                     </div>
 
                     <button type="submit" id="signupBtn" class="btn-signup">Create Account</button>
@@ -436,7 +424,6 @@
         <div class="brand-side">
             <div class="brand-content">
                 <div class="brand-logo">
-                    <div class="logo-mark">🌿</div>
                     <span class="logo-text">Pratibha Marketing</span>
                 </div>
 
@@ -479,7 +466,7 @@
 
         password.addEventListener('input', function() {
             const val = this.value;
-            updateRequirement('req-length', val.length >= 12);
+            updateRequirement('req-length', val.length >= 6);
             updateRequirement('req-upper', /[A-Z]/.test(val));
             updateRequirement('req-number', /[0-9]/.test(val));
         });
@@ -521,8 +508,8 @@
                 return;
             }
 
-            if (passwordVal.length < 12) {
-                showError('Password must be at least 12 characters');
+            if (passwordVal.length < 6) {
+                showError('Password must be at least 6 characters');
                 return;
             }
 

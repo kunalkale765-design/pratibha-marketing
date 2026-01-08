@@ -8,14 +8,13 @@ const { protect, authorize } = require('../middleware/auth');
 const validateProduct = [
   body('name').trim().notEmpty().withMessage('Product name is required'),
   body('unit').isIn(['quintal', 'bag', 'kg', 'piece', 'ton']).withMessage('Invalid unit'),
-  body('basePrice').isFloat({ min: 0 }).withMessage('Base price must be positive'),
-  body('category').optional().isIn(['grain', 'seed', 'fertilizer', 'pesticide', 'equipment', 'other'])
+  body('category').optional().trim()
 ];
 
 // @route   GET /api/products
 // @desc    Get all products
-// @access  Public
-router.get('/', async (req, res, next) => {
+// @access  Private (All authenticated users)
+router.get('/', protect, async (req, res, next) => {
   try {
     const { search, category, isActive } = req.query;
     const filter = {};
@@ -28,8 +27,13 @@ router.get('/', async (req, res, next) => {
       filter.category = category;
     }
 
-    if (isActive !== undefined) {
-      filter.isActive = isActive === 'true';
+    // Default to only active products
+    if (isActive === 'all') {
+      // Show all
+    } else if (isActive === 'false') {
+      filter.isActive = false;
+    } else {
+      filter.isActive = true;
     }
 
     const products = await Product.find(filter)
@@ -48,8 +52,8 @@ router.get('/', async (req, res, next) => {
 
 // @route   GET /api/products/:id
 // @desc    Get single product
-// @access  Public
-router.get('/:id', async (req, res, next) => {
+// @access  Private (All authenticated users)
+router.get('/:id', protect, async (req, res, next) => {
   try {
     const product = await Product.findById(req.params.id).select('-__v');
 
@@ -126,8 +130,8 @@ router.put('/:id', protect, authorize('admin', 'staff'), validateProduct, async 
 
 // @route   DELETE /api/products/:id
 // @desc    Delete product (soft delete)
-// @access  Private (Admin only)
-router.delete('/:id', protect, authorize('admin'), async (req, res, next) => {
+// @access  Private (Admin, Staff)
+router.delete('/:id', protect, authorize('admin', 'staff'), async (req, res, next) => {
   try {
     const product = await Product.findByIdAndUpdate(
       req.params.id,
@@ -143,40 +147,6 @@ router.delete('/:id', protect, authorize('admin'), async (req, res, next) => {
     res.json({
       success: true,
       message: 'Product deactivated successfully'
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// @route   PUT /api/products/:id/stock
-// @desc    Update product stock
-// @access  Private (Admin, Staff)
-router.put('/:id/stock', protect, authorize('admin', 'staff'), [
-  body('quantity').isFloat().withMessage('Quantity must be a number')
-], async (req, res, next) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        errors: errors.array()
-      });
-    }
-
-    const product = await Product.findById(req.params.id);
-
-    if (!product) {
-      res.status(404);
-      throw new Error('Product not found');
-    }
-
-    product.stockQuantity = Math.max(0, product.stockQuantity + req.body.quantity);
-    await product.save();
-
-    res.json({
-      success: true,
-      data: product
     });
   } catch (error) {
     next(error);

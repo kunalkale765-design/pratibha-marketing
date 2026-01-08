@@ -16,40 +16,52 @@ const connectDB = async () => {
   }
 };
 
-// Initial vegetable products
+// Initial vegetable products (prices managed via MarketRate)
 const vegetables = [
   // Leafy Greens
-  { name: 'Spinach (Palak)', category: 'leafy-greens', unit: 'kg', basePrice: 40, stockQuantity: 50, minStockLevel: 10, description: 'Fresh green spinach leaves' },
-  { name: 'Cabbage (Patta Gobi)', category: 'leafy-greens', unit: 'kg', basePrice: 30, stockQuantity: 100, minStockLevel: 20, description: 'Fresh cabbage' },
-  { name: 'Lettuce', category: 'leafy-greens', unit: 'kg', basePrice: 50, stockQuantity: 30, minStockLevel: 10, description: 'Crispy lettuce leaves' },
-  { name: 'Coriander (Dhania)', category: 'leafy-greens', unit: 'kg', basePrice: 60, stockQuantity: 20, minStockLevel: 5, description: 'Fresh coriander leaves' },
-  { name: 'Fenugreek (Methi)', category: 'leafy-greens', unit: 'kg', basePrice: 45, stockQuantity: 25, minStockLevel: 8, description: 'Fresh methi leaves' },
+  { name: 'Spinach (Palak)', category: 'leafy-greens', unit: 'kg' },
+  { name: 'Cabbage (Patta Gobi)', category: 'leafy-greens', unit: 'kg' },
+  { name: 'Lettuce', category: 'leafy-greens', unit: 'kg' },
+  { name: 'Coriander (Dhania)', category: 'leafy-greens', unit: 'kg' },
+  { name: 'Fenugreek (Methi)', category: 'leafy-greens', unit: 'kg' },
 
   // Root Vegetables
-  { name: 'Potato (Aloo)', category: 'root', unit: 'kg', basePrice: 25, stockQuantity: 500, minStockLevel: 100, description: 'Fresh potatoes' },
-  { name: 'Onion (Pyaz)', category: 'root', unit: 'kg', basePrice: 35, stockQuantity: 400, minStockLevel: 80, description: 'Fresh onions' },
-  { name: 'Carrot (Gajar)', category: 'root', unit: 'kg', basePrice: 40, stockQuantity: 150, minStockLevel: 30, description: 'Fresh carrots' },
-  { name: 'Beetroot (Chukandar)', category: 'root', unit: 'kg', basePrice: 35, stockQuantity: 80, minStockLevel: 20, description: 'Fresh beetroot' },
-  { name: 'Radish (Mooli)', category: 'root', unit: 'kg', basePrice: 30, stockQuantity: 60, minStockLevel: 15, description: 'Fresh radish' },
+  { name: 'Potato (Aloo)', category: 'root', unit: 'kg' },
+  { name: 'Onion (Pyaz)', category: 'root', unit: 'kg' },
+  { name: 'Carrot (Gajar)', category: 'root', unit: 'kg' },
+  { name: 'Beetroot (Chukandar)', category: 'root', unit: 'kg' },
+  { name: 'Radish (Mooli)', category: 'root', unit: 'kg' },
 
   // Fruiting Vegetables
-  { name: 'Tomato (Tamatar)', category: 'fruiting', unit: 'kg', basePrice: 40, stockQuantity: 200, minStockLevel: 50, description: 'Fresh red tomatoes' },
-  { name: 'Cucumber (Kheera)', category: 'fruiting', unit: 'kg', basePrice: 30, stockQuantity: 100, minStockLevel: 25, description: 'Fresh cucumbers' },
-  { name: 'Capsicum (Shimla Mirch)', category: 'fruiting', unit: 'kg', basePrice: 60, stockQuantity: 80, minStockLevel: 20, description: 'Fresh bell peppers' },
-  { name: 'Brinjal (Baingan)', category: 'fruiting', unit: 'kg', basePrice: 35, stockQuantity: 90, minStockLevel: 20, description: 'Fresh eggplant' },
-  { name: 'Green Chilli (Hari Mirch)', category: 'fruiting', unit: 'kg', basePrice: 80, stockQuantity: 40, minStockLevel: 10, description: 'Fresh green chillies' },
+  { name: 'Tomato (Tamatar)', category: 'fruiting', unit: 'kg' },
+  { name: 'Cucumber (Kheera)', category: 'fruiting', unit: 'kg' },
+  { name: 'Capsicum (Shimla Mirch)', category: 'fruiting', unit: 'kg' },
+  { name: 'Brinjal (Baingan)', category: 'fruiting', unit: 'kg' },
+  { name: 'Green Chilli (Hari Mirch)', category: 'fruiting', unit: 'kg' },
 
   // Gourds
-  { name: 'Bottle Gourd (Lauki)', category: 'gourd', unit: 'kg', basePrice: 30, stockQuantity: 70, minStockLevel: 15, description: 'Fresh bottle gourd' },
-  { name: 'Ridge Gourd (Tori)', category: 'gourd', unit: 'kg', basePrice: 35, stockQuantity: 60, minStockLevel: 15, description: 'Fresh ridge gourd' },
-  { name: 'Bitter Gourd (Karela)', category: 'gourd', unit: 'kg', basePrice: 40, stockQuantity: 50, minStockLevel: 12, description: 'Fresh bitter gourd' },
+  { name: 'Bottle Gourd (Lauki)', category: 'gourd', unit: 'kg' },
+  { name: 'Ridge Gourd (Tori)', category: 'gourd', unit: 'kg' },
+  { name: 'Bitter Gourd (Karela)', category: 'gourd', unit: 'kg' },
 
   // Others
-  { name: 'Cauliflower (Phool Gobi)', category: 'other', unit: 'kg', basePrice: 40, stockQuantity: 120, minStockLevel: 30, description: 'Fresh cauliflower' },
-  { name: 'Beans (Sem Phali)', category: 'other', unit: 'kg', basePrice: 60, stockQuantity: 80, minStockLevel: 20, description: 'Fresh green beans' },
-  { name: 'Peas (Matar)', category: 'other', unit: 'kg', basePrice: 70, stockQuantity: 90, minStockLevel: 25, description: 'Fresh green peas' },
-  { name: 'Okra/Bhindi (Lady Finger)', category: 'other', unit: 'kg', basePrice: 50, stockQuantity: 70, minStockLevel: 18, description: 'Fresh okra/bhindi' },
+  { name: 'Cauliflower (Phool Gobi)', category: 'other', unit: 'kg' },
+  { name: 'Beans (Sem Phali)', category: 'other', unit: 'kg' },
+  { name: 'Peas (Matar)', category: 'other', unit: 'kg' },
+  { name: 'Okra/Bhindi (Lady Finger)', category: 'other', unit: 'kg' },
 ];
+
+// Default market rates for seeding
+const defaultRates = {
+  'Spinach (Palak)': 40, 'Cabbage (Patta Gobi)': 30, 'Lettuce': 50,
+  'Coriander (Dhania)': 60, 'Fenugreek (Methi)': 45, 'Potato (Aloo)': 25,
+  'Onion (Pyaz)': 35, 'Carrot (Gajar)': 40, 'Beetroot (Chukandar)': 35,
+  'Radish (Mooli)': 30, 'Tomato (Tamatar)': 40, 'Cucumber (Kheera)': 30,
+  'Capsicum (Shimla Mirch)': 60, 'Brinjal (Baingan)': 35, 'Green Chilli (Hari Mirch)': 80,
+  'Bottle Gourd (Lauki)': 30, 'Ridge Gourd (Tori)': 35, 'Bitter Gourd (Karela)': 40,
+  'Cauliflower (Phool Gobi)': 40, 'Beans (Sem Phali)': 60, 'Peas (Matar)': 70,
+  'Okra/Bhindi (Lady Finger)': 50
+};
 
 // Sample customers
 const sampleCustomers = [
@@ -64,7 +76,7 @@ const sampleCustomers = [
 const adminUser = {
   name: 'Admin',
   email: 'admin@pratibhamarketing.in',
-  password: 'admin123',
+  password: 'Admin123',
   phone: '9876543200',
   role: 'admin'
 };
@@ -106,7 +118,7 @@ const seedDatabase = async () => {
       await User.create({
         name: customer.name,
         email: `${customer.name.toLowerCase().replace(/\s+/g, '.')}@example.com`,
-        password: 'password123',
+        password: 'Pass1234',
         phone: customer.phone,
         role: 'customer',
         customer: customer._id
@@ -114,18 +126,22 @@ const seedDatabase = async () => {
     }
     console.log('✓ 2 customer user accounts created\n');
 
-    // Seed Market Rates
+    // Seed Market Rates for all products
     console.log('Seeding market rates...');
-    const marketRates = products.slice(0, 10).map(product => ({
+    const marketRates = products.map(product => ({
       product: product._id,
       productName: product.name,
-      rate: product.basePrice + Math.floor(Math.random() * 10) - 5, // Slight variation from base price
+      rate: (defaultRates[product.name] || 30) + Math.floor(Math.random() * 10) - 5,
       unit: product.unit,
       marketLocation: 'Main Wholesale Market',
       date: new Date()
     }));
     await MarketRate.insertMany(marketRates);
     console.log(`✓ ${marketRates.length} market rates created\n`);
+
+    // Create rate lookup for orders
+    const rateMap = {};
+    marketRates.forEach(r => { rateMap[r.productName] = r.rate; });
 
     // Seed Sample Orders
     console.log('Seeding sample orders...');
@@ -144,22 +160,24 @@ const seedDatabase = async () => {
       const qty1 = Math.floor(Math.random() * 20) + 10;
       const qty2 = Math.floor(Math.random() * 15) + 5;
 
+      const rate1 = rateMap[prod1.name] || 30;
+      const rate2 = rateMap[prod2.name] || 30;
       const orderProducts = [
         {
           product: prod1._id,
           productName: prod1.name,
           quantity: qty1,
           unit: prod1.unit,
-          rate: prod1.basePrice,
-          amount: qty1 * prod1.basePrice
+          rate: rate1,
+          amount: qty1 * rate1
         },
         {
           product: prod2._id,
           productName: prod2.name,
           quantity: qty2,
           unit: prod2.unit,
-          rate: prod2.basePrice,
-          amount: qty2 * prod2.basePrice
+          rate: rate2,
+          amount: qty2 * rate2
         }
       ];
 
@@ -183,14 +201,15 @@ const seedDatabase = async () => {
       const prod = products[Math.floor(Math.random() * products.length)];
       const qty = Math.floor(Math.random() * 25) + 15;
 
+      const rate = rateMap[prod.name] || 30;
       const orderProducts = [
         {
           product: prod._id,
           productName: prod.name,
           quantity: qty,
           unit: prod.unit,
-          rate: prod.basePrice,
-          amount: qty * prod.basePrice
+          rate: rate,
+          amount: qty * rate
         }
       ];
 
@@ -227,9 +246,9 @@ const seedDatabase = async () => {
     console.log(`   Password: admin123\n`);
     console.log('🔐 Sample Customer Credentials:');
     console.log(`   Email: rajesh.kumar@example.com`);
-    console.log(`   Password: password123\n`);
+    console.log(`   Password: Pass1234\n`);
     console.log(`   Email: priya.sharma@example.com`);
-    console.log(`   Password: password123\n`);
+    console.log(`   Password: Pass1234\n`);
     console.log('═══════════════════════════════════════\n');
 
     process.exit(0);

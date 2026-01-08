@@ -78,6 +78,15 @@ const customerSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
+  },
+  // Magic link for passwordless authentication
+  magicLinkToken: {
+    type: String,
+    unique: true,
+    sparse: true  // Allows multiple null values
+  },
+  magicLinkCreatedAt: {
+    type: Date
   }
 }, {
   timestamps: true
@@ -85,6 +94,6 @@ const customerSchema = new mongoose.Schema({
 
 // Index for faster searches
 customerSchema.index({ name: 1 });
-customerSchema.index({ phone: 1 }, { unique: true, sparse: true }); // sparse allows multiple null/empty values
+customerSchema.index({ phone: 1 }, { sparse: true });
 
 module.exports = mongoose.model('Customer', customerSchema);

@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const MarketRate = require('../models/MarketRate');
@@ -45,7 +46,7 @@ router.get('/quantity-summary', protect, authorize('admin', 'staff'), async (req
     // Get market rates for these products
     const productIds = Array.from(quantityMap.keys());
     const latestRates = await MarketRate.aggregate([
-      { $match: { product: { $in: productIds.map(id => require('mongoose').Types.ObjectId(id)) } } },
+      { $match: { product: { $in: productIds.map(id => new mongoose.Types.ObjectId(id)) } } },
       { $sort: { effectiveDate: -1 } },
       {
         $group: {
@@ -148,26 +149,6 @@ router.get('/daily-requirements', protect, authorize('admin', 'staff'), async (r
       date: today.toISOString().split('T')[0],
       orderCount: todayOrders.length,
       data
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// @route   GET /api/supplier/low-stock
-// @desc    Get products with low stock
-// @access  Private (Admin, Staff)
-router.get('/low-stock', protect, authorize('admin', 'staff'), async (req, res, next) => {
-  try {
-    const lowStockProducts = await Product.find({
-      $expr: { $lte: ['$stockQuantity', '$minStockLevel'] },
-      isActive: true
-    }).select('name stockQuantity minStockLevel unit');
-
-    res.json({
-      success: true,
-      count: lowStockProducts.length,
-      data: lowStockProducts
     });
   } catch (error) {
     next(error);

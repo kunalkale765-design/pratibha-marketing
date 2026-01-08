@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const { body, validationResult } = require('express-validator');
 const Customer = require('../models/Customer');
 const { protect, authorize } = require('../middleware/auth');
@@ -7,8 +8,8 @@ const { protect, authorize } = require('../middleware/auth');
 // Validation middleware
 const validateCustomer = [
   body('name').trim().notEmpty().withMessage('Name is required'),
-  body('phone').matches(/^[0-9]{10}$/).withMessage('Phone must be 10 digits'),
-  body('whatsapp').optional().matches(/^[0-9]{10}$/).withMessage('WhatsApp must be 10 digits'),
+  body('phone').optional({ checkFalsy: true }).matches(/^[0-9]{10}$/).withMessage('Phone must be 10 digits'),
+  body('whatsapp').optional({ checkFalsy: true }).matches(/^[0-9]{10}$/).withMessage('WhatsApp must be 10 digits'),
   body('creditLimit').optional().isFloat({ min: 0 }).withMessage('Credit limit must be positive')
 ];
 
@@ -27,8 +28,14 @@ router.get('/', protect, authorize('admin', 'staff'), async (req, res, next) => 
       ];
     }
 
-    if (isActive !== undefined) {
-      filter.isActive = isActive === 'true';
+    // Default to only active customers, unless explicitly requesting all or inactive
+    if (isActive === 'all') {
+      // Show all customers (active and inactive)
+    } else if (isActive === 'false') {
+      filter.isActive = false;
+    } else {
+      // Default: only active customers
+      filter.isActive = true;
     }
 
     const customers = await Customer.find(filter)
@@ -103,16 +110,27 @@ router.put('/:id', protect, authorize('admin', 'staff'), validateCustomer, async
       });
     }
 
-    const customer = await Customer.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    );
+    const customer = await Customer.findById(req.params.id);
 
     if (!customer) {
       res.status(404);
       throw new Error('Customer not found');
     }
+
+    // Update basic fields
+    if (req.body.name) customer.name = req.body.name;
+    if (req.body.phone !== undefined) customer.phone = req.body.phone;
+    if (req.body.whatsapp !== undefined) customer.whatsapp = req.body.whatsapp;
+    if (req.body.address !== undefined) customer.address = req.body.address;
+    if (req.body.pricingType) customer.pricingType = req.body.pricingType;
+    if (req.body.markupPercentage !== undefined) customer.markupPercentage = req.body.markupPercentage;
+
+    // Handle contractPrices Map update properly
+    if (req.body.contractPrices) {
+      customer.contractPrices = new Map(Object.entries(req.body.contractPrices));
+    }
+
+    await customer.save();
 
     res.json({
       success: true,
@@ -125,8 +143,8 @@ router.put('/:id', protect, authorize('admin', 'staff'), validateCustomer, async
 
 // @route   DELETE /api/customers/:id
 // @desc    Delete customer (soft delete)
-// @access  Private (Admin only)
-router.delete('/:id', protect, authorize('admin'), async (req, res, next) => {
+// @access  Private (Admin, Staff)
+router.delete('/:id', protect, authorize('admin', 'staff'), async (req, res, next) => {
   try {
     const customer = await Customer.findByIdAndUpdate(
       req.params.id,
@@ -187,6 +205,72 @@ router.post('/:id/payment', protect, authorize('admin', 'staff'), [
     res.json({
       success: true,
       data: customer
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// @route   POST /api/customers/:id/magic-link
+// @desc    Generate magic link for customer
+// @access  Private (Admin, Staff)
+router.post('/:id/magic-link', protect, authorize('admin', 'staff'), async (req, res, next) => {
+  try {
+    const customer = await Customer.findById(req.params.id);
+
+    if (!customer) {
+      res.status(404);
+      throw new Error('Customer not found');
+    }
+
+    if (!customer.isActive) {
+      res.status(400);
+      throw new Error('Cannot generate magic link for inactive customer');
+    }
+
+    // Generate a secure random token (32 bytes = 64 hex chars)
+    const token = crypto.randomBytes(32).toString('hex');
+
+    customer.magicLinkToken = token;
+    customer.magicLinkCreatedAt = new Date();
+    await customer.save();
+
+    // Build the magic link URL
+    const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+    const magicLink = `${baseUrl}/customer-order-form.html?token=${token}`;
+
+    res.json({
+      success: true,
+      data: {
+        token,
+        link: magicLink,
+        createdAt: customer.magicLinkCreatedAt
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// @route   DELETE /api/customers/:id/magic-link
+// @desc    Revoke magic link for customer
+// @access  Private (Admin, Staff)
+router.delete('/:id/magic-link', protect, authorize('admin', 'staff'), async (req, res, next) => {
+  try {
+    const customer = await Customer.findById(req.params.id);
+
+    if (!customer) {
+      res.status(404);
+      throw new Error('Customer not found');
+    }
+
+    customer.magicLinkToken = undefined;
+    customer.magicLinkCreatedAt = undefined;
+    await customer.save();
+
+    res.json({
+      success: true,
+      message: 'Magic link revoked'
     });
   } catch (error) {
     next(error);

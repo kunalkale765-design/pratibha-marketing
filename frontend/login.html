@@ -92,18 +92,6 @@
             margin-bottom: 3rem;
         }
 
-        .logo-mark {
-            width: 56px;
-            height: 56px;
-            background: linear-gradient(135deg, var(--dusty-olive) 0%, var(--dusty-olive-dark) 100%);
-            border-radius: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.75rem;
-            box-shadow: 0 4px 12px rgba(126, 145, 129, 0.3);
-        }
-
         .logo-text {
             font-family: 'Crimson Pro', serif;
             font-size: 2rem;
@@ -300,21 +288,6 @@
             text-decoration: underline;
         }
 
-        .back-link {
-            text-align: center;
-            margin-top: 1rem;
-        }
-
-        .back-link a {
-            color: var(--text-muted);
-            font-size: 0.875rem;
-            text-decoration: none;
-        }
-
-        .back-link a:hover {
-            color: var(--dusty-olive);
-        }
-
         @media (max-width: 900px) {
             body::before {
                 display: none;
@@ -366,7 +339,6 @@
     <div class="login-container">
         <div class="brand-side">
             <div class="brand-logo">
-                <div class="logo-mark">🌿</div>
                 <div class="logo-text">Pratibha <span>Marketing</span></div>
             </div>
             <h2 class="brand-tagline">Fresh vegetables, delivered with trust</h2>
@@ -387,8 +359,8 @@
 
                 <form id="loginForm">
                     <div class="form-group">
-                        <label class="form-label" for="email">Email Address</label>
-                        <input type="email" id="email" class="form-input" placeholder="you@example.com" required autocomplete="email">
+                        <label class="form-label" for="email">Username</label>
+                        <input type="text" id="email" class="form-input" placeholder="Enter your username" required autocomplete="username">
                     </div>
 
                     <div class="form-group">
@@ -406,10 +378,6 @@
                     <p class="signup-link">
                         Don't have an account? <a href="/signup.html">Sign up</a>
                     </p>
-
-                    <div class="back-link">
-                        <a href="/">← Back to Home</a>
-                    </div>
                 </form>
             </div>
         </div>
@@ -448,7 +416,7 @@
                         window.location.href = '/customer-order-form.html';
                     } else {
                         // Staff/admin go to market rates first (daily workflow)
-                        window.location.href = '/market-rates.html';
+                        window.location.href = '/index.html';
                     }
                 }
             } catch (error) {}
@@ -485,7 +453,7 @@
                         window.location.href = '/customer-order-form.html';
                     } else {
                         // Staff/admin go to market rates first (daily workflow)
-                        window.location.href = '/market-rates.html';
+                        window.location.href = '/index.html';
                     }
                 } else {
                     showError(data.message || 'Login failed. Please check your credentials.');

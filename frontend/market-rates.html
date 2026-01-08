@@ -2,37 +2,24 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Market Rates - Pratibha Marketing</title>
-    <!-- PWA Meta Tags -->
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#7e9181">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Pratibha">
-    <link rel="apple-touch-icon" href="/icons/icon.svg">
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <meta name="theme-color" content="#2e3532">
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@500;600&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
     <style>
         :root {
             --gunmetal: #2e3532;
-            --gunmetal-light: #3d4542;
             --dusty-olive: #7e9181;
-            --dusty-olive-light: #97a99a;
             --dusty-olive-dark: #5d6b5f;
-            --pale-slate: #c7cedb;
-            --pale-slate-light: #e8ebf0;
             --cream: #f9f7f3;
             --cream-dark: #efe9df;
             --warm-white: #fefdfb;
             --terracotta: #c4a77d;
             --text-primary: #1f2421;
-            --text-secondary: #5a6560;
             --text-muted: #8a918c;
-            --success: #5d7a5f;
-            --success-bg: rgba(93, 122, 95, 0.1);
-            --error: #9a6565;
-            --error-bg: rgba(154, 101, 101, 0.1);
+            --success: #6b8f71;
+            --pale-slate-light: #e8ebf0;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -40,583 +27,431 @@
         body {
             font-family: 'DM Sans', sans-serif;
             background: var(--cream);
-            color: var(--text-primary);
             min-height: 100vh;
-            line-height: 1.6;
+            color: var(--text-primary);
+            -webkit-tap-highlight-color: transparent;
         }
-
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        body > * { position: relative; z-index: 1; }
 
         /* Header */
         .header {
-            background: linear-gradient(135deg, var(--gunmetal) 0%, var(--gunmetal-light) 100%);
-            color: var(--warm-white);
-            padding: 1.25rem 1.5rem;
+            background: var(--gunmetal);
+            color: white;
+            padding: 0.875rem 1rem;
             position: sticky;
             top: 0;
             z-index: 100;
         }
 
-        .header::after {
-            content: '';
-            position: absolute;
-            bottom: 0; left: 0; right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, var(--dusty-olive), var(--terracotta), var(--dusty-olive));
-        }
-
         .header-content {
-            max-width: 1200px;
-            margin: 0 auto;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
         .logo {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            text-decoration: none;
-            color: inherit;
-        }
-
-        .logo-mark {
-            width: 42px; height: 42px;
-            background: linear-gradient(135deg, var(--dusty-olive) 0%, var(--dusty-olive-dark) 100%);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-        }
-
-        .logo-text {
             font-family: 'Crimson Pro', serif;
-            font-size: 1.5rem;
+            font-size: 1.25rem;
             font-weight: 600;
+            text-decoration: none;
+            color: white;
         }
 
-        .logo-text span { color: var(--dusty-olive-light); font-weight: 400; }
+        .logo span {
+            font-weight: 400;
+            opacity: 0.8;
+        }
 
-        .header-actions {
+        .btn-back {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: white;
+            padding: 0.5rem 0.875rem;
+            border-radius: 6px;
+            font-size: 0.8125rem;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        /* Date Bar */
+        .date-bar {
+            background: var(--warm-white);
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--cream-dark);
+            text-align: center;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        /* Product List */
+        .product-list {
+            padding: 0.5rem;
+            padding-bottom: 100px;
+        }
+
+        .product-item {
+            background: var(--warm-white);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
             display: flex;
-            gap: 0.75rem;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            min-height: 60px;
         }
 
-        .btn {
-            padding: 0.625rem 1.25rem;
+        .product-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .product-name {
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--gunmetal);
+            line-height: 1.3;
+        }
+
+        .product-unit {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+            margin-top: 0.125rem;
+        }
+
+        .rate-input {
+            width: 100px;
+            padding: 0.75rem;
+            border: 1.5px solid var(--cream-dark);
             border-radius: 8px;
-            font-family: 'DM Sans', sans-serif;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.125rem;
+            text-align: right;
+            background: white;
+            -webkit-appearance: none;
+            -moz-appearance: textfield;
+        }
+
+        .rate-input::-webkit-inner-spin-button,
+        .rate-input::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .rate-input:focus {
+            outline: none;
+            border-color: var(--dusty-olive);
+            box-shadow: 0 0 0 3px rgba(126, 145, 129, 0.15);
+        }
+
+        .rate-input.changed {
+            border-color: var(--dusty-olive);
+            background: rgba(126, 145, 129, 0.1);
+        }
+
+        /* Category Header */
+        .category-header {
+            padding: 0.625rem 0.5rem;
+            font-family: 'Crimson Pro', serif;
             font-size: 0.875rem;
             font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            border: none;
-        }
-
-        .btn-ghost {
-            background: transparent;
-            border: 1px solid rgba(255,255,255,0.3);
-            color: var(--warm-white);
-        }
-
-        .btn-ghost:hover { background: rgba(255,255,255,0.1); }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--dusty-olive) 0%, var(--dusty-olive-dark) 100%);
-            color: white;
-            box-shadow: 0 2px 4px rgba(126, 145, 129, 0.3);
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(126, 145, 129, 0.4);
-        }
-
-        .btn-secondary {
-            background: var(--cream);
-            color: var(--gunmetal);
-            border: 1px solid var(--pale-slate);
-        }
-
-        .btn-secondary:hover { background: var(--pale-slate-light); }
-
-        /* Main Content */
-        .main {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem 1.5rem;
-        }
-
-        .page-title {
-            margin-bottom: 2rem;
-        }
-
-        .page-title h1 {
-            font-family: 'Crimson Pro', serif;
-            font-size: 2rem;
-            font-weight: 600;
-            color: var(--gunmetal);
-            margin-bottom: 0.25rem;
-        }
-
-        .page-title p {
             color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 0.5rem;
+        }
+
+        /* Bottom Bar */
+        .bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--gunmetal);
+            color: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+            padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+        }
+
+        .changes-count {
             font-size: 0.9375rem;
         }
 
-        /* Rates Grid */
-        .rates-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 1.25rem;
-        }
-
-        .rate-card {
-            background: var(--warm-white);
-            border-radius: 14px;
-            padding: 1.5rem;
-            border: 1px solid var(--pale-slate-light);
-            box-shadow: 0 1px 3px rgba(46, 53, 50, 0.04);
-            transition: all 0.25s ease;
-        }
-
-        .rate-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(46, 53, 50, 0.08);
-        }
-
-        .rate-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 1rem;
-        }
-
-        .rate-card h3 {
-            font-family: 'Crimson Pro', serif;
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: var(--gunmetal);
-        }
-
-        .trend-icon {
-            font-size: 1.5rem;
-        }
-
-        .trend-up { color: var(--success); }
-        .trend-down { color: var(--error); }
-        .trend-flat { color: var(--text-muted); }
-
-        .rate-value {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--gunmetal);
-            margin-bottom: 0.75rem;
-        }
-
-        .rate-details {
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-        }
-
-        .rate-details div {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 0.25rem;
-        }
-
-        .rate-change {
-            font-weight: 600;
-        }
-
-        .rate-meta {
-            margin-top: 0.75rem;
-            padding-top: 0.75rem;
-            border-top: 1px solid var(--pale-slate-light);
-            font-size: 0.75rem;
-            color: var(--text-muted);
-        }
-
-        /* Modal */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(46, 53, 50, 0.5);
-            z-index: 200;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal-overlay.show { display: flex; }
-
-        .modal {
-            background: var(--warm-white);
-            border-radius: 16px;
-            padding: 2rem;
-            max-width: 450px;
-            width: 90%;
-            box-shadow: 0 20px 60px rgba(46, 53, 50, 0.2);
-        }
-
-        .modal h2 {
-            font-family: 'Crimson Pro', serif;
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: var(--gunmetal);
-            margin-bottom: 1.5rem;
-        }
-
-        .form-group {
-            margin-bottom: 1.25rem;
-        }
-
-        .form-label {
-            display: block;
-            font-size: 0.8125rem;
-            font-weight: 600;
-            color: var(--text-secondary);
-            margin-bottom: 0.5rem;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-        }
-
-        .form-input, .form-select, .form-textarea {
-            width: 100%;
-            padding: 0.75rem 1rem;
-            font-family: 'DM Sans', sans-serif;
-            font-size: 1rem;
-            border: 1.5px solid var(--pale-slate);
+        .btn-save {
+            background: var(--dusty-olive);
+            color: white;
+            border: none;
+            padding: 0.875rem 1.75rem;
             border-radius: 8px;
-            background: var(--cream);
-            color: var(--text-primary);
-            transition: all 0.2s ease;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            min-height: 48px;
         }
 
-        .form-input:focus, .form-select:focus, .form-textarea:focus {
-            outline: none;
-            border-color: var(--dusty-olive);
-            background: var(--warm-white);
-            box-shadow: 0 0 0 4px rgba(126, 145, 129, 0.12);
+        .btn-save:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
         }
 
-        .modal-actions {
-            display: flex;
-            gap: 0.75rem;
-            margin-top: 1.5rem;
+        .btn-save:not(:disabled):active {
+            transform: scale(0.97);
         }
 
-        .modal-actions .btn { flex: 1; padding: 0.875rem; }
-
-        /* Toast Messages */
+        /* Toast */
         .toast {
             position: fixed;
-            top: 1.5rem;
-            right: 1.5rem;
-            padding: 1rem 1.5rem;
-            border-radius: 10px;
+            top: 60px;
+            left: 1rem;
+            right: 1rem;
+            padding: 0.875rem 1rem;
+            border-radius: 8px;
             font-weight: 500;
-            display: none;
-            z-index: 300;
-            animation: slideIn 0.3s ease;
+            z-index: 200;
+            transform: translateY(-100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            background: var(--success);
+            color: white;
         }
 
-        .toast.show { display: block; }
-
-        .toast-success {
-            background: var(--success-bg);
-            border: 1px solid rgba(93, 122, 95, 0.3);
-            color: #4a6150;
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
         }
 
-        .toast-error {
-            background: var(--error-bg);
-            border: 1px solid rgba(154, 101, 101, 0.3);
-            color: #7a5050;
+        .toast.error {
+            background: #9a6565;
         }
 
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-
-        /* Empty State */
-        .empty-state {
+        .loading {
             text-align: center;
-            padding: 4rem 2rem;
+            padding: 3rem 1rem;
             color: var(--text-muted);
-        }
-
-        .empty-state .icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.5; }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .header-content { flex-direction: column; gap: 1rem; }
-            .rates-grid { grid-template-columns: 1fr; }
-            .page-title h1 { font-size: 1.5rem; }
-        }
-
-        /* Animations */
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .rate-card {
-            animation: fadeInUp 0.4s ease backwards;
         }
     </style>
 </head>
 <body>
-    <!-- Header -->
     <header class="header">
         <div class="header-content">
-            <a href="/" class="logo">
-                <div class="logo-mark">🌿</div>
-                <div class="logo-text">Pratibha <span>Marketing</span></div>
-            </a>
-            <div class="header-actions">
-                <button onclick="showUpdateRateForm()" class="btn btn-primary">+ Update Rate</button>
-                <a href="/" class="btn btn-ghost">Dashboard</a>
-            </div>
+            <a href="/" class="logo">Pratibha <span>Marketing</span></a>
+            <a href="/" class="btn-back">Dashboard</a>
         </div>
     </header>
 
-    <!-- Main Content -->
-    <main class="main">
-        <div class="page-title">
-            <h1>Market Rates</h1>
-            <p>Current product pricing and trends</p>
-        </div>
+    <div class="date-bar" id="dateBar">Loading...</div>
 
-        <div id="ratesList" class="rates-grid">
-            <div class="empty-state">
-                <div class="icon">📊</div>
-                <p>Loading market rates...</p>
-            </div>
-        </div>
-    </main>
+    <div id="toast" class="toast"></div>
 
-    <!-- Update Rate Modal -->
-    <div id="rateModal" class="modal-overlay">
-        <div class="modal">
-            <h2>Update Market Rate</h2>
-            <form id="rateForm">
-                <div class="form-group">
-                    <label class="form-label" for="productId">Select Product *</label>
-                    <select id="productId" class="form-select" required>
-                        <option value="">Loading products...</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="rateValue">New Rate (₹) *</label>
-                    <input id="rateValue" type="number" step="0.01" class="form-input" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="rateSource">Source</label>
-                    <input id="rateSource" type="text" placeholder="e.g., Local Market, Wholesale" class="form-input">
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="rateNotes">Notes</label>
-                    <textarea id="rateNotes" rows="2" class="form-textarea"></textarea>
-                </div>
-                <div class="modal-actions">
-                    <button type="submit" class="btn btn-primary">Update Rate</button>
-                    <button type="button" onclick="closeModal()" class="btn btn-secondary">Cancel</button>
-                </div>
-            </form>
-        </div>
+    <div class="product-list" id="productList">
+        <div class="loading">Loading products...</div>
     </div>
 
-    <!-- Toast Messages -->
-    <div id="successMessage" class="toast toast-success"></div>
-    <div id="errorMessage" class="toast toast-error"></div>
+    <div class="bottom-bar">
+        <div class="changes-count"><span id="changesCount">0</span> changed</div>
+        <button class="btn-save" id="saveBtn" disabled onclick="saveRates()">Save Rates</button>
+    </div>
 
-    <!-- Shared Modules -->
     <script src="/js/auth.js"></script>
     <script src="/js/api.js"></script>
-
     <script>
         let products = [];
+        let rates = {};
+        let changedRates = {};
 
-        // XSS Prevention Utility
-        function escapeHtml(unsafe) {
-            if (unsafe === null || unsafe === undefined) return '';
-            return String(unsafe)
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
+        async function init() {
+            const user = await Auth.requireAuth(['admin', 'staff']);
+            if (!user) return;
+
+            document.getElementById('dateBar').textContent = new Date().toLocaleDateString('en-IN', {
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+            });
+
+            await loadData();
         }
 
         async function loadData() {
             try {
-                const [ratesRes, productsRes] = await Promise.all([
-                    fetch('/api/market-rates', { credentials: 'include' }),
-                    fetch('/api/products', { credentials: 'include' })
+                const [productsRes, ratesRes] = await Promise.all([
+                    fetch('/api/products', { credentials: 'include' }),
+                    fetch('/api/market-rates', { credentials: 'include' })
                 ]);
 
-                const ratesData = await ratesRes.json();
                 const productsData = await productsRes.json();
+                const ratesData = await ratesRes.json();
 
-                products = productsData.data;
-                displayRates(ratesData.data);
-                populateProducts();
-            } catch (error) {
-                console.error('Error:', error);
-                showError('Failed to load data');
+                products = (productsData.data || []).filter(p => p.isActive);
+
+                // Map rates by product ID
+                (ratesData.data || []).forEach(rate => {
+                    const pid = typeof rate.product === 'object' ? rate.product._id : rate.product;
+                    rates[pid] = rate.rate;
+                });
+
+                renderProducts();
+            } catch (e) {
+                console.error(e);
+                showToast('Failed to load data', true);
             }
         }
 
-        function displayRates(rates) {
-            const container = document.getElementById('ratesList');
-            if (!rates || rates.length === 0) {
-                container.innerHTML = '<div class="empty-state"><div class="icon">📊</div><p>No market rates available</p></div>';
+        function renderProducts() {
+            const container = document.getElementById('productList');
+
+            if (!products.length) {
+                container.innerHTML = '<div class="loading">No products found</div>';
                 return;
             }
 
-            container.innerHTML = rates.map((rate, index) => {
-                const trendIcon = rate.trend === 'up' ? '↑' : rate.trend === 'down' ? '↓' : '→';
-                const trendClass = rate.trend === 'up' ? 'trend-up' : rate.trend === 'down' ? 'trend-down' : 'trend-flat';
-
-                return `
-                    <div class="rate-card" style="animation-delay: ${index * 0.05}s">
-                        <div class="rate-card-header">
-                            <h3>${escapeHtml(rate.productName)}</h3>
-                            <span class="trend-icon ${trendClass}">${trendIcon}</span>
-                        </div>
-                        <div class="rate-value">₹${rate.rate.toFixed(2)}</div>
-                        <div class="rate-details">
-                            ${rate.previousRate ? `
-                            <div>
-                                <span>Previous:</span>
-                                <span>₹${rate.previousRate.toFixed(2)}</span>
-                            </div>
-                            ` : ''}
-                            ${rate.changePercentage ? `
-                            <div>
-                                <span>Change:</span>
-                                <span class="rate-change ${trendClass}">${rate.changePercentage > 0 ? '+' : ''}${escapeHtml(rate.changePercentage)}%</span>
-                            </div>
-                            ` : ''}
-                        </div>
-                        <div class="rate-meta">
-                            ${rate.source ? `Source: ${escapeHtml(rate.source)} • ` : ''}
-                            Updated: ${new Date(rate.effectiveDate).toLocaleDateString()}
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function populateProducts() {
-            const select = document.getElementById('productId');
-            select.innerHTML = '<option value="">Select a product</option>';
-            products.forEach(product => {
-                const option = document.createElement('option');
-                option.value = product._id;
-                option.textContent = `${product.name} (Current: ₹${product.basePrice})`;
-                select.appendChild(option);
+            // Group by category
+            const grouped = {};
+            products.forEach(p => {
+                const cat = p.category || 'other';
+                if (!grouped[cat]) grouped[cat] = [];
+                grouped[cat].push(p);
             });
-        }
 
-        function showUpdateRateForm() {
-            document.getElementById('rateForm').reset();
-            document.getElementById('rateModal').classList.add('show');
-        }
+            let html = '';
+            for (const [cat, prods] of Object.entries(grouped)) {
+                const catName = cat.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                html += `<div class="category-header">${catName}</div>`;
 
-        function closeModal() {
-            document.getElementById('rateModal').classList.remove('show');
-        }
-
-        function showSuccess(message) {
-            const div = document.getElementById('successMessage');
-            div.textContent = message;
-            div.classList.add('show');
-            setTimeout(() => div.classList.remove('show'), 3000);
-        }
-
-        function showError(message) {
-            const div = document.getElementById('errorMessage');
-            div.textContent = message;
-            div.classList.add('show');
-            setTimeout(() => div.classList.remove('show'), 3000);
-        }
-
-        document.getElementById('rateForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const rateData = {
-                product: document.getElementById('productId').value,
-                rate: parseFloat(document.getElementById('rateValue').value),
-                source: document.getElementById('rateSource').value,
-                notes: document.getElementById('rateNotes').value,
-                effectiveDate: new Date().toISOString()
-            };
-
-            try {
-                const response = await fetch('/api/market-rates', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify(rateData)
+                prods.forEach(p => {
+                    const currentRate = rates[p._id] || 0;
+                    html += `
+                        <div class="product-item">
+                            <div class="product-info">
+                                <div class="product-name">${escapeHtml(p.name)}</div>
+                                <div class="product-unit">per ${escapeHtml(p.unit)}</div>
+                            </div>
+                            <input type="number" class="rate-input"
+                                id="rate-${p._id}"
+                                data-id="${p._id}"
+                                data-original="${currentRate}"
+                                value="${currentRate}"
+                                min="0" step="0.01"
+                                onfocus="clearZero(this)"
+                                onblur="restoreValue(this)"
+                                onchange="handleChange(this)"
+                                oninput="handleInput(this)">
+                        </div>
+                    `;
                 });
+            }
 
-                if (response.ok) {
-                    showSuccess('Market rate updated successfully');
-                    closeModal();
-                    loadData();
-                } else {
-                    const data = await response.json();
-                    showError(data.message || 'Failed to update rate');
+            container.innerHTML = html;
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/[&<>"']/g, m => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[m]));
+        }
+
+        function clearZero(input) {
+            input.dataset.prevValue = input.value;
+            input.value = '';
+            input.select();
+        }
+
+        function restoreValue(input) {
+            if (input.value === '') {
+                input.value = input.dataset.prevValue || input.dataset.original;
+            }
+            handleChange(input);
+        }
+
+        function handleInput(input) {
+            const original = parseFloat(input.dataset.original);
+            const current = parseFloat(input.value);
+            input.classList.toggle('changed', current !== original);
+        }
+
+        function handleChange(input) {
+            const id = input.dataset.id;
+            const original = parseFloat(input.dataset.original);
+            const current = parseFloat(input.value);
+
+            if (current !== original && current > 0) {
+                changedRates[id] = current;
+                input.classList.add('changed');
+            } else {
+                delete changedRates[id];
+                input.classList.remove('changed');
+            }
+
+            updateSaveButton();
+        }
+
+        function updateSaveButton() {
+            const count = Object.keys(changedRates).length;
+            document.getElementById('changesCount').textContent = count;
+            document.getElementById('saveBtn').disabled = count === 0;
+        }
+
+        async function saveRates() {
+            const btn = document.getElementById('saveBtn');
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+
+            let success = 0, failed = 0;
+
+            for (const [productId, rate] of Object.entries(changedRates)) {
+                try {
+                    const res = await fetch('/api/market-rates', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            product: productId,
+                            rate: rate,
+                            effectiveDate: new Date().toISOString()
+                        })
+                    });
+
+                    if (res.ok) {
+                        success++;
+                        // Update the original value
+                        const input = document.getElementById('rate-' + productId);
+                        if (input) {
+                            input.dataset.original = rate;
+                            input.classList.remove('changed');
+                        }
+                        rates[productId] = rate;
+                    } else {
+                        failed++;
+                    }
+                } catch (e) {
+                    failed++;
                 }
-            } catch (error) {
-                console.error('Error:', error);
-                showError('Network error');
-            }
-        });
-
-        // Initialize with authentication check - Admin only for purchase rates
-        async function init() {
-            const user = await Auth.requireAuth(['admin']);
-            if (!user) return;
-
-            // Update user badge if it exists
-            const userBadge = document.getElementById('userBadge');
-            if (userBadge) {
-                userBadge.textContent = user.name || user.email || 'User';
             }
 
-            loadData();
+            changedRates = {};
+            updateSaveButton();
+
+            btn.textContent = 'Save Rates';
+
+            if (success > 0) {
+                showToast(`${success} rate(s) saved`);
+            }
+            if (failed > 0) {
+                showToast(`${failed} rate(s) failed`, true);
+            }
+        }
+
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast show' + (isError ? ' error' : '');
+            setTimeout(() => toast.classList.remove('show'), 3000);
         }
 
         init();
-
-        // Register Service Worker for PWA
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js')
-                    .then(reg => console.log('Service Worker registered:', reg.scope))
-                    .catch(err => console.error('Service Worker registration failed:', err));
-            });
-        }
     </script>
 </body>
 </html>
