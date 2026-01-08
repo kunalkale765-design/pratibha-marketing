@@ -4,6 +4,50 @@ const { body, validationResult } = require('express-validator');
 const Order = require('../models/Order');
 const Customer = require('../models/Customer');
 const Product = require('../models/Product');
+const MarketRate = require('../models/MarketRate');
+const { protect, authorize } = require('../middleware/auth');
+
+// Helper function to get current market rate for a product
+async function getMarketRate(productId) {
+  const rate = await MarketRate.findOne({ product: productId })
+    .sort({ effectiveDate: -1 })
+    .limit(1);
+  return rate ? rate.rate : null;
+}
+
+// Helper function to calculate price based on customer's pricing type
+async function calculatePrice(customer, product, requestedRate = null) {
+  // If rate is explicitly provided (staff creating order), use it
+  if (requestedRate !== null && requestedRate !== undefined && requestedRate > 0) {
+    return requestedRate;
+  }
+
+  const pricingType = customer.pricingType || 'market';
+
+  switch (pricingType) {
+    case 'contract':
+      // Use fixed contract price if available
+      const contractPrice = customer.contractPrices?.get(product._id.toString());
+      if (contractPrice) {
+        return contractPrice;
+      }
+      // Fall back to product base price if no contract price set
+      return product.basePrice;
+
+    case 'markup':
+      // Get market rate and apply markup
+      const marketRate = await getMarketRate(product._id);
+      const baseRate = marketRate || product.basePrice;
+      const markup = customer.markupPercentage || 0;
+      return baseRate * (1 + markup / 100);
+
+    case 'market':
+    default:
+      // Use current market rate or product base price
+      const currentRate = await getMarketRate(product._id);
+      return currentRate || product.basePrice;
+  }
+}
 
 // Validation middleware
 const validateOrder = [
@@ -11,13 +55,14 @@ const validateOrder = [
   body('products').isArray({ min: 1 }).withMessage('At least one product is required'),
   body('products.*.product').notEmpty().withMessage('Product ID is required'),
   body('products.*.quantity').isFloat({ min: 0.01 }).withMessage('Quantity must be greater than 0'),
-  body('products.*.rate').isFloat({ min: 0 }).withMessage('Rate must be positive')
+  // Rate is optional - will be calculated based on customer pricing type if not provided
+  body('products.*.rate').optional().isFloat({ min: 0 }).withMessage('Rate must be positive')
 ];
 
 // @route   GET /api/orders
 // @desc    Get all orders
-// @access  Public
-router.get('/', async (req, res, next) => {
+// @access  Private
+router.get('/', protect, async (req, res, next) => {
   try {
     const { status, customer, startDate, endDate, limit = 50 } = req.query;
     const filter = {};
@@ -55,8 +100,8 @@ router.get('/', async (req, res, next) => {
 
 // @route   GET /api/orders/:id
 // @desc    Get single order
-// @access  Public
-router.get('/:id', async (req, res, next) => {
+// @access  Private
+router.get('/:id', protect, async (req, res, next) => {
   try {
     const order = await Order.findById(req.params.id)
       .populate('customer')
@@ -79,8 +124,8 @@ router.get('/:id', async (req, res, next) => {
 
 // @route   GET /api/orders/customer/:customerId
 // @desc    Get orders by customer
-// @access  Public
-router.get('/customer/:customerId', async (req, res, next) => {
+// @access  Private
+router.get('/customer/:customerId', protect, async (req, res, next) => {
   try {
     const orders = await Order.find({ customer: req.params.customerId })
       .populate('products.product', 'name unit')
@@ -99,8 +144,8 @@ router.get('/customer/:customerId', async (req, res, next) => {
 
 // @route   POST /api/orders
 // @desc    Create new order
-// @access  Public
-router.post('/', validateOrder, async (req, res, next) => {
+// @access  Private (All authenticated users - customers can create orders)
+router.post('/', protect, validateOrder, async (req, res, next) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -118,6 +163,7 @@ router.post('/', validateOrder, async (req, res, next) => {
     }
 
     // Calculate amounts and populate product names
+    // Price is calculated based on customer's pricing type if not provided
     let totalAmount = 0;
     const processedProducts = await Promise.all(
       req.body.products.map(async (item) => {
@@ -126,7 +172,9 @@ router.post('/', validateOrder, async (req, res, next) => {
           throw new Error(`Product ${item.product} not found`);
         }
 
-        const amount = item.quantity * item.rate;
+        // Calculate rate based on customer's pricing type
+        const rate = await calculatePrice(customer, product, item.rate);
+        const amount = item.quantity * rate;
         totalAmount += amount;
 
         return {
@@ -134,7 +182,7 @@ router.post('/', validateOrder, async (req, res, next) => {
           productName: product.name,
           quantity: item.quantity,
           unit: product.unit,
-          rate: item.rate,
+          rate: rate,
           amount: amount
         };
       })
@@ -171,8 +219,8 @@ router.post('/', validateOrder, async (req, res, next) => {
 
 // @route   PUT /api/orders/:id/status
 // @desc    Update order status
-// @access  Public
-router.put('/:id/status', [
+// @access  Private (Admin, Staff)
+router.put('/:id/status', protect, authorize('admin', 'staff'), [
   body('status').isIn(['pending', 'confirmed', 'processing', 'packed', 'shipped', 'delivered', 'cancelled'])
     .withMessage('Invalid status')
 ], async (req, res, next) => {
@@ -219,8 +267,8 @@ router.put('/:id/status', [
 
 // @route   PUT /api/orders/:id/payment
 // @desc    Update order payment
-// @access  Public
-router.put('/:id/payment', [
+// @access  Private (Admin, Staff)
+router.put('/:id/payment', protect, authorize('admin', 'staff'), [
   body('paidAmount').isFloat({ min: 0 }).withMessage('Paid amount must be positive')
 ], async (req, res, next) => {
   try {
@@ -263,8 +311,8 @@ router.put('/:id/payment', [
 
 // @route   DELETE /api/orders/:id
 // @desc    Cancel order
-// @access  Public
-router.delete('/:id', async (req, res, next) => {
+// @access  Private (Admin, Staff)
+router.delete('/:id', protect, authorize('admin', 'staff'), async (req, res, next) => {
   try {
     const order = await Order.findByIdAndUpdate(
       req.params.id,

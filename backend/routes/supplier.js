@@ -3,11 +3,12 @@ const router = express.Router();
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const MarketRate = require('../models/MarketRate');
+const { protect, authorize } = require('../middleware/auth');
 
 // @route   GET /api/supplier/quantity-summary
 // @desc    Get consolidated quantities needed across all pending orders
-// @access  Public (will add auth later)
-router.get('/quantity-summary', async (req, res, next) => {
+// @access  Private (Admin, Staff)
+router.get('/quantity-summary', protect, authorize('admin', 'staff'), async (req, res, next) => {
   try {
     // Get all pending/confirmed orders
     const orders = await Order.find({
@@ -85,8 +86,8 @@ router.get('/quantity-summary', async (req, res, next) => {
 
 // @route   GET /api/supplier/pending-orders
 // @desc    Get all pending orders for fulfillment
-// @access  Public
-router.get('/pending-orders', async (req, res, next) => {
+// @access  Private (Admin, Staff)
+router.get('/pending-orders', protect, authorize('admin', 'staff'), async (req, res, next) => {
   try {
     const orders = await Order.find({
       status: { $in: ['pending', 'confirmed', 'processing'] }
@@ -108,8 +109,8 @@ router.get('/pending-orders', async (req, res, next) => {
 
 // @route   GET /api/supplier/daily-requirements
 // @desc    Get procurement requirements for today
-// @access  Public
-router.get('/daily-requirements', async (req, res, next) => {
+// @access  Private (Admin, Staff)
+router.get('/daily-requirements', protect, authorize('admin', 'staff'), async (req, res, next) => {
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -155,8 +156,8 @@ router.get('/daily-requirements', async (req, res, next) => {
 
 // @route   GET /api/supplier/low-stock
 // @desc    Get products with low stock
-// @access  Public
-router.get('/low-stock', async (req, res, next) => {
+// @access  Private (Admin, Staff)
+router.get('/low-stock', protect, authorize('admin', 'staff'), async (req, res, next) => {
   try {
     const lowStockProducts = await Product.find({
       $expr: { $lte: ['$stockQuantity', '$minStockLevel'] },

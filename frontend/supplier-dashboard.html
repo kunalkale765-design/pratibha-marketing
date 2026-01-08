@@ -1,151 +1,715 @@
 <!DOCTYPE html>
-<html class="light" lang="en">
+<html lang="en">
 <head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Supplier Dashboard - Pratibha Marketing</title>
-    <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols-Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    colors: {
-                        "primary": "#13ec13",
-                        "background-light": "#f6f8f6",
-                        "background-dark": "#102210",
-                    },
-                    fontFamily: {
-                        "display": ["Work Sans", "sans-serif"]
-                    }
-                }
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#7e9181">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Pratibha">
+    <link rel="apple-touch-icon" href="/icons/icon.svg">
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gunmetal: #2e3532;
+            --gunmetal-light: #3d4542;
+            --dusty-olive: #7e9181;
+            --dusty-olive-light: #97a99a;
+            --dusty-olive-dark: #5d6b5f;
+            --pale-slate: #c7cedb;
+            --pale-slate-light: #e8ebf0;
+            --cream: #f9f7f3;
+            --cream-dark: #efe9df;
+            --warm-white: #fefdfb;
+            --terracotta: #c4a77d;
+            --terracotta-light: #d4bc9a;
+            --text-primary: #1f2421;
+            --text-secondary: #5a6560;
+            --text-muted: #8a918c;
+            --success: #5d7a5f;
+            --warning: #b89a5a;
+            --error: #9a6565;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--cream);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* Subtle paper texture */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body > * { position: relative; z-index: 1; }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--gunmetal) 0%, var(--gunmetal-light) 100%);
+            color: var(--warm-white);
+            padding: 1.25rem 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%; right: -10%;
+            width: 60%; height: 200%;
+            background: linear-gradient(45deg, rgba(126, 145, 129, 0.12) 0%, transparent 60%);
+            transform: skewX(-15deg);
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--dusty-olive), var(--terracotta), var(--dusty-olive));
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-mark {
+            width: 42px; height: 42px;
+            background: linear-gradient(135deg, var(--dusty-olive) 0%, var(--dusty-olive-dark) 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .logo-text {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        .logo-text span { color: var(--dusty-olive-light); font-weight: 400; }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 0.625rem 1.25rem;
+            border-radius: 8px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            border: none;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.3);
+            color: var(--warm-white);
+        }
+
+        .btn-ghost:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--dusty-olive) 0%, var(--dusty-olive-dark) 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(126, 145, 129, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(126, 145, 129, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--cream);
+            color: var(--gunmetal);
+            border: 1px solid var(--pale-slate);
+        }
+
+        .btn-secondary:hover {
+            background: var(--pale-slate-light);
+        }
+
+        /* Main Content */
+        .main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        /* Page Title */
+        .page-title {
+            margin-bottom: 2rem;
+        }
+
+        .page-title h1 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--gunmetal);
+            margin-bottom: 0.25rem;
+        }
+
+        .page-title p {
+            color: var(--text-muted);
+            font-size: 0.9375rem;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--warm-white);
+            border-radius: 12px;
+            padding: 1.25rem;
+            border: 1px solid var(--pale-slate-light);
+            box-shadow: 0 1px 3px rgba(46, 53, 50, 0.04);
+            transition: all 0.25s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 4px; height: 100%;
+            background: var(--dusty-olive);
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(46, 53, 50, 0.08);
+        }
+
+        .stat-card:hover::before { opacity: 1; }
+
+        .stat-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--gunmetal);
+        }
+
+        .stat-icon {
+            position: absolute;
+            top: 1rem; right: 1rem;
+            font-size: 1.25rem;
+            opacity: 0.6;
+        }
+
+        /* Section Card */
+        .section-card {
+            background: var(--warm-white);
+            border-radius: 14px;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--pale-slate-light);
+            box-shadow: 0 1px 3px rgba(46, 53, 50, 0.04);
+            overflow: hidden;
+        }
+
+        .section-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--pale-slate-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(180deg, var(--warm-white) 0%, var(--cream) 100%);
+        }
+
+        .section-title {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--gunmetal);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-title .icon {
+            width: 32px; height: 32px;
+            background: linear-gradient(135deg, var(--dusty-olive) 0%, var(--dusty-olive-dark) 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .section-subtitle {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+            margin-top: 0.125rem;
+        }
+
+        .section-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        /* Shopping Table */
+        .shopping-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .shopping-table thead {
+            background: var(--cream);
+        }
+
+        .shopping-table th {
+            padding: 0.875rem 1.5rem;
+            text-align: left;
+            font-size: 0.6875rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            border-bottom: 2px solid var(--pale-slate-light);
+        }
+
+        .shopping-table th.text-right { text-align: right; }
+        .shopping-table th.text-center { text-align: center; }
+
+        .shopping-table td {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--pale-slate-light);
+            vertical-align: middle;
+        }
+
+        .shopping-table tbody tr {
+            transition: all 0.15s ease;
+        }
+
+        .shopping-table tbody tr:hover {
+            background: var(--cream);
+        }
+
+        .shopping-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .item-name {
+            font-weight: 600;
+            color: var(--gunmetal);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .item-icon {
+            width: 36px; height: 36px;
+            background: var(--cream-dark);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.125rem;
+        }
+
+        .item-qty {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            font-size: 1.0625rem;
+            color: var(--dusty-olive-dark);
+            text-align: right;
+        }
+
+        .value-cell {
+            text-align: right;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            color: var(--gunmetal);
+        }
+
+        .trend-up { color: var(--success); }
+        .trend-down { color: var(--error); }
+        .trend-flat { color: var(--text-muted); }
+
+        /* Two Column Grid */
+        .two-col-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+        }
+
+        /* List Items */
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--pale-slate-light);
+        }
+
+        .list-item:last-child { border-bottom: none; }
+
+        .list-item-info h4 {
+            font-weight: 600;
+            color: var(--gunmetal);
+            margin-bottom: 0.125rem;
+        }
+
+        .list-item-info p {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+        }
+
+        .list-item-value {
+            text-align: right;
+        }
+
+        .list-item-value .value {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            color: var(--gunmetal);
+        }
+
+        .list-item-value .label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .list-item-value .value.error { color: var(--error); }
+        .list-item-value .change { font-size: 0.8125rem; }
+        .list-item-value .change.positive { color: var(--success); }
+        .list-item-value .change.negative { color: var(--error); }
+
+        /* Empty State */
+        .empty-state {
+            padding: 3rem;
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        .empty-state .icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.75rem;
+            opacity: 0.5;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .two-col-grid { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+            .stats-grid { grid-template-columns: 1fr; }
+            .section-header {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+            .shopping-table th, .shopping-table td {
+                padding: 0.75rem 1rem;
+            }
+            .page-title h1 { font-size: 1.5rem; }
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .stat-card {
+            animation: fadeInUp 0.4s ease backwards;
+        }
+        .stat-card:nth-child(1) { animation-delay: 0.05s; }
+        .stat-card:nth-child(2) { animation-delay: 0.1s; }
+        .stat-card:nth-child(3) { animation-delay: 0.15s; }
+        .stat-card:nth-child(4) { animation-delay: 0.2s; }
+
+        .section-card {
+            animation: fadeInUp 0.5s ease backwards;
+            animation-delay: 0.25s;
+        }
+
+        /* Print Styles */
+        @media print {
+            body {
+                background: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            body::before { display: none; }
+
+            .header {
+                background: var(--gunmetal) !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                position: relative;
+            }
+
+            .header::before, .header::after { display: none; }
+
+            .header-actions,
+            .section-actions,
+            .stats-grid,
+            .two-col-grid {
+                display: none !important;
+            }
+
+            .main { padding: 1rem; }
+            .page-title { margin-bottom: 1rem; }
+            .page-title h1 { font-size: 1.5rem; }
+
+            .section-card {
+                box-shadow: none;
+                border: 1px solid #ddd;
+                break-inside: avoid;
+            }
+
+            .section-header {
+                background: var(--cream) !important;
+                padding: 0.75rem 1rem;
+            }
+
+            .shopping-table th, .shopping-table td {
+                padding: 0.5rem 0.75rem;
+            }
+
+            .item-icon {
+                width: 24px; height: 24px;
+                font-size: 0.875rem;
+            }
+
+            /* Print header */
+            .print-header {
+                display: block !important;
+                text-align: center;
+                margin-bottom: 1rem;
+                padding-bottom: 0.5rem;
+                border-bottom: 2px solid var(--gunmetal);
+            }
+
+            .print-header h2 {
+                font-family: 'Crimson Pro', serif;
+                font-size: 1.25rem;
+                margin-bottom: 0.25rem;
+            }
+
+            .print-header p {
+                font-size: 0.75rem;
+                color: var(--text-muted);
+            }
+
+            /* Checkbox column for market */
+            .print-checkbox {
+                display: table-cell !important;
+                width: 30px;
+            }
+
+            .print-checkbox-box {
+                display: inline-block !important;
+                width: 18px; height: 18px;
+                border: 2px solid var(--gunmetal);
+                border-radius: 3px;
             }
         }
-    </script>
+
+        /* Hidden by default, shown in print */
+        .print-header, .print-checkbox, .print-checkbox-box {
+            display: none;
+        }
+    </style>
 </head>
-<body class="bg-background-light dark:bg-background-dark font-display text-gray-900 dark:text-gray-100">
-    <div class="min-h-screen">
-        <!-- Header -->
-        <header class="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-10">
-            <div class="max-w-7xl mx-auto px-6 py-4">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <h1 class="text-2xl font-bold">Supplier Dashboard</h1>
-                        <p class="text-sm text-gray-600 dark:text-gray-400">Pratibha Marketing - Procurement Planning</p>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <a href="/" class="logo" style="text-decoration: none; color: inherit;">
+                <div class="logo-mark">🌿</div>
+                <div class="logo-text">Pratibha <span>Marketing</span></div>
+            </a>
+            <div class="header-actions">
+                <button onclick="refreshData()" class="btn btn-ghost">↻ Refresh</button>
+                <a href="/" class="btn btn-ghost">Dashboard</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <!-- Print Header (only visible when printing) -->
+        <div class="print-header">
+            <h2>Pratibha Marketing - Shopping List</h2>
+            <p id="printDate"></p>
+        </div>
+
+        <!-- Page Title -->
+        <div class="page-title">
+            <h1>Supplier Dashboard</h1>
+            <p>Procurement Planning — Quantities needed across all pending orders</p>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <span class="stat-icon">📋</span>
+                <div class="stat-label">Pending Orders</div>
+                <div class="stat-value" id="pendingOrders">-</div>
+            </div>
+            <div class="stat-card">
+                <span class="stat-icon">📦</span>
+                <div class="stat-label">Products Required</div>
+                <div class="stat-value" id="productsRequired">-</div>
+            </div>
+            <div class="stat-card">
+                <span class="stat-icon">⚠️</span>
+                <div class="stat-label">Low Stock Items</div>
+                <div class="stat-value" id="lowStockCount">-</div>
+            </div>
+            <div class="stat-card">
+                <span class="stat-icon">💰</span>
+                <div class="stat-label">Est. Procurement Value</div>
+                <div class="stat-value" id="totalValue">₹0</div>
+            </div>
+        </div>
+
+        <!-- Shopping List Section -->
+        <div class="section-card">
+            <div class="section-header">
+                <div>
+                    <div class="section-title">
+                        <div class="icon">🛒</div>
+                        Procurement Requirements
                     </div>
-                    <div class="flex gap-3">
-                        <button onclick="refreshData()" class="px-4 py-2 bg-primary text-black rounded-lg font-medium hover:bg-green-400">
-                            <span class="material-symbols-outlined text-sm inline-block mr-1">refresh</span>
-                            Refresh
-                        </button>
-                        <a href="/" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg font-medium">
-                            Dashboard
-                        </a>
+                    <div class="section-subtitle">Total quantities needed across all pending orders</div>
+                </div>
+                <div class="section-actions">
+                    <button class="btn btn-secondary" onclick="printShoppingList()">🖨️ Print List</button>
+                    <button class="btn btn-primary" onclick="exportToCSV()">📥 Export CSV</button>
+                </div>
+            </div>
+            <table class="shopping-table">
+                <thead>
+                    <tr>
+                        <th class="print-checkbox">✓</th>
+                        <th>Product</th>
+                        <th class="text-right">Total Qty</th>
+                        <th>Unit</th>
+                        <th class="text-right">Orders</th>
+                        <th class="text-right">Customers</th>
+                        <th class="text-right">Market Rate</th>
+                        <th class="text-right">Est. Cost</th>
+                        <th class="text-center">Trend</th>
+                    </tr>
+                </thead>
+                <tbody id="quantityTableBody">
+                    <tr>
+                        <td colspan="9" class="empty-state">
+                            <div class="icon">⏳</div>
+                            <p>Loading procurement data...</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Two Column Layout -->
+        <div class="two-col-grid">
+            <!-- Low Stock Alerts -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">
+                        <div class="icon">⚠️</div>
+                        Low Stock Alerts
+                    </div>
+                </div>
+                <div id="lowStockList">
+                    <div class="empty-state">
+                        <p>Loading...</p>
                     </div>
                 </div>
             </div>
-        </header>
 
-        <!-- Main Content -->
-        <main class="max-w-7xl mx-auto px-6 py-8">
-            <!-- Stats Overview -->
-            <div class="grid md:grid-cols-4 gap-6 mb-8">
-                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-gray-600 dark:text-gray-400">Pending Orders</span>
-                        <span class="material-symbols-outlined text-orange-500">pending_actions</span>
-                    </div>
-                    <div class="text-3xl font-bold" id="pendingOrders">-</div>
-                </div>
-                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-gray-600 dark:text-gray-400">Products Required</span>
-                        <span class="material-symbols-outlined text-primary">inventory_2</span>
-                    </div>
-                    <div class="text-3xl font-bold" id="productsRequired">-</div>
-                </div>
-                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-gray-600 dark:text-gray-400">Low Stock Items</span>
-                        <span class="material-symbols-outlined text-red-500">warning</span>
-                    </div>
-                    <div class="text-3xl font-bold" id="lowStockCount">-</div>
-                </div>
-                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-gray-600 dark:text-gray-400">Est. Procurement Value</span>
-                        <span class="material-symbols-outlined text-blue-500">currency_rupee</span>
-                    </div>
-                    <div class="text-3xl font-bold" id="totalValue">₹0</div>
-                </div>
-            </div>
-
-            <!-- Consolidated Quantity Table - THE MAIN FEATURE -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow mb-8">
-                <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <h2 class="text-2xl font-bold mb-1">Procurement Requirements</h2>
-                            <p class="text-sm text-gray-600 dark:text-gray-400">Total quantities needed across all pending orders</p>
-                        </div>
-                        <button onclick="exportToCSV()" class="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700">
-                            <span class="material-symbols-outlined text-sm inline-block mr-1">download</span>
-                            Export CSV
-                        </button>
+            <!-- Recent Market Rates -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">
+                        <div class="icon">📊</div>
+                        Recent Market Rates
                     </div>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead class="bg-gray-50 dark:bg-gray-900">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Qty</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Orders</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Customers</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Market Rate</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Est. Cost</th>
-                                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Trend</th>
-                            </tr>
-                        </thead>
-                        <tbody id="quantityTableBody" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                            <tr>
-                                <td colspan="8" class="px-6 py-12 text-center text-gray-500">
-                                    <span class="material-symbols-outlined text-4xl mb-2 block">hourglass_empty</span>
-                                    Loading procurement data...
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Two Column Layout -->
-            <div class="grid md:grid-cols-2 gap-8">
-                <!-- Low Stock Alerts -->
-                <div class="bg-white dark:bg-gray-800 rounded-xl shadow">
-                    <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-                        <h2 class="text-xl font-bold">Low Stock Alerts</h2>
-                    </div>
-                    <div id="lowStockList" class="p-6">
-                        <p class="text-gray-500 text-center py-8">Loading...</p>
-                    </div>
-                </div>
-
-                <!-- Recent Market Rate Changes -->
-                <div class="bg-white dark:bg-gray-800 rounded-xl shadow">
-                    <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-                        <h2 class="text-xl font-bold">Recent Market Rates</h2>
-                    </div>
-                    <div id="marketRatesList" class="p-6">
-                        <p class="text-gray-500 text-center py-8">Loading...</p>
+                <div id="marketRatesList">
+                    <div class="empty-state">
+                        <p>Loading...</p>
                     </div>
                 </div>
             </div>
-        </main>
-    </div>
+        </div>
+    </main>
+
+    <!-- Shared Modules -->
+    <script src="/js/auth.js"></script>
+    <script src="/js/api.js"></script>
 
     <script>
         let quantityData = [];
@@ -181,9 +745,9 @@
             if (!data || data.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="8" class="px-6 py-12 text-center text-gray-500">
-                            <span class="material-symbols-outlined text-4xl mb-2 block">inventory</span>
-                            No pending orders. All clear!
+                        <td colspan="9" class="empty-state">
+                            <div class="icon">✅</div>
+                            <p>No pending orders. All clear!</p>
                         </td>
                     </tr>
                 `;
@@ -191,25 +755,25 @@
             }
 
             tbody.innerHTML = data.map(item => {
-                const trendIcon = item.trend === 'up' ? 'trending_up' : item.trend === 'down' ? 'trending_down' : 'trending_flat';
-                const trendColor = item.trend === 'up' ? 'text-green-600' : item.trend === 'down' ? 'text-red-600' : 'text-gray-600';
+                const trendIcon = item.trend === 'up' ? '↑' : item.trend === 'down' ? '↓' : '→';
+                const trendClass = item.trend === 'up' ? 'trend-up' : item.trend === 'down' ? 'trend-down' : 'trend-flat';
 
                 return `
-                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td class="px-6 py-4 whitespace-nowrap font-medium">${item.productName}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right text-lg font-bold text-primary">${item.totalQuantity}</td>
-                        <td class="px-6 py-4 whitespace-nowrap">${item.unit}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right">${item.orderCount}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right">${item.customerCount}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right">
-                            ${item.marketRate ? `₹${item.marketRate}/${item.unit}` : '-'}
+                    <tr>
+                        <td class="print-checkbox"><span class="print-checkbox-box"></span></td>
+                        <td>
+                            <div class="item-name">
+                                <div class="item-icon">🥬</div>
+                                ${item.productName}
+                            </div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right font-semibold">
-                            ${item.estimatedValue ? `₹${item.estimatedValue}` : '-'}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-center">
-                            <span class="material-symbols-outlined ${trendColor}">${trendIcon}</span>
-                        </td>
+                        <td class="item-qty">${item.totalQuantity}</td>
+                        <td>${item.unit}</td>
+                        <td class="value-cell">${item.orderCount}</td>
+                        <td class="value-cell">${item.customerCount}</td>
+                        <td class="value-cell">${item.marketRate ? `₹${item.marketRate}/${item.unit}` : '-'}</td>
+                        <td class="value-cell">${item.estimatedValue ? `₹${item.estimatedValue}` : '-'}</td>
+                        <td class="value-cell ${trendClass}">${trendIcon}</td>
                     </tr>
                 `;
             }).join('');
@@ -223,28 +787,33 @@
             const totalValue = quantity.data.reduce((sum, item) => {
                 return sum + (parseFloat(item.estimatedValue) || 0);
             }, 0);
-            document.getElementById('totalValue').textContent = `₹${totalValue.toFixed(2)}`;
+            document.getElementById('totalValue').textContent = `₹${totalValue.toFixed(0)}`;
         }
 
         function displayLowStock(data) {
             const container = document.getElementById('lowStockList');
 
             if (!data || data.length === 0) {
-                container.innerHTML = '<p class="text-gray-500 text-center py-8">All products well stocked!</p>';
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">✅</div>
+                        <p>All products well stocked!</p>
+                    </div>
+                `;
                 document.getElementById('lowStockCount').textContent = '0';
                 return;
             }
 
             document.getElementById('lowStockCount').textContent = data.length;
             container.innerHTML = data.map(item => `
-                <div class="flex justify-between items-center py-3 border-b border-gray-200 dark:border-gray-700 last:border-0">
-                    <div>
-                        <div class="font-medium">${item.name}</div>
-                        <div class="text-sm text-gray-500">Min: ${item.minStockLevel} ${item.unit}</div>
+                <div class="list-item">
+                    <div class="list-item-info">
+                        <h4>${item.name}</h4>
+                        <p>Min: ${item.minStockLevel} ${item.unit}</p>
                     </div>
-                    <div class="text-right">
-                        <div class="text-red-600 font-bold">${item.stockQuantity} ${item.unit}</div>
-                        <div class="text-xs text-gray-500">Current Stock</div>
+                    <div class="list-item-value">
+                        <div class="value error">${item.stockQuantity} ${item.unit}</div>
+                        <div class="label">Current Stock</div>
                     </div>
                 </div>
             `).join('');
@@ -254,21 +823,25 @@
             const container = document.getElementById('marketRatesList');
 
             if (!data || data.length === 0) {
-                container.innerHTML = '<p class="text-gray-500 text-center py-8">No recent rate updates</p>';
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <p>No recent rate updates</p>
+                    </div>
+                `;
                 return;
             }
 
             container.innerHTML = data.slice(0, 5).map(item => {
-                const changeColor = item.changePercentage > 0 ? 'text-green-600' : item.changePercentage < 0 ? 'text-red-600' : 'text-gray-600';
+                const changeClass = item.changePercentage > 0 ? 'positive' : item.changePercentage < 0 ? 'negative' : '';
                 return `
-                    <div class="flex justify-between items-center py-3 border-b border-gray-200 dark:border-gray-700 last:border-0">
-                        <div>
-                            <div class="font-medium">${item.productName}</div>
-                            <div class="text-xs text-gray-500">${new Date(item.effectiveDate).toLocaleDateString()}</div>
+                    <div class="list-item">
+                        <div class="list-item-info">
+                            <h4>${item.productName}</h4>
+                            <p>${new Date(item.effectiveDate).toLocaleDateString()}</p>
                         </div>
-                        <div class="text-right">
-                            <div class="font-bold">₹${item.rate}</div>
-                            ${item.changePercentage ? `<div class="text-xs ${changeColor}">${item.changePercentage > 0 ? '+' : ''}${item.changePercentage}%</div>` : ''}
+                        <div class="list-item-value">
+                            <div class="value">₹${item.rate}</div>
+                            ${item.changePercentage ? `<div class="change ${changeClass}">${item.changePercentage > 0 ? '+' : ''}${item.changePercentage}%</div>` : ''}
                         </div>
                     </div>
                 `;
@@ -278,6 +851,14 @@
         function refreshData() {
             loadDashboard();
             showSuccess('Data refreshed!');
+        }
+
+        function printShoppingList() {
+            // Update print date
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('printDate').textContent = new Date().toLocaleDateString('en-IN', options);
+            // Trigger print dialog
+            window.print();
         }
 
         function exportToCSV() {
@@ -324,6 +905,15 @@
 
         // Auto-refresh every 5 minutes
         setInterval(loadDashboard, 5 * 60 * 1000);
+
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(reg => console.log('Service Worker registered:', reg.scope))
+                    .catch(err => console.error('Service Worker registration failed:', err));
+            });
+        }
     </script>
 </body>
 </html>

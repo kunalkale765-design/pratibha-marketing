@@ -19,8 +19,15 @@ const userSchema = new mongoose.Schema({
   password: {
     type: String,
     required: [true, 'Password is required'],
-    minlength: [6, 'Password must be at least 6 characters'],
-    select: false // Don't return password in queries by default
+    minlength: [12, 'Password must be at least 12 characters'],
+    select: false, // Don't return password in queries by default
+    validate: {
+      validator: function(v) {
+        // Check for at least one uppercase, one lowercase, and one number
+        return /[A-Z]/.test(v) && /[a-z]/.test(v) && /[0-9]/.test(v);
+      },
+      message: 'Password must contain at least one uppercase letter, one lowercase letter, and one number'
+    }
   },
   phone: {
     type: String,

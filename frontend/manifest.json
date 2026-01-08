@@ -1,0 +1,21 @@
+{
+  "name": "Pratibha Marketing",
+  "short_name": "Pratibha",
+  "description": "Fresh vegetable supply management for hotels and restaurants",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f9f7f3",
+  "theme_color": "#7e9181",
+  "categories": ["business", "food"],
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
+}

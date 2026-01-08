@@ -9,9 +9,14 @@ const customerSchema = new mongoose.Schema({
   },
   phone: {
     type: String,
-    required: [true, 'Phone number is required'],
     trim: true,
-    match: [/^[0-9]{10}$/, 'Please enter a valid 10-digit phone number']
+    validate: {
+      validator: function(v) {
+        // Allow empty or valid 10-digit phone
+        return !v || /^[0-9]{10}$/.test(v);
+      },
+      message: 'Please enter a valid 10-digit phone number'
+    }
   },
   whatsapp: {
     type: String,
@@ -23,6 +28,26 @@ const customerSchema = new mongoose.Schema({
     trim: true,
     maxlength: [500, 'Address cannot exceed 500 characters']
   },
+  // Pricing type determines how order prices are calculated
+  pricingType: {
+    type: String,
+    enum: ['contract', 'markup', 'market'],
+    default: 'market'
+  },
+  // For 'markup' pricing type - percentage added to purchase price
+  markupPercentage: {
+    type: Number,
+    default: 0,
+    min: [0, 'Markup cannot be negative'],
+    max: [200, 'Markup cannot exceed 200%']
+  },
+  // For 'contract' pricing type - fixed prices per product (productId -> price)
+  contractPrices: {
+    type: Map,
+    of: Number,
+    default: new Map()
+  },
+  // Legacy field - kept for backward compatibility
   personalizedPricing: {
     type: Map,
     of: Number,
@@ -60,6 +85,6 @@ const customerSchema = new mongoose.Schema({
 
 // Index for faster searches
 customerSchema.index({ name: 1 });
-customerSchema.index({ phone: 1 }, { unique: true });
+customerSchema.index({ phone: 1 }, { unique: true, sparse: true }); // sparse allows multiple null/empty values
 
 module.exports = mongoose.model('Customer', customerSchema);

@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pratibha Marketing - Earthy Professional</title>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gunmetal: #2e3532;
+            --gunmetal-light: #3d4542;
+            --dusty-olive: #7e9181;
+            --dusty-olive-light: #97a99a;
+            --dusty-olive-dark: #5d6b5f;
+            --pale-slate: #c7cedb;
+            --pale-slate-light: #e8ebf0;
+            --cream: #f9f7f3;
+            --cream-dark: #efe9df;
+            --warm-white: #fefdfb;
+            --terracotta: #c4a77d;
+            --terracotta-light: #d4bc9a;
+            --text-primary: #1f2421;
+            --text-secondary: #5a6560;
+            --text-muted: #8a918c;
+            --success: #5d7a5f;
+            --warning: #b89a5a;
+            --error: #9a6565;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--cream);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* Subtle paper texture */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--gunmetal) 0%, var(--gunmetal-light) 100%);
+            color: var(--warm-white);
+            padding: 1.25rem 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 60%;
+            height: 200%;
+            background: linear-gradient(45deg, rgba(126, 145, 129, 0.12) 0%, transparent 60%);
+            transform: skewX(-15deg);
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--dusty-olive), var(--terracotta), var(--dusty-olive));
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-mark {
+            width: 42px;
+            height: 42px;
+            background: linear-gradient(135deg, var(--dusty-olive) 0%, var(--dusty-olive-dark) 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .logo-text {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        .logo-text span {
+            color: var(--dusty-olive-light);
+            font-weight: 400;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-badge {
+            background: rgba(255,255,255,0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+
+        .btn-logout {
+            background: transparent;
+            color: var(--pale-slate);
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-logout:hover {
+            background: rgba(255,255,255,0.1);
+            color: var(--warm-white);
+        }
+
+        /* Main Container */
+        .main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        /* Page Title */
+        .page-title {
+            margin-bottom: 2rem;
+        }
+
+        .page-title h1 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--gunmetal);
+            margin-bottom: 0.25rem;
+        }
+
+        .page-title p {
+            color: var(--text-muted);
+            font-size: 0.9375rem;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--warm-white);
+            border-radius: 12px;
+            padding: 1.25rem;
+            border: 1px solid var(--pale-slate-light);
+            box-shadow: 0 1px 3px rgba(46, 53, 50, 0.04);
+            transition: all 0.25s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--dusty-olive);
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(46, 53, 50, 0.08);
+        }
+
+        .stat-card:hover::before {
+            opacity: 1;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--gunmetal);
+        }
+
+        .stat-change {
+            font-size: 0.8125rem;
+            margin-top: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .stat-change.positive { color: var(--success); }
+        .stat-change.negative { color: var(--error); }
+
+        /* Section Card */
+        .section-card {
+            background: var(--warm-white);
+            border-radius: 14px;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--pale-slate-light);
+            box-shadow: 0 1px 3px rgba(46, 53, 50, 0.04);
+            overflow: hidden;
+        }
+
+        .section-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--pale-slate-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(180deg, var(--warm-white) 0%, var(--cream) 100%);
+        }
+
+        .section-title {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--gunmetal);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-title .icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--dusty-olive) 0%, var(--dusty-olive-dark) 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .section-subtitle {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+            margin-top: 0.125rem;
+        }
+
+        .section-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--dusty-olive) 0%, var(--dusty-olive-dark) 100%);
+            color: white;
+            border: none;
+            padding: 0.625rem 1.25rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(126, 145, 129, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(126, 145, 129, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--cream);
+            color: var(--gunmetal);
+            border: 1px solid var(--pale-slate);
+            padding: 0.625rem 1.25rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-secondary:hover {
+            background: var(--pale-slate-light);
+        }
+
+        /* Shopping Table */
+        .shopping-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .shopping-table thead {
+            background: var(--cream);
+        }
+
+        .shopping-table th {
+            padding: 0.875rem 1.5rem;
+            text-align: left;
+            font-size: 0.6875rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            border-bottom: 2px solid var(--pale-slate-light);
+        }
+
+        .shopping-table th:last-child {
+            text-align: right;
+        }
+
+        .shopping-table td {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--pale-slate-light);
+            vertical-align: middle;
+        }
+
+        .shopping-table tbody tr {
+            transition: all 0.15s ease;
+        }
+
+        .shopping-table tbody tr:hover {
+            background: var(--cream);
+        }
+
+        .shopping-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .item-name {
+            font-weight: 600;
+            color: var(--gunmetal);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .item-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--cream-dark);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.125rem;
+        }
+
+        .item-qty {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            font-size: 1.0625rem;
+            color: var(--dusty-olive-dark);
+        }
+
+        .rate-input {
+            width: 100px;
+            padding: 0.5rem 0.75rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9375rem;
+            font-weight: 500;
+            border: 1px solid var(--pale-slate);
+            border-radius: 6px;
+            text-align: right;
+            background: var(--warm-white);
+            transition: all 0.2s ease;
+        }
+
+        .rate-input:focus {
+            outline: none;
+            border-color: var(--dusty-olive);
+            box-shadow: 0 0 0 3px rgba(126, 145, 129, 0.15);
+        }
+
+        .value-cell {
+            text-align: right;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            color: var(--gunmetal);
+        }
+
+        /* Orders Table */
+        .orders-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .orders-table thead {
+            background: var(--cream);
+        }
+
+        .orders-table th {
+            padding: 0.75rem 1.5rem;
+            text-align: left;
+            font-size: 0.6875rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            border-bottom: 2px solid var(--pale-slate-light);
+        }
+
+        .orders-table td {
+            padding: 0.875rem 1.5rem;
+            border-bottom: 1px solid var(--pale-slate-light);
+            font-size: 0.9375rem;
+        }
+
+        .orders-table tbody tr {
+            transition: all 0.15s ease;
+        }
+
+        .orders-table tbody tr:hover {
+            background: var(--cream);
+        }
+
+        .invoice-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            color: var(--gunmetal);
+        }
+
+        .customer-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .amount {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+        }
+
+        .profit {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            color: var(--success);
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.6875rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            border-radius: 20px;
+        }
+
+        .badge-pending {
+            background: rgba(184, 154, 90, 0.15);
+            color: #8a7340;
+            border: 1px solid rgba(184, 154, 90, 0.3);
+        }
+
+        .badge-delivered {
+            background: rgba(93, 122, 95, 0.15);
+            color: #4a6150;
+            border: 1px solid rgba(93, 122, 95, 0.3);
+        }
+
+        .badge-paid {
+            background: rgba(93, 122, 95, 0.15);
+            color: #4a6150;
+            border: 1px solid rgba(93, 122, 95, 0.3);
+        }
+
+        .badge-partial {
+            background: rgba(184, 154, 90, 0.15);
+            color: #8a7340;
+            border: 1px solid rgba(184, 154, 90, 0.3);
+        }
+
+        .badge-unpaid {
+            background: rgba(154, 101, 101, 0.15);
+            color: #7a5050;
+            border: 1px solid rgba(154, 101, 101, 0.3);
+        }
+
+        /* Action Button in Table */
+        .btn-table {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.8125rem;
+            background: var(--cream);
+            border: 1px solid var(--pale-slate);
+            border-radius: 6px;
+            color: var(--gunmetal);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-table:hover {
+            background: var(--dusty-olive);
+            color: white;
+            border-color: var(--dusty-olive);
+        }
+
+        /* Total Row */
+        .total-row {
+            background: var(--cream);
+        }
+
+        .total-row td {
+            padding: 1rem 1.5rem;
+            font-weight: 700;
+            border-bottom: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .section-header {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+
+            .shopping-table, .orders-table {
+                font-size: 0.875rem;
+            }
+
+            .shopping-table th,
+            .shopping-table td,
+            .orders-table th,
+            .orders-table td {
+                padding: 0.75rem 1rem;
+            }
+
+            .rate-input {
+                width: 80px;
+            }
+
+            .page-title h1 {
+                font-size: 1.5rem;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .stat-card {
+            animation: fadeInUp 0.4s ease backwards;
+        }
+        .stat-card:nth-child(1) { animation-delay: 0.05s; }
+        .stat-card:nth-child(2) { animation-delay: 0.1s; }
+        .stat-card:nth-child(3) { animation-delay: 0.15s; }
+        .stat-card:nth-child(4) { animation-delay: 0.2s; }
+
+        .section-card {
+            animation: fadeInUp 0.5s ease backwards;
+            animation-delay: 0.25s;
+        }
+
+        /* Print Styles */
+        @media print {
+            body {
+                background: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            body::before {
+                display: none;
+            }
+
+            .header {
+                background: var(--gunmetal) !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .header::before,
+            .header::after {
+                display: none;
+            }
+
+            .header-actions,
+            .btn-logout,
+            .user-badge,
+            .section-actions,
+            .btn-table,
+            .stats-grid,
+            .orders-table-section {
+                display: none !important;
+            }
+
+            .main {
+                padding: 1rem;
+            }
+
+            .page-title {
+                margin-bottom: 1rem;
+            }
+
+            .page-title h1 {
+                font-size: 1.5rem;
+            }
+
+            .section-card {
+                box-shadow: none;
+                border: 1px solid #ddd;
+                break-inside: avoid;
+            }
+
+            .section-header {
+                background: var(--cream) !important;
+                padding: 0.75rem 1rem;
+            }
+
+            .shopping-table th,
+            .shopping-table td {
+                padding: 0.5rem 0.75rem;
+            }
+
+            .rate-input {
+                border: none;
+                background: transparent;
+                font-weight: 600;
+            }
+
+            .rate-input::placeholder {
+                color: transparent;
+            }
+
+            .item-icon {
+                width: 24px;
+                height: 24px;
+                font-size: 0.875rem;
+            }
+
+            /* Print header */
+            .print-header {
+                display: block !important;
+                text-align: center;
+                margin-bottom: 1rem;
+                padding-bottom: 0.5rem;
+                border-bottom: 2px solid var(--gunmetal);
+            }
+
+            .print-header h2 {
+                font-family: 'Crimson Pro', serif;
+                font-size: 1.25rem;
+                margin-bottom: 0.25rem;
+            }
+
+            .print-header p {
+                font-size: 0.75rem;
+                color: var(--text-muted);
+            }
+
+            /* Checkbox column for market */
+            .print-checkbox {
+                display: table-cell !important;
+                width: 30px;
+            }
+
+            .print-checkbox-box {
+                display: inline-block !important;
+                width: 18px;
+                height: 18px;
+                border: 2px solid var(--gunmetal);
+                border-radius: 3px;
+            }
+        }
+
+        /* Hidden by default, shown in print */
+        .print-header,
+        .print-checkbox,
+        .print-checkbox-box {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-mark">🌿</div>
+                <div class="logo-text">Pratibha <span>Marketing</span></div>
+            </div>
+            <div class="header-actions">
+                <div class="user-badge">Supplier Dashboard</div>
+                <button class="btn-logout">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <!-- Print Header (only visible when printing) -->
+        <div class="print-header">
+            <h2>Pratibha Marketing - Shopping List</h2>
+            <p id="printDate">Wednesday, January 8, 2026</p>
+        </div>
+
+        <!-- Page Title -->
+        <div class="page-title">
+            <h1>Good Morning, Kunal</h1>
+            <p>Wednesday, January 8, 2026 — Here's your market overview</p>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Items to Buy</div>
+                <div class="stat-value">12</div>
+                <div class="stat-change positive">↑ 3 more than yesterday</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Pending Orders</div>
+                <div class="stat-value">8</div>
+                <div class="stat-change">For today's delivery</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Today's Revenue</div>
+                <div class="stat-value">₹12,450</div>
+                <div class="stat-change positive">↑ ₹2,100 from yesterday</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Outstanding</div>
+                <div class="stat-value">₹45,200</div>
+                <div class="stat-change negative">3 overdue payments</div>
+            </div>
+        </div>
+
+        <!-- Shopping List Section -->
+        <div class="section-card">
+            <div class="section-header">
+                <div>
+                    <div class="section-title">
+                        <div class="icon">🛒</div>
+                        Shopping List for Market
+                    </div>
+                    <div class="section-subtitle">12 items from 8 pending orders • Sorted by quantity needed</div>
+                </div>
+                <div class="section-actions">
+                    <button class="btn-secondary" onclick="printShoppingList()">🖨️ Print List</button>
+                    <button class="btn-primary">Save Rates</button>
+                </div>
+            </div>
+            <table class="shopping-table">
+                <thead>
+                    <tr>
+                        <th class="print-checkbox">✓</th>
+                        <th>Item</th>
+                        <th>Quantity Needed</th>
+                        <th>Purchase Rate</th>
+                        <th>Est. Cost</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="print-checkbox"><span class="print-checkbox-box"></span></td>
+                        <td>
+                            <div class="item-name">
+                                <div class="item-icon">🥔</div>
+                                Potato (Aloo)
+                            </div>
+                        </td>
+                        <td><span class="item-qty">45 kg</span></td>
+                        <td><input type="text" class="rate-input" value="28" placeholder="₹"></td>
+                        <td class="value-cell">₹1,260</td>
+                    </tr>
+                    <tr>
+                        <td class="print-checkbox"><span class="print-checkbox-box"></span></td>
+                        <td>
+                            <div class="item-name">
+                                <div class="item-icon">🍅</div>
+                                Tomato (Tamatar)
+                            </div>
+                        </td>
+                        <td><span class="item-qty">32 kg</span></td>
+                        <td><input type="text" class="rate-input" value="35" placeholder="₹"></td>
+                        <td class="value-cell">₹1,120</td>
+                    </tr>
+                    <tr>
+                        <td class="print-checkbox"><span class="print-checkbox-box"></span></td>
+                        <td>
+                            <div class="item-name">
+                                <div class="item-icon">🧅</div>
+                                Onion (Pyaz)
+                            </div>
+                        </td>
+                        <td><span class="item-qty">28 kg</span></td>
+                        <td><input type="text" class="rate-input" value="32" placeholder="₹"></td>
+                        <td class="value-cell">₹896</td>
+                    </tr>
+                    <tr>
+                        <td class="print-checkbox"><span class="print-checkbox-box"></span></td>
+                        <td>
+                            <div class="item-name">
+                                <div class="item-icon">🥕</div>
+                                Carrot (Gajar)
+                            </div>
+                        </td>
+                        <td><span class="item-qty">18 kg</span></td>
+                        <td><input type="text" class="rate-input" value="40" placeholder="₹"></td>
+                        <td class="value-cell">₹720</td>
+                    </tr>
+                    <tr>
+                        <td class="print-checkbox"><span class="print-checkbox-box"></span></td>
+                        <td>
+                            <div class="item-name">
+                                <div class="item-icon">🥬</div>
+                                Cabbage (Patta Gobi)
+                            </div>
+                        </td>
+                        <td><span class="item-qty">15 kg</span></td>
+                        <td><input type="text" class="rate-input" value="25" placeholder="₹"></td>
+                        <td class="value-cell">₹375</td>
+                    </tr>
+                    <tr>
+                        <td class="print-checkbox"><span class="print-checkbox-box"></span></td>
+                        <td>
+                            <div class="item-name">
+                                <div class="item-icon">🌶️</div>
+                                Green Chilli (Hari Mirch)
+                            </div>
+                        </td>
+                        <td><span class="item-qty">8 kg</span></td>
+                        <td><input type="text" class="rate-input" value="60" placeholder="₹"></td>
+                        <td class="value-cell">₹480</td>
+                    </tr>
+                    <tr class="total-row">
+                        <td class="print-checkbox"></td>
+                        <td colspan="3" style="text-align: right; color: var(--text-muted);">Estimated Total Cost:</td>
+                        <td class="value-cell" style="font-size: 1.125rem;">₹4,851</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Recent Orders Section (hidden in print) -->
+        <div class="section-card orders-table-section">
+            <div class="section-header">
+                <div>
+                    <div class="section-title">
+                        <div class="icon">📋</div>
+                        Recent Orders
+                    </div>
+                    <div class="section-subtitle">Last 5 orders • Click to view details</div>
+                </div>
+                <div class="section-actions">
+                    <button class="btn-secondary">View All Orders</button>
+                </div>
+            </div>
+            <table class="orders-table">
+                <thead>
+                    <tr>
+                        <th>Invoice</th>
+                        <th>Customer</th>
+                        <th>Delivery</th>
+                        <th>Amount</th>
+                        <th>Profit</th>
+                        <th>Status</th>
+                        <th>Payment</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="invoice-num">INV-2026-1042</span></td>
+                        <td><span class="customer-name">Hotel Sunrise</span></td>
+                        <td>Today, 3 PM</td>
+                        <td><span class="amount">₹2,450</span></td>
+                        <td><span class="profit">+₹485</span></td>
+                        <td><span class="badge badge-pending">Pending</span></td>
+                        <td><span class="badge badge-unpaid">Unpaid</span></td>
+                        <td><button class="btn-table">View</button></td>
+                    </tr>
+                    <tr>
+                        <td><span class="invoice-num">INV-2026-1041</span></td>
+                        <td><span class="customer-name">Green Leaf Restaurant</span></td>
+                        <td>Today, 4 PM</td>
+                        <td><span class="amount">₹1,875</span></td>
+                        <td><span class="profit">+₹320</span></td>
+                        <td><span class="badge badge-pending">Pending</span></td>
+                        <td><span class="badge badge-partial">Partial</span></td>
+                        <td><button class="btn-table">View</button></td>
+                    </tr>
+                    <tr>
+                        <td><span class="invoice-num">INV-2026-1040</span></td>
+                        <td><span class="customer-name">Taj Kitchen</span></td>
+                        <td>Yesterday</td>
+                        <td><span class="amount">₹3,200</span></td>
+                        <td><span class="profit">+₹640</span></td>
+                        <td><span class="badge badge-delivered">Delivered</span></td>
+                        <td><span class="badge badge-paid">Paid</span></td>
+                        <td><button class="btn-table">View</button></td>
+                    </tr>
+                    <tr>
+                        <td><span class="invoice-num">INV-2026-1039</span></td>
+                        <td><span class="customer-name">Paradise Dhaba</span></td>
+                        <td>Yesterday</td>
+                        <td><span class="amount">₹980</span></td>
+                        <td><span class="profit">+₹165</span></td>
+                        <td><span class="badge badge-delivered">Delivered</span></td>
+                        <td><span class="badge badge-paid">Paid</span></td>
+                        <td><button class="btn-table">View</button></td>
+                    </tr>
+                    <tr>
+                        <td><span class="invoice-num">INV-2026-1038</span></td>
+                        <td><span class="customer-name">Royal Caterers</span></td>
+                        <td>Jan 6</td>
+                        <td><span class="amount">₹5,600</span></td>
+                        <td><span class="profit">+₹980</span></td>
+                        <td><span class="badge badge-delivered">Delivered</span></td>
+                        <td><span class="badge badge-unpaid">Unpaid</span></td>
+                        <td><button class="btn-table">View</button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script>
+        function printShoppingList() {
+            // Update print date
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('printDate').textContent = new Date().toLocaleDateString('en-IN', options);
+
+            // Trigger print dialog
+            window.print();
+        }
+    </script>
+</body>
+</html>

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
 const Customer = require('../models/Customer');
+const { protect, authorize } = require('../middleware/auth');
 
 // Validation middleware
 const validateCustomer = [
@@ -13,8 +14,8 @@ const validateCustomer = [
 
 // @route   GET /api/customers
 // @desc    Get all customers
-// @access  Public
-router.get('/', async (req, res, next) => {
+// @access  Private (Admin, Staff)
+router.get('/', protect, authorize('admin', 'staff'), async (req, res, next) => {
   try {
     const { search, isActive } = req.query;
     const filter = {};
@@ -46,8 +47,8 @@ router.get('/', async (req, res, next) => {
 
 // @route   GET /api/customers/:id
 // @desc    Get single customer
-// @access  Public
-router.get('/:id', async (req, res, next) => {
+// @access  Private (Admin, Staff)
+router.get('/:id', protect, authorize('admin', 'staff'), async (req, res, next) => {
   try {
     const customer = await Customer.findById(req.params.id).select('-__v');
 
@@ -67,8 +68,8 @@ router.get('/:id', async (req, res, next) => {
 
 // @route   POST /api/customers
 // @desc    Create new customer
-// @access  Public
-router.post('/', validateCustomer, async (req, res, next) => {
+// @access  Private (Admin, Staff)
+router.post('/', protect, authorize('admin', 'staff'), validateCustomer, async (req, res, next) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -91,8 +92,8 @@ router.post('/', validateCustomer, async (req, res, next) => {
 
 // @route   PUT /api/customers/:id
 // @desc    Update customer
-// @access  Public
-router.put('/:id', validateCustomer, async (req, res, next) => {
+// @access  Private (Admin, Staff)
+router.put('/:id', protect, authorize('admin', 'staff'), validateCustomer, async (req, res, next) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -124,8 +125,8 @@ router.put('/:id', validateCustomer, async (req, res, next) => {
 
 // @route   DELETE /api/customers/:id
 // @desc    Delete customer (soft delete)
-// @access  Public
-router.delete('/:id', async (req, res, next) => {
+// @access  Private (Admin only)
+router.delete('/:id', protect, authorize('admin'), async (req, res, next) => {
   try {
     const customer = await Customer.findByIdAndUpdate(
       req.params.id,
@@ -149,8 +150,8 @@ router.delete('/:id', async (req, res, next) => {
 
 // @route   POST /api/customers/:id/payment
 // @desc    Add payment to customer
-// @access  Public
-router.post('/:id/payment', [
+// @access  Private (Admin, Staff)
+router.post('/:id/payment', protect, authorize('admin', 'staff'), [
   body('amount').isFloat({ min: 0.01 }).withMessage('Amount must be greater than 0'),
   body('paymentMethod').isIn(['cash', 'online', 'cheque', 'credit']).withMessage('Invalid payment method')
 ], async (req, res, next) => {

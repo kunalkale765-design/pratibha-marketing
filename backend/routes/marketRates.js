@@ -3,6 +3,7 @@ const router = express.Router();
 const { body, validationResult } = require('express-validator');
 const MarketRate = require('../models/MarketRate');
 const Product = require('../models/Product');
+const { protect, authorize } = require('../middleware/auth');
 
 // Validation middleware
 const validateMarketRate = [
@@ -128,8 +129,8 @@ router.get('/:id', async (req, res, next) => {
 
 // @route   POST /api/market-rates
 // @desc    Create/Update market rate
-// @access  Public
-router.post('/', validateMarketRate, async (req, res, next) => {
+// @access  Private (Admin, Staff)
+router.post('/', protect, authorize('admin', 'staff'), validateMarketRate, async (req, res, next) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -179,8 +180,8 @@ router.post('/', validateMarketRate, async (req, res, next) => {
 
 // @route   PUT /api/market-rates/:id
 // @desc    Update market rate
-// @access  Public
-router.put('/:id', validateMarketRate, async (req, res, next) => {
+// @access  Private (Admin, Staff)
+router.put('/:id', protect, authorize('admin', 'staff'), validateMarketRate, async (req, res, next) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -212,8 +213,8 @@ router.put('/:id', validateMarketRate, async (req, res, next) => {
 
 // @route   DELETE /api/market-rates/:id
 // @desc    Delete market rate
-// @access  Public
-router.delete('/:id', async (req, res, next) => {
+// @access  Private (Admin only)
+router.delete('/:id', protect, authorize('admin'), async (req, res, next) => {
   try {
     const marketRate = await MarketRate.findByIdAndDelete(req.params.id);
 

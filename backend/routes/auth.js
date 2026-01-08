@@ -5,9 +5,16 @@ const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
 const Customer = require('../models/Customer');
 
+// Validate JWT_SECRET is set in production
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  console.error('FATAL: JWT_SECRET must be set in production');
+  process.exit(1);
+}
+
 // Generate JWT Token
 const generateToken = (userId) => {
-  return jwt.sign({ id: userId }, process.env.JWT_SECRET || 'your-secret-key', {
+  const secret = process.env.JWT_SECRET || 'dev-secret-change-in-production';
+  return jwt.sign({ id: userId }, secret, {
     expiresIn: '30d'
   });
 };
@@ -18,7 +25,11 @@ const generateToken = (userId) => {
 router.post('/register', [
   body('name').trim().notEmpty().withMessage('Name is required'),
   body('email').isEmail().withMessage('Please enter a valid email'),
-  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('password')
+    .isLength({ min: 12 }).withMessage('Password must be at least 12 characters')
+    .matches(/[A-Z]/).withMessage('Password must contain at least one uppercase letter')
+    .matches(/[a-z]/).withMessage('Password must contain at least one lowercase letter')
+    .matches(/[0-9]/).withMessage('Password must contain at least one number'),
   body('phone').optional().matches(/^[0-9]{10}$/).withMessage('Phone must be 10 digits')
 ], async (req, res, next) => {
   try {
@@ -30,7 +41,8 @@ router.post('/register', [
       });
     }
 
-    const { name, email, password, phone, role } = req.body;
+    // Note: role is intentionally NOT accepted from user input to prevent privilege escalation
+    const { name, email, password, phone } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -41,13 +53,14 @@ router.post('/register', [
       });
     }
 
-    // Create user
+    // Create user - always as customer for public registration
+    // Admin/staff accounts must be created by an existing admin
     const user = await User.create({
       name,
       email,
       password,
       phone,
-      role: role || 'customer' // Default to customer
+      role: 'customer'
     });
 
     // If customer role, create a customer record
@@ -78,7 +91,8 @@ router.post('/register', [
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
+        customer: user.customer || null
       },
       token
     });
@@ -189,7 +203,8 @@ router.get('/me', async (req, res, next) => {
     }
 
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    const secret = process.env.JWT_SECRET || 'dev-secret-change-in-production';
+    const decoded = jwt.verify(token, secret);
 
     // Get user
     const user = await User.findById(decoded.id).select('-password').populate('customer');

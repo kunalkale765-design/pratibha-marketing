@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pratibha Marketing - Minimal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --black: #0d0d0d;
+            --text: #1a1a1a;
+            --text-secondary: #525252;
+            --text-tertiary: #737373;
+            --border: #e5e5e5;
+            --border-light: #f0f0f0;
+            --bg: #ffffff;
+            --bg-subtle: #fafafa;
+            --accent: #0066ff;
+            --accent-hover: #0052cc;
+            --success: #00875a;
+            --warning: #ff8b00;
+            --error: #de350b;
+
+            --font-sans: 'IBM Plex Sans', -apple-system, sans-serif;
+            --font-mono: 'IBM Plex Mono', monospace;
+
+            --space-1: 4px;
+            --space-2: 8px;
+            --space-3: 12px;
+            --space-4: 16px;
+            --space-5: 24px;
+            --space-6: 32px;
+            --space-7: 48px;
+            --space-8: 64px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--bg);
+            color: var(--text);
+            font-size: 14px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+        }
+
+        /* Header - Ultra minimal */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 56px;
+            background: var(--bg);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 var(--space-5);
+            z-index: 100;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .logo-mark {
+            width: 24px;
+            height: 24px;
+            background: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo-mark span {
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .logo-text {
+            font-weight: 600;
+            font-size: 15px;
+            letter-spacing: -0.3px;
+            color: var(--black);
+        }
+
+        .header-nav {
+            display: flex;
+            align-items: center;
+            gap: var(--space-5);
+        }
+
+        .nav-link {
+            font-size: 13px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.15s;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            color: var(--text);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+        }
+
+        .btn {
+            font-family: var(--font-sans);
+            font-size: 13px;
+            font-weight: 500;
+            padding: var(--space-2) var(--space-4);
+            border: none;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-secondary);
+        }
+
+        .btn-ghost:hover {
+            color: var(--text);
+            background: var(--bg-subtle);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+        }
+
+        .avatar {
+            width: 28px;
+            height: 28px;
+            background: var(--border);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        /* Main content */
+        .main {
+            padding-top: 56px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--space-6) var(--space-5);
+        }
+
+        /* Page header */
+        .page-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: var(--space-6);
+            padding-bottom: var(--space-5);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+            color: var(--black);
+            margin-bottom: var(--space-1);
+        }
+
+        .page-subtitle {
+            font-size: 13px;
+            color: var(--text-tertiary);
+            font-family: var(--font-mono);
+        }
+
+        /* Stats row */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--space-4);
+            margin-bottom: var(--space-6);
+        }
+
+        .stat-card {
+            padding: var(--space-5);
+            border: 1px solid var(--border);
+            background: var(--bg);
+        }
+
+        .stat-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-tertiary);
+            margin-bottom: var(--space-2);
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 600;
+            color: var(--black);
+            font-family: var(--font-mono);
+            letter-spacing: -1px;
+        }
+
+        .stat-change {
+            font-size: 12px;
+            margin-top: var(--space-2);
+            font-family: var(--font-mono);
+        }
+
+        .stat-change.positive {
+            color: var(--success);
+        }
+
+        .stat-change.negative {
+            color: var(--error);
+        }
+
+        /* Content grid */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: var(--space-5);
+        }
+
+        /* Section */
+        .section {
+            border: 1px solid var(--border);
+            background: var(--bg);
+        }
+
+        .section-header {
+            padding: var(--space-4) var(--space-5);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .section-title {
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text);
+        }
+
+        .section-action {
+            font-size: 12px;
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .section-action:hover {
+            text-decoration: underline;
+        }
+
+        /* Table */
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table th {
+            text-align: left;
+            padding: var(--space-3) var(--space-5);
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-tertiary);
+            background: var(--bg-subtle);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .table td {
+            padding: var(--space-4) var(--space-5);
+            border-bottom: 1px solid var(--border-light);
+            font-size: 13px;
+        }
+
+        .table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .table tr:hover td {
+            background: var(--bg-subtle);
+        }
+
+        .product-name {
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .product-unit {
+            color: var(--text-tertiary);
+            font-size: 12px;
+            margin-left: var(--space-1);
+        }
+
+        .qty-cell {
+            font-family: var(--font-mono);
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .rate-input {
+            width: 80px;
+            padding: var(--space-2) var(--space-3);
+            border: 1px solid var(--border);
+            font-family: var(--font-mono);
+            font-size: 13px;
+            text-align: right;
+            transition: border-color 0.15s;
+        }
+
+        .rate-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .rate-input::placeholder {
+            color: var(--text-tertiary);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 2px var(--space-2);
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .status-badge.pending {
+            background: #fff7e6;
+            color: var(--warning);
+        }
+
+        .status-badge.confirmed {
+            background: #e6fcf5;
+            color: var(--success);
+        }
+
+        .status-badge.delivered {
+            background: #e6f2ff;
+            color: var(--accent);
+        }
+
+        /* Orders list */
+        .order-item {
+            padding: var(--space-4) var(--space-5);
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .order-item:last-child {
+            border-bottom: none;
+        }
+
+        .order-item:hover {
+            background: var(--bg-subtle);
+        }
+
+        .order-info {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-1);
+        }
+
+        .order-customer {
+            font-weight: 500;
+            font-size: 13px;
+            color: var(--text);
+        }
+
+        .order-meta {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            font-family: var(--font-mono);
+        }
+
+        .order-amount {
+            font-family: var(--font-mono);
+            font-weight: 500;
+            font-size: 14px;
+            color: var(--text);
+        }
+
+        /* Summary footer */
+        .table-footer {
+            padding: var(--space-4) var(--space-5);
+            background: var(--bg-subtle);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .total-label {
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+        }
+
+        .total-value {
+            font-family: var(--font-mono);
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--black);
+        }
+
+        /* Action bar */
+        .action-bar {
+            padding: var(--space-4) var(--space-5);
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: var(--space-3);
+            justify-content: flex-end;
+        }
+
+        .btn-outline {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+
+        .btn-outline:hover {
+            background: var(--bg-subtle);
+            border-color: var(--text-tertiary);
+        }
+
+        /* Empty state */
+        .empty-state {
+            padding: var(--space-7) var(--space-5);
+            text-align: center;
+        }
+
+        .empty-state-text {
+            color: var(--text-tertiary);
+            font-size: 13px;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .header-nav {
+                display: none;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .stats-row {
+                grid-template-columns: 1fr;
+            }
+
+            .page-header {
+                flex-direction: column;
+                gap: var(--space-4);
+            }
+
+            .table th:nth-child(3),
+            .table td:nth-child(3) {
+                display: none;
+            }
+        }
+
+        /* Keyboard shortcut hint */
+        .kbd {
+            display: inline-block;
+            padding: 2px 6px;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            background: var(--bg-subtle);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            color: var(--text-tertiary);
+        }
+
+        /* Focus states */
+        *:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        button:focus-visible {
+            outline-offset: 0;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">
+            <div class="logo-mark"><span>P</span></div>
+            <span class="logo-text">Pratibha</span>
+        </div>
+
+        <nav class="header-nav">
+            <a href="#" class="nav-link active">Dashboard</a>
+            <a href="#" class="nav-link">Products</a>
+            <a href="#" class="nav-link">Customers</a>
+            <a href="#" class="nav-link">Orders</a>
+            <a href="#" class="nav-link">Reports</a>
+        </nav>
+
+        <div class="header-actions">
+            <button class="btn btn-ghost">
+                <kbd>K</kbd>
+            </button>
+            <div class="avatar">KS</div>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="container">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Shopping List</h1>
+                    <p class="page-subtitle">2026-01-08 / Wednesday</p>
+                </div>
+                <button class="btn btn-primary">Export PDF</button>
+            </div>
+
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-label">Total Items</div>
+                    <div class="stat-value">12</div>
+                    <div class="stat-change positive">+2 from yesterday</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Est. Purchase</div>
+                    <div class="stat-value">8,450</div>
+                    <div class="stat-change">INR</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Pending Orders</div>
+                    <div class="stat-value">5</div>
+                    <div class="stat-change negative">3 need confirmation</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Today's Revenue</div>
+                    <div class="stat-value">12,840</div>
+                    <div class="stat-change positive">+18% vs avg</div>
+                </div>
+            </div>
+
+            <div class="content-grid">
+                <section class="section">
+                    <div class="section-header">
+                        <h2 class="section-title">Purchase Required</h2>
+                        <a href="#" class="section-action">View all products</a>
+                    </div>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th style="text-align: right">Qty</th>
+                                <th style="text-align: right">Last Rate</th>
+                                <th style="text-align: right">Today's Rate</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <span class="product-name">Potato</span>
+                                    <span class="product-unit">kg</span>
+                                </td>
+                                <td class="qty-cell" style="text-align: right">45</td>
+                                <td style="text-align: right; color: var(--text-tertiary); font-family: var(--font-mono);">28.00</td>
+                                <td style="text-align: right">
+                                    <input type="text" class="rate-input" placeholder="0.00">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <span class="product-name">Tomato</span>
+                                    <span class="product-unit">kg</span>
+                                </td>
+                                <td class="qty-cell" style="text-align: right">32</td>
+                                <td style="text-align: right; color: var(--text-tertiary); font-family: var(--font-mono);">45.00</td>
+                                <td style="text-align: right">
+                                    <input type="text" class="rate-input" placeholder="0.00">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <span class="product-name">Onion</span>
+                                    <span class="product-unit">kg</span>
+                                </td>
+                                <td class="qty-cell" style="text-align: right">28</td>
+                                <td style="text-align: right; color: var(--text-tertiary); font-family: var(--font-mono);">35.00</td>
+                                <td style="text-align: right">
+                                    <input type="text" class="rate-input" placeholder="0.00">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <span class="product-name">Capsicum</span>
+                                    <span class="product-unit">kg</span>
+                                </td>
+                                <td class="qty-cell" style="text-align: right">15</td>
+                                <td style="text-align: right; color: var(--text-tertiary); font-family: var(--font-mono);">80.00</td>
+                                <td style="text-align: right">
+                                    <input type="text" class="rate-input" placeholder="0.00">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <span class="product-name">Cabbage</span>
+                                    <span class="product-unit">kg</span>
+                                </td>
+                                <td class="qty-cell" style="text-align: right">20</td>
+                                <td style="text-align: right; color: var(--text-tertiary); font-family: var(--font-mono);">25.00</td>
+                                <td style="text-align: right">
+                                    <input type="text" class="rate-input" placeholder="0.00">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <span class="product-name">Cauliflower</span>
+                                    <span class="product-unit">kg</span>
+                                </td>
+                                <td class="qty-cell" style="text-align: right">18</td>
+                                <td style="text-align: right; color: var(--text-tertiary); font-family: var(--font-mono);">40.00</td>
+                                <td style="text-align: right">
+                                    <input type="text" class="rate-input" placeholder="0.00">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <span class="product-name">Green Chilli</span>
+                                    <span class="product-unit">kg</span>
+                                </td>
+                                <td class="qty-cell" style="text-align: right">8</td>
+                                <td style="text-align: right; color: var(--text-tertiary); font-family: var(--font-mono);">60.00</td>
+                                <td style="text-align: right">
+                                    <input type="text" class="rate-input" placeholder="0.00">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <span class="product-name">Coriander</span>
+                                    <span class="product-unit">bunch</span>
+                                </td>
+                                <td class="qty-cell" style="text-align: right">25</td>
+                                <td style="text-align: right; color: var(--text-tertiary); font-family: var(--font-mono);">5.00</td>
+                                <td style="text-align: right">
+                                    <input type="text" class="rate-input" placeholder="0.00">
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="table-footer">
+                        <span class="total-label">Estimated Total</span>
+                        <span class="total-value">8,450</span>
+                    </div>
+                    <div class="action-bar">
+                        <button class="btn btn-outline">Reset Rates</button>
+                        <button class="btn btn-primary">Save Rates</button>
+                    </div>
+                </section>
+
+                <section class="section">
+                    <div class="section-header">
+                        <h2 class="section-title">Recent Orders</h2>
+                        <a href="#" class="section-action">View all</a>
+                    </div>
+                    <div>
+                        <div class="order-item">
+                            <div class="order-info">
+                                <span class="order-customer">Hotel Sunrise</span>
+                                <span class="order-meta">08:45 / 6 items</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: var(--space-4);">
+                                <span class="status-badge pending">Pending</span>
+                                <span class="order-amount">2,450</span>
+                            </div>
+                        </div>
+                        <div class="order-item">
+                            <div class="order-info">
+                                <span class="order-customer">Royal Kitchen</span>
+                                <span class="order-meta">08:32 / 4 items</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: var(--space-4);">
+                                <span class="status-badge confirmed">Confirmed</span>
+                                <span class="order-amount">1,890</span>
+                            </div>
+                        </div>
+                        <div class="order-item">
+                            <div class="order-info">
+                                <span class="order-customer">Spice Garden</span>
+                                <span class="order-meta">08:15 / 8 items</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: var(--space-4);">
+                                <span class="status-badge confirmed">Confirmed</span>
+                                <span class="order-amount">3,240</span>
+                            </div>
+                        </div>
+                        <div class="order-item">
+                            <div class="order-info">
+                                <span class="order-customer">Taj Restaurant</span>
+                                <span class="order-meta">07:58 / 5 items</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: var(--space-4);">
+                                <span class="status-badge delivered">Delivered</span>
+                                <span class="order-amount">2,180</span>
+                            </div>
+                        </div>
+                        <div class="order-item">
+                            <div class="order-info">
+                                <span class="order-customer">Green Leaf Cafe</span>
+                                <span class="order-meta">07:45 / 3 items</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: var(--space-4);">
+                                <span class="status-badge delivered">Delivered</span>
+                                <span class="order-amount">980</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

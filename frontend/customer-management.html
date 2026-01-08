@@ -1,96 +1,657 @@
 <!DOCTYPE html>
-<html class="light" lang="en">
+<html lang="en">
 <head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Customer Management - Pratibha Marketing</title>
-    <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
-    <script>
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    colors: {
-                        "primary": "#13ec13",
-                        "background-light": "#f6f8f6",
-                        "background-dark": "#102210",
-                    },
-                    fontFamily: {
-                        "display": ["Work Sans", "sans-serif"]
-                    }
-                }
-            }
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#7e9181">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Pratibha">
+    <link rel="apple-touch-icon" href="/icons/icon.svg">
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gunmetal: #2e3532;
+            --gunmetal-light: #3d4542;
+            --dusty-olive: #7e9181;
+            --dusty-olive-light: #97a99a;
+            --dusty-olive-dark: #5d6b5f;
+            --pale-slate: #c7cedb;
+            --pale-slate-light: #e8ebf0;
+            --cream: #f9f7f3;
+            --cream-dark: #efe9df;
+            --warm-white: #fefdfb;
+            --terracotta: #c4a77d;
+            --text-primary: #1f2421;
+            --text-secondary: #5a6560;
+            --text-muted: #8a918c;
+            --success: #5d7a5f;
+            --success-bg: rgba(93, 122, 95, 0.1);
+            --warning: #b89a5a;
+            --warning-bg: rgba(184, 154, 90, 0.1);
+            --error: #9a6565;
+            --error-bg: rgba(154, 101, 101, 0.1);
+            --info: #6a8a9a;
+            --info-bg: rgba(106, 138, 154, 0.1);
+            --purple: #8a6a9a;
+            --purple-bg: rgba(138, 106, 154, 0.15);
         }
-    </script>
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--cream);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body > * { position: relative; z-index: 1; }
+
+        .header {
+            background: linear-gradient(135deg, var(--gunmetal) 0%, var(--gunmetal-light) 100%);
+            color: var(--warm-white);
+            padding: 1.25rem 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--dusty-olive), var(--terracotta), var(--dusty-olive));
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .logo-mark {
+            width: 42px; height: 42px;
+            background: linear-gradient(135deg, var(--dusty-olive) 0%, var(--dusty-olive-dark) 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .logo-text {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .logo-text span { color: var(--dusty-olive-light); font-weight: 400; }
+
+        .header-actions { display: flex; gap: 0.75rem; }
+
+        .btn {
+            padding: 0.625rem 1.25rem;
+            border-radius: 8px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            border: none;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.3);
+            color: var(--warm-white);
+        }
+
+        .btn-ghost:hover { background: rgba(255,255,255,0.1); }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--dusty-olive) 0%, var(--dusty-olive-dark) 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(126, 145, 129, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(126, 145, 129, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--cream);
+            color: var(--gunmetal);
+            border: 1px solid var(--pale-slate);
+        }
+
+        .btn-secondary:hover { background: var(--pale-slate-light); }
+
+        .btn-icon {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+        }
+
+        .btn-edit { background: var(--info-bg); color: #4a6a7a; border: 1px solid rgba(106, 138, 154, 0.3); }
+        .btn-delete { background: var(--error-bg); color: #7a5050; border: 1px solid rgba(154, 101, 101, 0.3); }
+        .btn-pricing { background: var(--purple-bg); color: #6a507a; border: 1px solid rgba(138, 106, 154, 0.3); }
+
+        .main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        .page-title {
+            margin-bottom: 2rem;
+        }
+
+        .page-title h1 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--gunmetal);
+            margin-bottom: 0.25rem;
+        }
+
+        .page-title p {
+            color: var(--text-muted);
+            font-size: 0.9375rem;
+        }
+
+        /* Search Bar */
+        .search-bar {
+            margin-bottom: 2rem;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            border: 1.5px solid var(--pale-slate);
+            border-radius: 10px;
+            background: var(--warm-white);
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--dusty-olive);
+            box-shadow: 0 0 0 4px rgba(126, 145, 129, 0.12);
+        }
+
+        /* Customer Grid */
+        .customers-grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .customer-card {
+            background: var(--warm-white);
+            border-radius: 14px;
+            padding: 1.5rem;
+            border: 1px solid var(--pale-slate-light);
+            box-shadow: 0 1px 3px rgba(46, 53, 50, 0.04);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            transition: all 0.25s ease;
+        }
+
+        .customer-card:hover {
+            box-shadow: 0 4px 12px rgba(46, 53, 50, 0.08);
+        }
+
+        .customer-info {
+            flex: 1;
+        }
+
+        .customer-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .customer-name {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--gunmetal);
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.625rem;
+            font-size: 0.6875rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            border-radius: 20px;
+        }
+
+        .badge-contract { background: var(--purple-bg); color: #6a507a; border: 1px solid rgba(138, 106, 154, 0.3); }
+        .badge-markup { background: var(--info-bg); color: #4a6a7a; border: 1px solid rgba(106, 138, 154, 0.3); }
+        .badge-market { background: var(--cream); color: var(--text-muted); border: 1px solid var(--pale-slate-light); }
+
+        .customer-details {
+            display: flex;
+            flex-direction: column;
+            gap: 0.375rem;
+            font-size: 0.9375rem;
+            color: var(--text-secondary);
+        }
+
+        .customer-details span {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .customer-credit {
+            display: flex;
+            gap: 1.5rem;
+            margin-top: 0.75rem;
+            font-size: 0.9375rem;
+        }
+
+        .customer-credit .label {
+            color: var(--text-muted);
+        }
+
+        .customer-credit .value {
+            font-weight: 600;
+            color: var(--gunmetal);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .customer-credit .value.negative {
+            color: var(--error);
+        }
+
+        .customer-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-muted);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(46, 53, 50, 0.5);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.show { display: flex; }
+
+        .modal {
+            background: var(--warm-white);
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(46, 53, 50, 0.2);
+        }
+
+        .modal-lg { max-width: 700px; }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal h2 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--gunmetal);
+        }
+
+        .modal p.subtitle {
+            font-size: 0.9375rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        .btn-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            border: 1.5px solid var(--pale-slate);
+            border-radius: 8px;
+            background: var(--cream);
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--dusty-olive);
+            background: var(--warm-white);
+            box-shadow: 0 0 0 4px rgba(126, 145, 129, 0.12);
+        }
+
+        .form-hint {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.375rem;
+        }
+
+        .form-section {
+            border-top: 1px solid var(--pale-slate-light);
+            padding-top: 1.25rem;
+            margin-top: 1.25rem;
+        }
+
+        .form-section h3 {
+            font-weight: 600;
+            color: var(--gunmetal);
+            margin-bottom: 1rem;
+        }
+
+        .hidden { display: none !important; }
+
+        .info-box {
+            background: var(--warning-bg);
+            border: 1px solid rgba(184, 154, 90, 0.3);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            font-size: 0.875rem;
+            color: #8a7340;
+            margin-top: 0.75rem;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+
+        .modal-actions .btn { flex: 1; padding: 0.875rem; }
+
+        /* Contract Prices Modal */
+        .contract-search {
+            margin-bottom: 1rem;
+        }
+
+        .contract-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .contract-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.875rem;
+            background: var(--cream);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+
+        .contract-item-info {
+            flex: 1;
+        }
+
+        .contract-item-name {
+            font-weight: 600;
+            color: var(--gunmetal);
+        }
+
+        .contract-item-base {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .contract-price-input {
+            width: 100px;
+            padding: 0.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            text-align: right;
+            border: 1.5px solid var(--pale-slate);
+            border-radius: 6px;
+            background: var(--warm-white);
+        }
+
+        .contract-item-unit {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            width: 50px;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            top: 1.5rem;
+            right: 1.5rem;
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            font-weight: 500;
+            display: none;
+            z-index: 300;
+        }
+
+        .toast.show { display: block; }
+        .toast-success { background: var(--success-bg); color: #4a6150; border: 1px solid rgba(93, 122, 95, 0.3); }
+        .toast-error { background: var(--error-bg); color: #7a5050; border: 1px solid rgba(154, 101, 101, 0.3); }
+
+        @media (max-width: 768px) {
+            .header-content { flex-direction: column; gap: 1rem; }
+            .customer-card { flex-direction: column; gap: 1rem; }
+            .customer-actions { width: 100%; justify-content: flex-end; }
+            .page-title h1 { font-size: 1.5rem; }
+        }
+    </style>
 </head>
-<body class="bg-background-light dark:bg-background-dark font-display text-gray-900 dark:text-gray-100">
-    <div class="max-w-6xl mx-auto p-6">
-        <!-- Header -->
-        <div class="flex justify-between items-center mb-8">
-            <div>
-                <h1 class="text-3xl font-bold mb-2">Customer Management</h1>
-                <p class="text-gray-600 dark:text-gray-400">Manage customers and personalized pricing</p>
-            </div>
-            <button onclick="showAddCustomerForm()" class="px-6 py-3 bg-primary text-black rounded-lg font-bold">
-                Add Customer
-            </button>
-        </div>
-
-        <!-- Search Bar -->
-        <div class="mb-6">
-            <input id="searchInput" type="text" placeholder="Search customers..."
-                   class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900"
-                   oninput="searchCustomers()">
-        </div>
-
-        <!-- Customers List -->
-        <div id="customersList" class="grid gap-4">
-            <!-- Customers will be loaded here -->
-        </div>
-
-        <!-- Add/Edit Customer Modal -->
-        <div id="customerModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div class="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4">
-                <h2 id="modalTitle" class="text-2xl font-bold mb-4">Add Customer</h2>
-                <form id="customerForm" class="space-y-4">
-                    <input type="hidden" id="customerId">
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Name *</label>
-                        <input id="customerName" type="text" required class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Phone *</label>
-                        <input id="customerPhone" type="tel" pattern="[0-9]{10}" required class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2">WhatsApp</label>
-                        <input id="customerWhatsapp" type="tel" pattern="[0-9]{10}" class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Address</label>
-                        <textarea id="customerAddress" rows="2" class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900"></textarea>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Credit Limit</label>
-                        <input id="customerCreditLimit" type="number" step="0.01" value="0" class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900">
-                    </div>
-                    <div class="flex gap-4 pt-4">
-                        <button type="submit" class="flex-1 py-3 bg-primary text-black rounded-lg font-bold">Save</button>
-                        <button type="button" onclick="closeModal()" class="px-6 py-3 bg-gray-200 dark:bg-gray-700 rounded-lg">Cancel</button>
-                    </div>
-                </form>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <a href="/" class="logo">
+                <div class="logo-mark">🌿</div>
+                <div class="logo-text">Pratibha <span>Marketing</span></div>
+            </a>
+            <div class="header-actions">
+                <button onclick="showAddCustomerForm()" class="btn btn-primary">+ Add Customer</button>
+                <a href="/" class="btn btn-ghost">Dashboard</a>
             </div>
         </div>
+    </header>
 
-        <!-- Success/Error Messages -->
-        <div id="successMessage" class="hidden fixed top-4 right-4 p-4 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-lg"></div>
-        <div id="errorMessage" class="hidden fixed top-4 right-4 p-4 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-lg"></div>
+    <main class="main">
+        <div class="page-title">
+            <h1>Customer Management</h1>
+            <p>Manage customers and personalized pricing</p>
+        </div>
+
+        <div class="search-bar">
+            <input id="searchInput" type="text" placeholder="Search customers by name or phone..." class="search-input" oninput="searchCustomers()">
+        </div>
+
+        <div id="customersList" class="customers-grid">
+            <div class="empty-state">Loading customers...</div>
+        </div>
+    </main>
+
+    <!-- Add/Edit Customer Modal -->
+    <div id="customerModal" class="modal-overlay">
+        <div class="modal">
+            <h2 id="modalTitle">Add Customer</h2>
+            <form id="customerForm">
+                <input type="hidden" id="customerId">
+                <div class="form-group">
+                    <label class="form-label" for="customerName">Name *</label>
+                    <input id="customerName" type="text" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="customerPhone">Phone *</label>
+                    <input id="customerPhone" type="tel" pattern="[0-9]{10}" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="customerWhatsapp">WhatsApp</label>
+                    <input id="customerWhatsapp" type="tel" pattern="[0-9]{10}" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="customerAddress">Address</label>
+                    <textarea id="customerAddress" rows="2" class="form-textarea"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="customerCreditLimit">Credit Limit (₹)</label>
+                    <input id="customerCreditLimit" type="number" step="0.01" value="0" class="form-input">
+                </div>
+
+                <!-- Pricing Settings -->
+                <div class="form-section">
+                    <h3>Pricing Settings</h3>
+                    <div class="form-group">
+                        <label class="form-label" for="customerPricingType">Pricing Type *</label>
+                        <select id="customerPricingType" class="form-select" required onchange="toggleMarkupField()">
+                            <option value="market">Market Rate</option>
+                            <option value="markup">Market + Markup %</option>
+                            <option value="contract">Contract (Fixed Prices)</option>
+                        </select>
+                        <p class="form-hint">Market: Current rate | Markup: Purchase + % | Contract: Fixed agreed prices</p>
+                    </div>
+                    <div id="markupField" class="form-group hidden">
+                        <label class="form-label" for="customerMarkup">Markup Percentage (%)</label>
+                        <input id="customerMarkup" type="number" step="0.1" min="0" max="200" value="0" class="form-input">
+                        <p class="form-hint">e.g., 25 means selling price = purchase price + 25%</p>
+                    </div>
+                    <div id="contractInfo" class="info-box hidden">
+                        Contract prices are set per product. Save customer first, then use "Set Prices" button.
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <button type="button" onclick="closeModal()" class="btn btn-secondary">Cancel</button>
+                </div>
+            </form>
+        </div>
     </div>
+
+    <!-- Contract Prices Modal -->
+    <div id="contractModal" class="modal-overlay">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <div>
+                    <h2>Contract Prices</h2>
+                    <p class="subtitle" id="contractCustomerName"></p>
+                </div>
+                <button onclick="closeContractModal()" class="btn-close">×</button>
+            </div>
+            <input type="hidden" id="contractCustomerId">
+
+            <div class="contract-search">
+                <input id="productSearch" type="text" placeholder="Search products..." class="search-input" oninput="filterContractProducts()">
+            </div>
+
+            <div id="contractPricesList" class="contract-list">
+                <!-- Products will be loaded here -->
+            </div>
+
+            <div class="modal-actions">
+                <button onclick="saveContractPrices()" class="btn btn-primary">Save Prices</button>
+                <button onclick="closeContractModal()" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Messages -->
+    <div id="successMessage" class="toast toast-success"></div>
+    <div id="errorMessage" class="toast toast-error"></div>
+
+    <script src="/js/auth.js"></script>
+    <script src="/js/api.js"></script>
 
     <script>
         let allCustomers = [];
+        let allProducts = [];
+        let currentContractPrices = {};
+
+        async function loadProducts() {
+            try {
+                const response = await fetch('/api/products');
+                const data = await response.json();
+                allProducts = data.data;
+            } catch (error) {
+                console.error('Error loading products:', error);
+            }
+        }
 
         async function loadCustomers() {
             try {
@@ -104,33 +665,48 @@
             }
         }
 
+        function getPricingBadge(customer) {
+            const type = customer.pricingType || 'market';
+            if (type === 'contract') {
+                return '<span class="badge badge-contract">Contract</span>';
+            } else if (type === 'markup') {
+                return `<span class="badge badge-markup">Markup +${customer.markupPercentage || 0}%</span>`;
+            } else {
+                return '<span class="badge badge-market">Market Rate</span>';
+            }
+        }
+
         function displayCustomers(customers) {
             const container = document.getElementById('customersList');
+
+            if (!customers || customers.length === 0) {
+                container.innerHTML = '<div class="empty-state">No customers found. Add your first customer!</div>';
+                return;
+            }
+
             container.innerHTML = customers.map(customer => `
-                <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow">
-                    <div class="flex justify-between items-start">
-                        <div class="flex-1">
-                            <h3 class="text-xl font-bold mb-2">${customer.name}</h3>
-                            <div class="space-y-1 text-sm text-gray-600 dark:text-gray-400">
-                                <p><span class="material-symbols-outlined text-sm">phone</span> ${customer.phone}</p>
-                                ${customer.whatsapp ? `<p><span class="material-symbols-outlined text-sm">chat</span> ${customer.whatsapp}</p>` : ''}
-                                ${customer.address ? `<p><span class="material-symbols-outlined text-sm">location_on</span> ${customer.address}</p>` : ''}
-                            </div>
-                            <div class="mt-3 flex gap-4 text-sm">
-                                <span class="font-medium">Credit Limit: ₹${customer.creditLimit}</span>
-                                <span class="font-medium ${customer.currentCredit > 0 ? 'text-red-600' : 'text-green-600'}">
-                                    Current: ₹${customer.currentCredit}
-                                </span>
-                            </div>
+                <div class="customer-card">
+                    <div class="customer-info">
+                        <div class="customer-header">
+                            <h3 class="customer-name">${customer.name}</h3>
+                            ${getPricingBadge(customer)}
                         </div>
-                        <div class="flex gap-2">
-                            <button onclick='editCustomer(${JSON.stringify(customer)})' class="p-2 bg-blue-500 text-white rounded-lg">
-                                <span class="material-symbols-outlined">edit</span>
-                            </button>
-                            <button onclick="deleteCustomer('${customer._id}')" class="p-2 bg-red-500 text-white rounded-lg">
-                                <span class="material-symbols-outlined">delete</span>
-                            </button>
+                        <div class="customer-details">
+                            <span>📞 ${customer.phone}</span>
+                            ${customer.whatsapp ? `<span>💬 ${customer.whatsapp}</span>` : ''}
+                            ${customer.address ? `<span>📍 ${customer.address}</span>` : ''}
                         </div>
+                        <div class="customer-credit">
+                            <span><span class="label">Credit Limit:</span> <span class="value">₹${customer.creditLimit}</span></span>
+                            <span><span class="label">Current:</span> <span class="value ${customer.currentCredit > 0 ? 'negative' : ''}">₹${customer.currentCredit}</span></span>
+                        </div>
+                    </div>
+                    <div class="customer-actions">
+                        ${customer.pricingType === 'contract' ? `
+                        <button onclick="openContractPrices('${customer._id}', '${customer.name}')" class="btn btn-icon btn-pricing" title="Set Contract Prices">💰</button>
+                        ` : ''}
+                        <button onclick='editCustomer(${JSON.stringify(customer).replace(/'/g, "&#39;")})' class="btn btn-icon btn-edit" title="Edit">✏️</button>
+                        <button onclick="deleteCustomer('${customer._id}')" class="btn btn-icon btn-delete" title="Delete">🗑️</button>
                     </div>
                 </div>
             `).join('');
@@ -145,11 +721,29 @@
             displayCustomers(filtered);
         }
 
+        function toggleMarkupField() {
+            const pricingType = document.getElementById('customerPricingType').value;
+            const markupField = document.getElementById('markupField');
+            const contractInfo = document.getElementById('contractInfo');
+
+            markupField.classList.add('hidden');
+            contractInfo.classList.add('hidden');
+
+            if (pricingType === 'markup') {
+                markupField.classList.remove('hidden');
+            } else if (pricingType === 'contract') {
+                contractInfo.classList.remove('hidden');
+            }
+        }
+
         function showAddCustomerForm() {
             document.getElementById('modalTitle').textContent = 'Add Customer';
             document.getElementById('customerForm').reset();
             document.getElementById('customerId').value = '';
-            document.getElementById('customerModal').classList.remove('hidden');
+            document.getElementById('customerPricingType').value = 'market';
+            document.getElementById('customerMarkup').value = '0';
+            toggleMarkupField();
+            document.getElementById('customerModal').classList.add('show');
         }
 
         function editCustomer(customer) {
@@ -160,11 +754,14 @@
             document.getElementById('customerWhatsapp').value = customer.whatsapp || '';
             document.getElementById('customerAddress').value = customer.address || '';
             document.getElementById('customerCreditLimit').value = customer.creditLimit;
-            document.getElementById('customerModal').classList.remove('hidden');
+            document.getElementById('customerPricingType').value = customer.pricingType || 'market';
+            document.getElementById('customerMarkup').value = customer.markupPercentage || 0;
+            toggleMarkupField();
+            document.getElementById('customerModal').classList.add('show');
         }
 
         function closeModal() {
-            document.getElementById('customerModal').classList.add('hidden');
+            document.getElementById('customerModal').classList.remove('show');
         }
 
         async function deleteCustomer(id) {
@@ -187,27 +784,31 @@
         function showSuccess(message) {
             const div = document.getElementById('successMessage');
             div.textContent = message;
-            div.classList.remove('hidden');
-            setTimeout(() => div.classList.add('hidden'), 3000);
+            div.classList.add('show');
+            setTimeout(() => div.classList.remove('show'), 3000);
         }
 
         function showError(message) {
             const div = document.getElementById('errorMessage');
             div.textContent = message;
-            div.classList.remove('hidden');
-            setTimeout(() => div.classList.add('hidden'), 3000);
+            div.classList.add('show');
+            setTimeout(() => div.classList.remove('show'), 3000);
         }
 
         document.getElementById('customerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
             const id = document.getElementById('customerId').value;
+            const pricingType = document.getElementById('customerPricingType').value;
+
             const customerData = {
                 name: document.getElementById('customerName').value,
                 phone: document.getElementById('customerPhone').value,
                 whatsapp: document.getElementById('customerWhatsapp').value,
                 address: document.getElementById('customerAddress').value,
-                creditLimit: parseFloat(document.getElementById('customerCreditLimit').value)
+                creditLimit: parseFloat(document.getElementById('customerCreditLimit').value),
+                pricingType: pricingType,
+                markupPercentage: pricingType === 'markup' ? parseFloat(document.getElementById('customerMarkup').value) || 0 : 0
             };
 
             try {
@@ -234,8 +835,95 @@
             }
         });
 
-        // Load customers on page load
+        // Contract Prices Functions
+        async function openContractPrices(customerId, customerName) {
+            document.getElementById('contractCustomerId').value = customerId;
+            document.getElementById('contractCustomerName').textContent = `Setting prices for: ${customerName}`;
+
+            const customer = allCustomers.find(c => c._id === customerId);
+            currentContractPrices = customer?.contractPrices || {};
+
+            displayContractProducts(allProducts);
+            document.getElementById('contractModal').classList.add('show');
+        }
+
+        function displayContractProducts(products) {
+            const container = document.getElementById('contractPricesList');
+            container.innerHTML = products.map(product => {
+                const existingPrice = currentContractPrices[product._id] || '';
+                return `
+                    <div class="contract-item">
+                        <div class="contract-item-info">
+                            <div class="contract-item-name">${product.name}</div>
+                            <div class="contract-item-base">Base: ₹${product.basePrice}/${product.unit}</div>
+                        </div>
+                        <input type="number" step="0.01" min="0"
+                               class="contract-price-input"
+                               data-product-id="${product._id}"
+                               value="${existingPrice}"
+                               placeholder="₹">
+                        <span class="contract-item-unit">/${product.unit}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function filterContractProducts() {
+            const query = document.getElementById('productSearch').value.toLowerCase();
+            const filtered = allProducts.filter(p => p.name.toLowerCase().includes(query));
+            displayContractProducts(filtered);
+        }
+
+        async function saveContractPrices() {
+            const customerId = document.getElementById('contractCustomerId').value;
+            const inputs = document.querySelectorAll('.contract-price-input');
+            const contractPrices = {};
+
+            inputs.forEach(input => {
+                const productId = input.dataset.productId;
+                const price = parseFloat(input.value);
+                if (!isNaN(price) && price > 0) {
+                    contractPrices[productId] = price;
+                }
+            });
+
+            try {
+                const response = await fetch(`/api/customers/${customerId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contractPrices })
+                });
+
+                if (response.ok) {
+                    showSuccess('Contract prices saved');
+                    closeContractModal();
+                    loadCustomers();
+                } else {
+                    const data = await response.json();
+                    showError(data.message || 'Failed to save prices');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Network error');
+            }
+        }
+
+        function closeContractModal() {
+            document.getElementById('contractModal').classList.remove('show');
+            document.getElementById('productSearch').value = '';
+        }
+
+        // Load data on page load
         loadCustomers();
+        loadProducts();
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(reg => console.log('Service Worker registered:', reg.scope))
+                    .catch(err => console.error('Service Worker registration failed:', err));
+            });
+        }
     </script>
 </body>
 </html>

@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Place Order - Pratibha Marketing</title>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gunmetal: #2e3532;
+            --gunmetal-light: #3d4542;
+            --dusty-olive: #7e9181;
+            --dusty-olive-light: #97a99a;
+            --dusty-olive-dark: #5d6b5f;
+            --pale-slate: #c7cedb;
+            --pale-slate-light: #e8ebf0;
+            --cream: #f9f7f3;
+            --cream-dark: #efe9df;
+            --warm-white: #fefdfb;
+            --terracotta: #c4a77d;
+            --text-primary: #1f2421;
+            --text-secondary: #5a6560;
+            --text-muted: #8a918c;
+            --success: #5d7a5f;
+            --warning: #b89a5a;
+            --error: #9a6565;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--cream);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--gunmetal) 0%, var(--gunmetal-light) 100%);
+            color: var(--warm-white);
+            padding: 1rem 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--dusty-olive), var(--terracotta), var(--dusty-olive));
+        }
+
+        .header-content {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo-mark {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--dusty-olive) 0%, var(--dusty-olive-dark) 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .logo-text {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .customer-badge {
+            background: rgba(255,255,255,0.1);
+            padding: 0.375rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.8125rem;
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+
+        /* Main */
+        .main {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        /* Page Header */
+        .page-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .page-header h1 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--gunmetal);
+            margin-bottom: 0.25rem;
+        }
+
+        .page-header p {
+            color: var(--text-muted);
+            font-size: 0.9375rem;
+        }
+
+        /* Search */
+        .search-box {
+            margin-bottom: 1.5rem;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.875rem 1rem 0.875rem 2.75rem;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            border: 1.5px solid var(--pale-slate);
+            border-radius: 12px;
+            background: var(--warm-white) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%238a918c' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='M21 21l-4.35-4.35'/%3E%3C/svg%3E") no-repeat 0.875rem center;
+            transition: all 0.2s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--dusty-olive);
+            box-shadow: 0 0 0 4px rgba(126, 145, 129, 0.12);
+        }
+
+        /* Categories */
+        .categories {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            overflow-x: auto;
+            padding-bottom: 0.5rem;
+        }
+
+        .category-btn {
+            padding: 0.5rem 1rem;
+            background: var(--warm-white);
+            border: 1px solid var(--pale-slate);
+            border-radius: 20px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+
+        .category-btn:hover {
+            background: var(--cream-dark);
+        }
+
+        .category-btn.active {
+            background: var(--dusty-olive);
+            color: white;
+            border-color: var(--dusty-olive);
+        }
+
+        /* Products Grid */
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 1rem;
+            margin-bottom: 6rem;
+        }
+
+        .product-card {
+            background: var(--warm-white);
+            border-radius: 14px;
+            padding: 1rem;
+            border: 1px solid var(--pale-slate-light);
+            text-align: center;
+            transition: all 0.25s ease;
+            cursor: pointer;
+        }
+
+        .product-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(46, 53, 50, 0.08);
+        }
+
+        .product-card.selected {
+            border-color: var(--dusty-olive);
+            box-shadow: 0 0 0 3px rgba(126, 145, 129, 0.15);
+        }
+
+        .product-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .product-name {
+            font-weight: 600;
+            color: var(--gunmetal);
+            font-size: 0.9375rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .product-name-hindi {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+        }
+
+        .quantity-control {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .qty-btn {
+            width: 32px;
+            height: 32px;
+            background: var(--cream);
+            border: 1px solid var(--pale-slate);
+            border-radius: 8px;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .qty-btn:hover {
+            background: var(--dusty-olive);
+            color: white;
+            border-color: var(--dusty-olive);
+        }
+
+        .qty-input {
+            width: 60px;
+            padding: 0.375rem;
+            text-align: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            font-weight: 600;
+            border: 1px solid var(--pale-slate);
+            border-radius: 8px;
+            background: var(--cream);
+        }
+
+        .qty-input:focus {
+            outline: none;
+            border-color: var(--dusty-olive);
+        }
+
+        .product-unit {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.375rem;
+        }
+
+        /* Cart Footer */
+        .cart-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--warm-white);
+            border-top: 1px solid var(--pale-slate);
+            padding: 1rem 1.5rem;
+            box-shadow: 0 -4px 20px rgba(46, 53, 50, 0.1);
+        }
+
+        .cart-footer-content {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .cart-summary {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .cart-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--cream-dark);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            position: relative;
+        }
+
+        .cart-count {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background: var(--dusty-olive);
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cart-info {
+            font-size: 0.9375rem;
+        }
+
+        .cart-info strong {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--gunmetal);
+        }
+
+        .btn-submit {
+            padding: 0.875rem 2rem;
+            background: linear-gradient(135deg, var(--dusty-olive) 0%, var(--dusty-olive-dark) 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            box-shadow: 0 4px 12px rgba(126, 145, 129, 0.3);
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(126, 145, 129, 0.4);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .products-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .cart-footer-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .btn-submit {
+                width: 100%;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .product-card {
+            animation: fadeInUp 0.4s ease backwards;
+        }
+
+        .product-card:nth-child(1) { animation-delay: 0.05s; }
+        .product-card:nth-child(2) { animation-delay: 0.1s; }
+        .product-card:nth-child(3) { animation-delay: 0.15s; }
+        .product-card:nth-child(4) { animation-delay: 0.2s; }
+        .product-card:nth-child(5) { animation-delay: 0.25s; }
+        .product-card:nth-child(6) { animation-delay: 0.3s; }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-mark">🌿</div>
+                <div class="logo-text">Pratibha</div>
+            </div>
+            <div class="customer-badge">Hotel Sunrise</div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="page-header">
+            <h1>Place Your Order</h1>
+            <p>Select items and quantities for today's delivery</p>
+        </div>
+
+        <div class="search-box">
+            <input type="text" class="search-input" placeholder="Search vegetables...">
+        </div>
+
+        <div class="categories">
+            <button class="category-btn active">All</button>
+            <button class="category-btn">Leafy</button>
+            <button class="category-btn">Root</button>
+            <button class="category-btn">Gourd</button>
+            <button class="category-btn">Exotic</button>
+            <button class="category-btn">Herbs</button>
+        </div>
+
+        <div class="products-grid">
+            <div class="product-card selected">
+                <div class="product-icon">🥔</div>
+                <div class="product-name">Potato</div>
+                <div class="product-name-hindi">Aloo</div>
+                <div class="quantity-control">
+                    <button class="qty-btn" onclick="updateQty(this, -1)">−</button>
+                    <input type="number" class="qty-input" value="10" min="0">
+                    <button class="qty-btn" onclick="updateQty(this, 1)">+</button>
+                </div>
+                <div class="product-unit">kg</div>
+            </div>
+
+            <div class="product-card selected">
+                <div class="product-icon">🍅</div>
+                <div class="product-name">Tomato</div>
+                <div class="product-name-hindi">Tamatar</div>
+                <div class="quantity-control">
+                    <button class="qty-btn" onclick="updateQty(this, -1)">−</button>
+                    <input type="number" class="qty-input" value="5" min="0">
+                    <button class="qty-btn" onclick="updateQty(this, 1)">+</button>
+                </div>
+                <div class="product-unit">kg</div>
+            </div>
+
+            <div class="product-card">
+                <div class="product-icon">🧅</div>
+                <div class="product-name">Onion</div>
+                <div class="product-name-hindi">Pyaz</div>
+                <div class="quantity-control">
+                    <button class="qty-btn" onclick="updateQty(this, -1)">−</button>
+                    <input type="number" class="qty-input" value="0" min="0">
+                    <button class="qty-btn" onclick="updateQty(this, 1)">+</button>
+                </div>
+                <div class="product-unit">kg</div>
+            </div>
+
+            <div class="product-card selected">
+                <div class="product-icon">🥕</div>
+                <div class="product-name">Carrot</div>
+                <div class="product-name-hindi">Gajar</div>
+                <div class="quantity-control">
+                    <button class="qty-btn" onclick="updateQty(this, -1)">−</button>
+                    <input type="number" class="qty-input" value="3" min="0">
+                    <button class="qty-btn" onclick="updateQty(this, 1)">+</button>
+                </div>
+                <div class="product-unit">kg</div>
+            </div>
+
+            <div class="product-card">
+                <div class="product-icon">🥬</div>
+                <div class="product-name">Cabbage</div>
+                <div class="product-name-hindi">Patta Gobi</div>
+                <div class="quantity-control">
+                    <button class="qty-btn" onclick="updateQty(this, -1)">−</button>
+                    <input type="number" class="qty-input" value="0" min="0">
+                    <button class="qty-btn" onclick="updateQty(this, 1)">+</button>
+                </div>
+                <div class="product-unit">kg</div>
+            </div>
+
+            <div class="product-card">
+                <div class="product-icon">🥒</div>
+                <div class="product-name">Cucumber</div>
+                <div class="product-name-hindi">Kheera</div>
+                <div class="quantity-control">
+                    <button class="qty-btn" onclick="updateQty(this, -1)">−</button>
+                    <input type="number" class="qty-input" value="0" min="0">
+                    <button class="qty-btn" onclick="updateQty(this, 1)">+</button>
+                </div>
+                <div class="product-unit">kg</div>
+            </div>
+
+            <div class="product-card">
+                <div class="product-icon">🌶️</div>
+                <div class="product-name">Green Chilli</div>
+                <div class="product-name-hindi">Hari Mirch</div>
+                <div class="quantity-control">
+                    <button class="qty-btn" onclick="updateQty(this, -1)">−</button>
+                    <input type="number" class="qty-input" value="0" min="0">
+                    <button class="qty-btn" onclick="updateQty(this, 1)">+</button>
+                </div>
+                <div class="product-unit">kg</div>
+            </div>
+
+            <div class="product-card">
+                <div class="product-icon">🫛</div>
+                <div class="product-name">Green Peas</div>
+                <div class="product-name-hindi">Matar</div>
+                <div class="quantity-control">
+                    <button class="qty-btn" onclick="updateQty(this, -1)">−</button>
+                    <input type="number" class="qty-input" value="0" min="0">
+                    <button class="qty-btn" onclick="updateQty(this, 1)">+</button>
+                </div>
+                <div class="product-unit">kg</div>
+            </div>
+
+            <div class="product-card">
+                <div class="product-icon">🥦</div>
+                <div class="product-name">Cauliflower</div>
+                <div class="product-name-hindi">Phool Gobi</div>
+                <div class="quantity-control">
+                    <button class="qty-btn" onclick="updateQty(this, -1)">−</button>
+                    <input type="number" class="qty-input" value="0" min="0">
+                    <button class="qty-btn" onclick="updateQty(this, 1)">+</button>
+                </div>
+                <div class="product-unit">kg</div>
+            </div>
+
+            <div class="product-card">
+                <div class="product-icon">🍆</div>
+                <div class="product-name">Brinjal</div>
+                <div class="product-name-hindi">Baingan</div>
+                <div class="quantity-control">
+                    <button class="qty-btn" onclick="updateQty(this, -1)">−</button>
+                    <input type="number" class="qty-input" value="0" min="0">
+                    <button class="qty-btn" onclick="updateQty(this, 1)">+</button>
+                </div>
+                <div class="product-unit">kg</div>
+            </div>
+
+            <div class="product-card">
+                <div class="product-icon">🌿</div>
+                <div class="product-name">Coriander</div>
+                <div class="product-name-hindi">Dhania</div>
+                <div class="quantity-control">
+                    <button class="qty-btn" onclick="updateQty(this, -1)">−</button>
+                    <input type="number" class="qty-input" value="0" min="0">
+                    <button class="qty-btn" onclick="updateQty(this, 1)">+</button>
+                </div>
+                <div class="product-unit">bunch</div>
+            </div>
+
+            <div class="product-card">
+                <div class="product-icon">🧄</div>
+                <div class="product-name">Garlic</div>
+                <div class="product-name-hindi">Lehsun</div>
+                <div class="quantity-control">
+                    <button class="qty-btn" onclick="updateQty(this, -1)">−</button>
+                    <input type="number" class="qty-input" value="0" min="0">
+                    <button class="qty-btn" onclick="updateQty(this, 1)">+</button>
+                </div>
+                <div class="product-unit">kg</div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Cart Footer -->
+    <div class="cart-footer">
+        <div class="cart-footer-content">
+            <div class="cart-summary">
+                <div class="cart-icon">
+                    🛒
+                    <span class="cart-count">3</span>
+                </div>
+                <div class="cart-info">
+                    <strong>3 items</strong> selected
+                </div>
+            </div>
+            <button class="btn-submit">Submit Order →</button>
+        </div>
+    </div>
+
+    <script>
+        function updateQty(btn, delta) {
+            const card = btn.closest('.product-card');
+            const input = card.querySelector('.qty-input');
+            let val = parseInt(input.value) || 0;
+            val = Math.max(0, val + delta);
+            input.value = val;
+
+            if (val > 0) {
+                card.classList.add('selected');
+            } else {
+                card.classList.remove('selected');
+            }
+
+            updateCart();
+        }
+
+        function updateCart() {
+            const selected = document.querySelectorAll('.product-card.selected');
+            document.querySelector('.cart-count').textContent = selected.length;
+            document.querySelector('.cart-info strong').textContent = selected.length + ' items';
+        }
+
+        // Category buttons
+        document.querySelectorAll('.category-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // Input change handler
+        document.querySelectorAll('.qty-input').forEach(input => {
+            input.addEventListener('change', function() {
+                const card = this.closest('.product-card');
+                const val = parseInt(this.value) || 0;
+                this.value = Math.max(0, val);
+
+                if (val > 0) {
+                    card.classList.add('selected');
+                } else {
+                    card.classList.remove('selected');
+                }
+                updateCart();
+            });
+        });
+    </script>
+</body>
+</html>

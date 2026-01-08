@@ -1,141 +1,508 @@
 <!DOCTYPE html>
-<html class="light" lang="en">
+<html lang="en">
 <head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pratibha Marketing - Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    colors: {
-                        "primary": "#13ec13",
-                        "background-light": "#f6f8f6",
-                        "background-dark": "#102210",
-                    },
-                    fontFamily: {
-                        "display": ["Work Sans", "sans-serif"]
-                    }
-                }
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#7e9181">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Pratibha">
+    <link rel="apple-touch-icon" href="/icons/icon.svg">
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gunmetal: #2e3532;
+            --gunmetal-light: #3d4542;
+            --dusty-olive: #7e9181;
+            --dusty-olive-light: #97a99a;
+            --dusty-olive-dark: #5d6b5f;
+            --pale-slate: #c7cedb;
+            --pale-slate-light: #e8ebf0;
+            --cream: #f9f7f3;
+            --cream-dark: #efe9df;
+            --warm-white: #fefdfb;
+            --terracotta: #c4a77d;
+            --text-primary: #1f2421;
+            --text-secondary: #5a6560;
+            --text-muted: #8a918c;
+            --success: #5d7a5f;
+            --warning: #b89a5a;
+            --error: #9a6565;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--cream);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--gunmetal) 0%, var(--gunmetal-light) 100%);
+            color: var(--warm-white);
+            padding: 1.5rem 2rem;
+            position: relative;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--dusty-olive), var(--terracotta), var(--dusty-olive));
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-mark {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--dusty-olive) 0%, var(--dusty-olive-dark) 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .logo-text {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.75rem;
+            font-weight: 600;
+        }
+
+        .logo-text span {
+            color: var(--dusty-olive-light);
+            font-weight: 400;
+        }
+
+        .header-subtitle {
+            font-size: 0.875rem;
+            color: var(--pale-slate);
+            margin-top: 0.25rem;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-badge {
+            background: rgba(255,255,255,0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+
+        .btn-logout {
+            background: transparent;
+            color: var(--pale-slate);
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-family: 'DM Sans', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-logout:hover {
+            background: rgba(255,255,255,0.1);
+            color: var(--warm-white);
+        }
+
+        /* Main */
+        .main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.25rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .stat-card {
+            background: var(--warm-white);
+            border-radius: 14px;
+            padding: 1.5rem;
+            border: 1px solid var(--pale-slate-light);
+            box-shadow: 0 1px 3px rgba(46, 53, 50, 0.04);
+            transition: all 0.25s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--dusty-olive);
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(46, 53, 50, 0.08);
+        }
+
+        .stat-card:hover::before {
+            opacity: 1;
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .stat-label {
+            font-size: 0.8125rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .stat-icon {
+            font-size: 1.25rem;
+        }
+
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--gunmetal);
+        }
+
+        /* Quick Actions */
+        .section-title {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--gunmetal);
+            margin-bottom: 1.5rem;
+        }
+
+        .actions-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.25rem;
+        }
+
+        .action-card {
+            background: var(--warm-white);
+            border-radius: 16px;
+            padding: 2rem;
+            border: 1px solid var(--pale-slate-light);
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .action-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--dusty-olive);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .action-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(46, 53, 50, 0.12);
+        }
+
+        .action-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .action-card.primary {
+            background: linear-gradient(135deg, var(--dusty-olive) 0%, var(--dusty-olive-dark) 100%);
+            color: white;
+            border: none;
+        }
+
+        .action-card.primary::before {
+            background: var(--terracotta);
+        }
+
+        .action-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .action-title {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.375rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .action-desc {
+            font-size: 0.9375rem;
+            opacity: 0.8;
+        }
+
+        /* API Status */
+        .api-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-top: 2rem;
+        }
+
+        .api-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+        }
+
+        .api-dot.offline {
+            background: var(--error);
+        }
+
+        /* Footer */
+        .footer {
+            background: var(--cream-dark);
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-muted);
+            margin-top: 3rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .actions-grid {
+                grid-template-columns: repeat(2, 1fr);
             }
         }
-    </script>
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+                gap: 1rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .actions-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .main {
+                padding: 1rem;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .stat-card {
+            animation: fadeInUp 0.4s ease backwards;
+        }
+
+        .stat-card:nth-child(1) { animation-delay: 0.05s; }
+        .stat-card:nth-child(2) { animation-delay: 0.1s; }
+        .stat-card:nth-child(3) { animation-delay: 0.15s; }
+        .stat-card:nth-child(4) { animation-delay: 0.2s; }
+
+        .action-card {
+            animation: fadeInUp 0.5s ease backwards;
+        }
+
+        .action-card:nth-child(1) { animation-delay: 0.25s; }
+        .action-card:nth-child(2) { animation-delay: 0.3s; }
+        .action-card:nth-child(3) { animation-delay: 0.35s; }
+        .action-card:nth-child(4) { animation-delay: 0.4s; }
+        .action-card:nth-child(5) { animation-delay: 0.45s; }
+        .action-card:nth-child(6) { animation-delay: 0.5s; }
+    </style>
 </head>
-<body class="bg-background-light dark:bg-background-dark font-display text-gray-900 dark:text-gray-100">
-    <div class="min-h-screen">
-        <!-- Header -->
-        <header class="bg-white dark:bg-gray-800 shadow-sm">
-            <div class="max-w-7xl mx-auto px-6 py-6">
-                <h1 class="text-4xl font-bold">Pratibha Marketing</h1>
-                <p class="text-gray-600 dark:text-gray-400 mt-2">Fresh Vegetables Supply & Distribution</p>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div>
+                <div class="logo">
+                    <div class="logo-mark">🌿</div>
+                    <div class="logo-text">Pratibha <span>Marketing</span></div>
+                </div>
+                <p class="header-subtitle">Fresh Vegetables Supply & Distribution</p>
             </div>
-        </header>
-
-        <!-- Main Content -->
-        <main class="max-w-7xl mx-auto px-6 py-12">
-            <!-- Stats Cards -->
-            <div id="statsGrid" class="grid md:grid-cols-4 gap-6 mb-12">
-                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-gray-600 dark:text-gray-400">Total Orders</span>
-                        <span class="material-symbols-outlined text-primary">shopping_cart</span>
-                    </div>
-                    <div class="text-3xl font-bold" id="totalOrders">-</div>
-                </div>
-                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-gray-600 dark:text-gray-400">Active Customers</span>
-                        <span class="material-symbols-outlined text-primary">people</span>
-                    </div>
-                    <div class="text-3xl font-bold" id="totalCustomers">-</div>
-                </div>
-                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-gray-600 dark:text-gray-400">Products</span>
-                        <span class="material-symbols-outlined text-primary">inventory</span>
-                    </div>
-                    <div class="text-3xl font-bold" id="totalProducts">-</div>
-                </div>
-                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-gray-600 dark:text-gray-400">Pending Orders</span>
-                        <span class="material-symbols-outlined text-yellow-500">pending</span>
-                    </div>
-                    <div class="text-3xl font-bold" id="pendingOrders">-</div>
-                </div>
+            <div class="header-actions">
+                <div class="user-badge" id="userBadge">Loading...</div>
+                <button class="btn-logout" onclick="logout()">Logout</button>
             </div>
+        </div>
+    </header>
 
-            <!-- Quick Actions -->
-            <h2 class="text-2xl font-bold mb-6">Quick Actions</h2>
-            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <!-- Supplier Dashboard - PRIORITY -->
-                <a href="/supplier-dashboard.html" class="bg-gradient-to-br from-green-600 to-green-800 rounded-xl p-8 text-white hover:shadow-xl transition transform hover:-translate-y-1 border-4 border-primary">
-                    <span class="material-symbols-outlined text-5xl mb-4">analytics</span>
-                    <h3 class="text-2xl font-bold mb-2">Supplier Dashboard</h3>
-                    <p class="text-white/90">Procurement planning & quantities</p>
-                </a>
-
-                <!-- Create Order -->
-                <a href="/customer-order-form.html" class="bg-gradient-to-br from-green-500 to-primary rounded-xl p-8 text-black hover:shadow-xl transition transform hover:-translate-y-1">
-                    <span class="material-symbols-outlined text-5xl mb-4">add_shopping_cart</span>
-                    <h3 class="text-2xl font-bold mb-2">Create Order</h3>
-                    <p class="text-black/80">Place a new customer order</p>
-                </a>
-
-                <!-- Manage Customers -->
-                <a href="/customer-management.html" class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-8 text-white hover:shadow-xl transition transform hover:-translate-y-1">
-                    <span class="material-symbols-outlined text-5xl mb-4">people</span>
-                    <h3 class="text-2xl font-bold mb-2">Customers</h3>
-                    <p class="text-white/80">Manage customer details</p>
-                </a>
-
-                <!-- Market Rates -->
-                <a href="/market-rates.html" class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-8 text-white hover:shadow-xl transition transform hover:-translate-y-1">
-                    <span class="material-symbols-outlined text-5xl mb-4">trending_up</span>
-                    <h3 class="text-2xl font-bold mb-2">Market Rates</h3>
-                    <p class="text-white/80">View and update pricing</p>
-                </a>
-
-                <!-- Products -->
-                <a href="/products.html" class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-8 text-white hover:shadow-xl transition transform hover:-translate-y-1">
-                    <span class="material-symbols-outlined text-5xl mb-4">inventory_2</span>
-                    <h3 class="text-2xl font-bold mb-2">Products</h3>
-                    <p class="text-white/80">Manage product catalog</p>
-                </a>
-
-                <!-- Orders List -->
-                <a href="/orders.html" class="bg-gradient-to-br from-red-500 to-red-600 rounded-xl p-8 text-white hover:shadow-xl transition transform hover:-translate-y-1">
-                    <span class="material-symbols-outlined text-5xl mb-4">list_alt</span>
-                    <h3 class="text-2xl font-bold mb-2">View Orders</h3>
-                    <p class="text-white/80">Track all orders</p>
-                </a>
-
-                <!-- API Health -->
-                <div id="apiHealth" class="bg-gradient-to-br from-gray-500 to-gray-600 rounded-xl p-8 text-white">
-                    <span class="material-symbols-outlined text-5xl mb-4">health_and_safety</span>
-                    <h3 class="text-2xl font-bold mb-2">API Status</h3>
-                    <p id="apiStatus" class="text-white/80">Checking...</p>
+    <main class="main">
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-header">
+                    <span class="stat-label">Total Orders</span>
+                    <span class="stat-icon">📦</span>
                 </div>
+                <div class="stat-value" id="totalOrders">-</div>
             </div>
-        </main>
+            <div class="stat-card">
+                <div class="stat-header">
+                    <span class="stat-label">Active Customers</span>
+                    <span class="stat-icon">👥</span>
+                </div>
+                <div class="stat-value" id="totalCustomers">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-header">
+                    <span class="stat-label">Products</span>
+                    <span class="stat-icon">🥬</span>
+                </div>
+                <div class="stat-value" id="totalProducts">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-header">
+                    <span class="stat-label">Pending Orders</span>
+                    <span class="stat-icon">⏳</span>
+                </div>
+                <div class="stat-value" id="pendingOrders">-</div>
+            </div>
+        </div>
 
-        <!-- Footer -->
-        <footer class="bg-white dark:bg-gray-800 mt-12 py-6 text-center text-gray-600 dark:text-gray-400">
-            <p>Pratibha Marketing &copy; 2026 | Built with Node.js, Express & MongoDB</p>
-        </footer>
-    </div>
+        <!-- Quick Actions -->
+        <h2 class="section-title">Quick Actions</h2>
+        <div class="actions-grid">
+            <a href="/supplier-dashboard.html" class="action-card primary">
+                <div class="action-icon">📊</div>
+                <h3 class="action-title">Supplier Dashboard</h3>
+                <p class="action-desc">Procurement planning & shopping list</p>
+            </a>
+
+            <a href="/customer-order-form.html" class="action-card">
+                <div class="action-icon">🛒</div>
+                <h3 class="action-title">Create Order</h3>
+                <p class="action-desc">Place a new customer order</p>
+            </a>
+
+            <a href="/customer-management.html" class="action-card">
+                <div class="action-icon">👥</div>
+                <h3 class="action-title">Customers</h3>
+                <p class="action-desc">Manage customer details</p>
+            </a>
+
+            <a href="/market-rates.html" class="action-card">
+                <div class="action-icon">📈</div>
+                <h3 class="action-title">Market Rates</h3>
+                <p class="action-desc">View and update pricing</p>
+            </a>
+
+            <a href="/products.html" class="action-card">
+                <div class="action-icon">🥕</div>
+                <h3 class="action-title">Products</h3>
+                <p class="action-desc">Manage product catalog</p>
+            </a>
+
+            <a href="/orders.html" class="action-card">
+                <div class="action-icon">📋</div>
+                <h3 class="action-title">View Orders</h3>
+                <p class="action-desc">Track all orders</p>
+            </a>
+        </div>
+
+        <div class="api-status">
+            <span class="api-dot" id="apiDot"></span>
+            <span id="apiStatus">Checking API...</span>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>Pratibha Marketing &copy; 2026 | Fresh vegetables, delivered with trust</p>
+    </footer>
+
+    <script src="/js/auth.js"></script>
+    <script src="/js/api.js"></script>
 
     <script>
         async function loadDashboardStats() {
             try {
                 const [ordersRes, customersRes, productsRes] = await Promise.all([
-                    fetch('/api/orders'),
-                    fetch('/api/customers'),
-                    fetch('/api/products')
+                    fetch('/api/orders', { credentials: 'include' }),
+                    fetch('/api/customers', { credentials: 'include' }),
+                    fetch('/api/products', { credentials: 'include' })
                 ]);
 
                 const orders = await ordersRes.json();
@@ -159,18 +526,49 @@
                 const data = await response.json();
 
                 if (data.status === 'ok') {
-                    document.getElementById('apiStatus').innerHTML = '<span class="text-green-300">● Online</span>';
+                    document.getElementById('apiDot').classList.remove('offline');
+                    document.getElementById('apiStatus').textContent = 'API Online';
                 } else {
-                    document.getElementById('apiStatus').innerHTML = '<span class="text-red-300">● Offline</span>';
+                    document.getElementById('apiDot').classList.add('offline');
+                    document.getElementById('apiStatus').textContent = 'API Offline';
                 }
             } catch (error) {
-                document.getElementById('apiStatus').innerHTML = '<span class="text-red-300">● Offline</span>';
+                document.getElementById('apiDot').classList.add('offline');
+                document.getElementById('apiStatus').textContent = 'API Offline';
             }
         }
 
-        // Load stats on page load
-        loadDashboardStats();
-        checkAPIHealth();
+        function logout() {
+            localStorage.removeItem('user');
+            fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+                .finally(() => {
+                    window.location.href = '/login.html';
+                });
+        }
+
+        // Initialize dashboard with authentication check
+        async function init() {
+            // Require admin or staff role for dashboard access
+            const user = await Auth.requireAuth(['admin', 'staff']);
+            if (!user) return; // requireAuth redirects to login if not authenticated
+
+            // Update user badge with authenticated user's name
+            document.getElementById('userBadge').textContent = user.name || user.email || 'User';
+
+            // Load dashboard data
+            loadDashboardStats();
+            checkAPIHealth();
+        }
+
+        init();
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(reg => console.log('Service Worker registered:', reg.scope))
+                    .catch(err => console.error('Service Worker registration failed:', err));
+            });
+        }
     </script>
 </body>
 </html>

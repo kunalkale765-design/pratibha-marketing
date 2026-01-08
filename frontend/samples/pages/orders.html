@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orders - Pratibha Marketing</title>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gunmetal: #2e3532;
+            --gunmetal-light: #3d4542;
+            --dusty-olive: #7e9181;
+            --dusty-olive-light: #97a99a;
+            --dusty-olive-dark: #5d6b5f;
+            --pale-slate: #c7cedb;
+            --pale-slate-light: #e8ebf0;
+            --cream: #f9f7f3;
+            --cream-dark: #efe9df;
+            --warm-white: #fefdfb;
+            --terracotta: #c4a77d;
+            --text-primary: #1f2421;
+            --text-secondary: #5a6560;
+            --text-muted: #8a918c;
+            --success: #5d7a5f;
+            --warning: #b89a5a;
+            --error: #9a6565;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--cream);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body > * { position: relative; z-index: 1; }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--gunmetal) 0%, var(--gunmetal-light) 100%);
+            color: var(--warm-white);
+            padding: 1.25rem 1.5rem;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, var(--dusty-olive), var(--terracotta), var(--dusty-olive));
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-mark {
+            width: 42px; height: 42px;
+            background: linear-gradient(135deg, var(--dusty-olive) 0%, var(--dusty-olive-dark) 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .logo-text {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .logo-text span { color: var(--dusty-olive-light); font-weight: 400; }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            color: var(--pale-slate);
+            text-decoration: none;
+            font-size: 0.9375rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover,
+        .nav-links a.active { color: var(--warm-white); }
+
+        /* Main */
+        .main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        /* Page Header */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 2rem;
+        }
+
+        .page-title h1 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--gunmetal);
+            margin-bottom: 0.25rem;
+        }
+
+        .page-title p {
+            color: var(--text-muted);
+            font-size: 0.9375rem;
+        }
+
+        .btn {
+            padding: 0.625rem 1.25rem;
+            border-radius: 8px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--dusty-olive) 0%, var(--dusty-olive-dark) 100%);
+            color: white;
+            border: none;
+            box-shadow: 0 2px 4px rgba(126, 145, 129, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(126, 145, 129, 0.4);
+        }
+
+        /* Filters */
+        .filters {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            background: var(--warm-white);
+            border: 1px solid var(--pale-slate);
+            border-radius: 8px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-btn:hover { background: var(--cream-dark); }
+
+        .filter-btn.active {
+            background: var(--gunmetal);
+            color: white;
+            border-color: var(--gunmetal);
+        }
+
+        .search-input {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--pale-slate);
+            border-radius: 8px;
+            font-size: 0.875rem;
+            min-width: 200px;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--dusty-olive);
+        }
+
+        /* Stats Row */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--warm-white);
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+            border: 1px solid var(--pale-slate-light);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .stat-icon {
+            width: 44px; height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .stat-icon.pending { background: rgba(184, 154, 90, 0.15); }
+        .stat-icon.confirmed { background: rgba(126, 145, 129, 0.15); }
+        .stat-icon.delivered { background: rgba(93, 122, 95, 0.15); }
+        .stat-icon.revenue { background: rgba(196, 167, 125, 0.15); }
+
+        .stat-info { flex: 1; }
+        .stat-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+        .stat-value { font-family: 'JetBrains Mono', monospace; font-size: 1.25rem; font-weight: 600; color: var(--gunmetal); }
+
+        /* Orders Table */
+        .section-card {
+            background: var(--warm-white);
+            border-radius: 14px;
+            border: 1px solid var(--pale-slate-light);
+            overflow: hidden;
+        }
+
+        .orders-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .orders-table thead { background: var(--cream); }
+
+        .orders-table th {
+            padding: 0.875rem 1.25rem;
+            text-align: left;
+            font-size: 0.6875rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            border-bottom: 2px solid var(--pale-slate-light);
+        }
+
+        .orders-table td {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--pale-slate-light);
+        }
+
+        .orders-table tbody tr {
+            transition: all 0.15s ease;
+            cursor: pointer;
+        }
+
+        .orders-table tbody tr:hover { background: var(--cream); }
+
+        .invoice-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            color: var(--dusty-olive-dark);
+            font-size: 0.875rem;
+        }
+
+        .customer-cell {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .customer-avatar {
+            width: 36px; height: 36px;
+            background: var(--cream-dark);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .customer-name { font-weight: 600; color: var(--gunmetal); }
+        .customer-phone { font-size: 0.8125rem; color: var(--text-muted); }
+
+        .items-count {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+        }
+
+        .amount {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--gunmetal);
+        }
+
+        .profit {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            color: var(--success);
+            font-size: 0.875rem;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.6875rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            border-radius: 20px;
+        }
+
+        .badge-pending {
+            background: rgba(184, 154, 90, 0.15);
+            color: #8a7340;
+            border: 1px solid rgba(184, 154, 90, 0.3);
+        }
+
+        .badge-confirmed {
+            background: rgba(126, 145, 129, 0.15);
+            color: #5d6b5f;
+            border: 1px solid rgba(126, 145, 129, 0.3);
+        }
+
+        .badge-delivered {
+            background: rgba(93, 122, 95, 0.15);
+            color: #4a6150;
+            border: 1px solid rgba(93, 122, 95, 0.3);
+        }
+
+        .badge-cancelled {
+            background: rgba(154, 101, 101, 0.15);
+            color: #7a5050;
+            border: 1px solid rgba(154, 101, 101, 0.3);
+        }
+
+        .badge-paid {
+            background: rgba(93, 122, 95, 0.15);
+            color: #4a6150;
+        }
+
+        .badge-unpaid {
+            background: rgba(154, 101, 101, 0.15);
+            color: #7a5050;
+        }
+
+        .badge-partial {
+            background: rgba(184, 154, 90, 0.15);
+            color: #8a7340;
+        }
+
+        .btn-view {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.8125rem;
+            background: var(--cream);
+            border: 1px solid var(--pale-slate);
+            border-radius: 6px;
+            color: var(--gunmetal);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-view:hover {
+            background: var(--dusty-olive);
+            color: white;
+            border-color: var(--dusty-olive);
+        }
+
+        /* Pagination */
+        .table-footer {
+            padding: 1rem 1.25rem;
+            border-top: 1px solid var(--pale-slate-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--cream);
+        }
+
+        .pagination {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .page-btn {
+            width: 36px; height: 36px;
+            background: var(--warm-white);
+            border: 1px solid var(--pale-slate);
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .page-btn:hover { background: var(--cream-dark); }
+        .page-btn.active {
+            background: var(--gunmetal);
+            color: white;
+            border-color: var(--gunmetal);
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+            .nav-links { display: none; }
+            .page-header { flex-direction: column; gap: 1rem; }
+            .filters { flex-direction: column; }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .stat-card, .section-card {
+            animation: fadeInUp 0.4s ease backwards;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-mark">🌿</div>
+                <div class="logo-text">Pratibha <span>Marketing</span></div>
+            </div>
+            <nav class="nav-links">
+                <a href="sample-earthy.html">Dashboard</a>
+                <a href="products.html">Products</a>
+                <a href="market-rates.html">Market Rates</a>
+                <a href="#" class="active">Orders</a>
+                <a href="customer-management.html">Customers</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main -->
+    <main class="main">
+        <div class="page-header">
+            <div class="page-title">
+                <h1>Orders</h1>
+                <p>Manage and track all customer orders</p>
+            </div>
+            <a href="customer-order-form.html" class="btn btn-primary">+ New Order</a>
+        </div>
+
+        <!-- Stats Row -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-icon pending">⏳</div>
+                <div class="stat-info">
+                    <div class="stat-label">Pending</div>
+                    <div class="stat-value">8</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon confirmed">✓</div>
+                <div class="stat-info">
+                    <div class="stat-label">Confirmed</div>
+                    <div class="stat-value">12</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon delivered">📦</div>
+                <div class="stat-info">
+                    <div class="stat-label">Delivered Today</div>
+                    <div class="stat-value">15</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon revenue">₹</div>
+                <div class="stat-info">
+                    <div class="stat-label">Today's Revenue</div>
+                    <div class="stat-value">₹24,500</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters">
+            <div class="filter-group">
+                <button class="filter-btn active">All Orders</button>
+                <button class="filter-btn">Pending</button>
+                <button class="filter-btn">Confirmed</button>
+                <button class="filter-btn">Delivered</button>
+            </div>
+            <input type="text" class="search-input" placeholder="Search by invoice or customer...">
+        </div>
+
+        <!-- Orders Table -->
+        <div class="section-card">
+            <table class="orders-table">
+                <thead>
+                    <tr>
+                        <th>Invoice</th>
+                        <th>Customer</th>
+                        <th>Items</th>
+                        <th>Amount</th>
+                        <th>Profit</th>
+                        <th>Status</th>
+                        <th>Payment</th>
+                        <th>Date</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="invoice-num">INV-2026-1048</span></td>
+                        <td>
+                            <div class="customer-cell">
+                                <div class="customer-avatar">HS</div>
+                                <div>
+                                    <div class="customer-name">Hotel Sunrise</div>
+                                    <div class="customer-phone">98765 43210</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="items-count">8 items</span></td>
+                        <td><span class="amount">₹3,450</span></td>
+                        <td><span class="profit">+₹680</span></td>
+                        <td><span class="badge badge-pending">Pending</span></td>
+                        <td><span class="badge badge-unpaid">Unpaid</span></td>
+                        <td>Today, 9:15 AM</td>
+                        <td><button class="btn-view">View</button></td>
+                    </tr>
+                    <tr>
+                        <td><span class="invoice-num">INV-2026-1047</span></td>
+                        <td>
+                            <div class="customer-cell">
+                                <div class="customer-avatar">GL</div>
+                                <div>
+                                    <div class="customer-name">Green Leaf Restaurant</div>
+                                    <div class="customer-phone">87654 32109</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="items-count">5 items</span></td>
+                        <td><span class="amount">₹1,875</span></td>
+                        <td><span class="profit">+₹340</span></td>
+                        <td><span class="badge badge-confirmed">Confirmed</span></td>
+                        <td><span class="badge badge-partial">Partial</span></td>
+                        <td>Today, 8:45 AM</td>
+                        <td><button class="btn-view">View</button></td>
+                    </tr>
+                    <tr>
+                        <td><span class="invoice-num">INV-2026-1046</span></td>
+                        <td>
+                            <div class="customer-cell">
+                                <div class="customer-avatar">TK</div>
+                                <div>
+                                    <div class="customer-name">Taj Kitchen</div>
+                                    <div class="customer-phone">76543 21098</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="items-count">12 items</span></td>
+                        <td><span class="amount">₹5,200</span></td>
+                        <td><span class="profit">+₹920</span></td>
+                        <td><span class="badge badge-delivered">Delivered</span></td>
+                        <td><span class="badge badge-paid">Paid</span></td>
+                        <td>Today, 7:30 AM</td>
+                        <td><button class="btn-view">View</button></td>
+                    </tr>
+                    <tr>
+                        <td><span class="invoice-num">INV-2026-1045</span></td>
+                        <td>
+                            <div class="customer-cell">
+                                <div class="customer-avatar">RC</div>
+                                <div>
+                                    <div class="customer-name">Royal Caterers</div>
+                                    <div class="customer-phone">65432 10987</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="items-count">18 items</span></td>
+                        <td><span class="amount">₹8,400</span></td>
+                        <td><span class="profit">+₹1,540</span></td>
+                        <td><span class="badge badge-delivered">Delivered</span></td>
+                        <td><span class="badge badge-unpaid">Unpaid</span></td>
+                        <td>Yesterday</td>
+                        <td><button class="btn-view">View</button></td>
+                    </tr>
+                    <tr>
+                        <td><span class="invoice-num">INV-2026-1044</span></td>
+                        <td>
+                            <div class="customer-cell">
+                                <div class="customer-avatar">PD</div>
+                                <div>
+                                    <div class="customer-name">Paradise Dhaba</div>
+                                    <div class="customer-phone">54321 09876</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="items-count">6 items</span></td>
+                        <td><span class="amount">₹1,250</span></td>
+                        <td><span class="profit">+₹220</span></td>
+                        <td><span class="badge badge-delivered">Delivered</span></td>
+                        <td><span class="badge badge-paid">Paid</span></td>
+                        <td>Yesterday</td>
+                        <td><button class="btn-view">View</button></td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="table-footer">
+                <span style="font-size: 0.875rem; color: var(--text-muted);">Showing 5 of 48 orders</span>
+                <div class="pagination">
+                    <button class="page-btn">←</button>
+                    <button class="page-btn active">1</button>
+                    <button class="page-btn">2</button>
+                    <button class="page-btn">3</button>
+                    <button class="page-btn">→</button>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

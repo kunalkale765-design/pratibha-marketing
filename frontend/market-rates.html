@@ -1,83 +1,456 @@
 <!DOCTYPE html>
-<html class="light" lang="en">
+<html lang="en">
 <head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Market Rates - Pratibha Marketing</title>
-    <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
-    <script>
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    colors: {
-                        "primary": "#13ec13",
-                        "background-light": "#f6f8f6",
-                        "background-dark": "#102210",
-                    },
-                    fontFamily: {
-                        "display": ["Work Sans", "sans-serif"]
-                    }
-                }
-            }
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#7e9181">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Pratibha">
+    <link rel="apple-touch-icon" href="/icons/icon.svg">
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gunmetal: #2e3532;
+            --gunmetal-light: #3d4542;
+            --dusty-olive: #7e9181;
+            --dusty-olive-light: #97a99a;
+            --dusty-olive-dark: #5d6b5f;
+            --pale-slate: #c7cedb;
+            --pale-slate-light: #e8ebf0;
+            --cream: #f9f7f3;
+            --cream-dark: #efe9df;
+            --warm-white: #fefdfb;
+            --terracotta: #c4a77d;
+            --text-primary: #1f2421;
+            --text-secondary: #5a6560;
+            --text-muted: #8a918c;
+            --success: #5d7a5f;
+            --success-bg: rgba(93, 122, 95, 0.1);
+            --error: #9a6565;
+            --error-bg: rgba(154, 101, 101, 0.1);
         }
-    </script>
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--cream);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body > * { position: relative; z-index: 1; }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--gunmetal) 0%, var(--gunmetal-light) 100%);
+            color: var(--warm-white);
+            padding: 1.25rem 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--dusty-olive), var(--terracotta), var(--dusty-olive));
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .logo-mark {
+            width: 42px; height: 42px;
+            background: linear-gradient(135deg, var(--dusty-olive) 0%, var(--dusty-olive-dark) 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .logo-text {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .logo-text span { color: var(--dusty-olive-light); font-weight: 400; }
+
+        .header-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .btn {
+            padding: 0.625rem 1.25rem;
+            border-radius: 8px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            border: none;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.3);
+            color: var(--warm-white);
+        }
+
+        .btn-ghost:hover { background: rgba(255,255,255,0.1); }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--dusty-olive) 0%, var(--dusty-olive-dark) 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(126, 145, 129, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(126, 145, 129, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--cream);
+            color: var(--gunmetal);
+            border: 1px solid var(--pale-slate);
+        }
+
+        .btn-secondary:hover { background: var(--pale-slate-light); }
+
+        /* Main Content */
+        .main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        .page-title {
+            margin-bottom: 2rem;
+        }
+
+        .page-title h1 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--gunmetal);
+            margin-bottom: 0.25rem;
+        }
+
+        .page-title p {
+            color: var(--text-muted);
+            font-size: 0.9375rem;
+        }
+
+        /* Rates Grid */
+        .rates-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .rate-card {
+            background: var(--warm-white);
+            border-radius: 14px;
+            padding: 1.5rem;
+            border: 1px solid var(--pale-slate-light);
+            box-shadow: 0 1px 3px rgba(46, 53, 50, 0.04);
+            transition: all 0.25s ease;
+        }
+
+        .rate-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(46, 53, 50, 0.08);
+        }
+
+        .rate-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .rate-card h3 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--gunmetal);
+        }
+
+        .trend-icon {
+            font-size: 1.5rem;
+        }
+
+        .trend-up { color: var(--success); }
+        .trend-down { color: var(--error); }
+        .trend-flat { color: var(--text-muted); }
+
+        .rate-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--gunmetal);
+            margin-bottom: 0.75rem;
+        }
+
+        .rate-details {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .rate-details div {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.25rem;
+        }
+
+        .rate-change {
+            font-weight: 600;
+        }
+
+        .rate-meta {
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--pale-slate-light);
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(46, 53, 50, 0.5);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.show { display: flex; }
+
+        .modal {
+            background: var(--warm-white);
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 450px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(46, 53, 50, 0.2);
+        }
+
+        .modal h2 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--gunmetal);
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            border: 1.5px solid var(--pale-slate);
+            border-radius: 8px;
+            background: var(--cream);
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--dusty-olive);
+            background: var(--warm-white);
+            box-shadow: 0 0 0 4px rgba(126, 145, 129, 0.12);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+
+        .modal-actions .btn { flex: 1; padding: 0.875rem; }
+
+        /* Toast Messages */
+        .toast {
+            position: fixed;
+            top: 1.5rem;
+            right: 1.5rem;
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            font-weight: 500;
+            display: none;
+            z-index: 300;
+            animation: slideIn 0.3s ease;
+        }
+
+        .toast.show { display: block; }
+
+        .toast-success {
+            background: var(--success-bg);
+            border: 1px solid rgba(93, 122, 95, 0.3);
+            color: #4a6150;
+        }
+
+        .toast-error {
+            background: var(--error-bg);
+            border: 1px solid rgba(154, 101, 101, 0.3);
+            color: #7a5050;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state .icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.5; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header-content { flex-direction: column; gap: 1rem; }
+            .rates-grid { grid-template-columns: 1fr; }
+            .page-title h1 { font-size: 1.5rem; }
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .rate-card {
+            animation: fadeInUp 0.4s ease backwards;
+        }
+    </style>
 </head>
-<body class="bg-background-light dark:bg-background-dark font-display text-gray-900 dark:text-gray-100">
-    <div class="max-w-6xl mx-auto p-6">
-        <!-- Header -->
-        <div class="flex justify-between items-center mb-8">
-            <div>
-                <h1 class="text-3xl font-bold mb-2">Market Rates</h1>
-                <p class="text-gray-600 dark:text-gray-400">Current product pricing and trends</p>
-            </div>
-            <button onclick="showUpdateRateForm()" class="px-6 py-3 bg-primary text-black rounded-lg font-bold">
-                Update Rate
-            </button>
-        </div>
-
-        <!-- Market Rates Grid -->
-        <div id="ratesList" class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <!-- Rates will be loaded here -->
-        </div>
-
-        <!-- Update Rate Modal -->
-        <div id="rateModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div class="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4">
-                <h2 class="text-2xl font-bold mb-4">Update Market Rate</h2>
-                <form id="rateForm" class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Select Product *</label>
-                        <select id="productId" required class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900">
-                            <option value="">Loading products...</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2">New Rate (₹) *</label>
-                        <input id="rateValue" type="number" step="0.01" required class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Source</label>
-                        <input id="rateSource" type="text" placeholder="e.g., Local Market, Wholesale" class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Notes</label>
-                        <textarea id="rateNotes" rows="2" class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900"></textarea>
-                    </div>
-                    <div class="flex gap-4 pt-4">
-                        <button type="submit" class="flex-1 py-3 bg-primary text-black rounded-lg font-bold">Update Rate</button>
-                        <button type="button" onclick="closeModal()" class="px-6 py-3 bg-gray-200 dark:bg-gray-700 rounded-lg">Cancel</button>
-                    </div>
-                </form>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <a href="/" class="logo">
+                <div class="logo-mark">🌿</div>
+                <div class="logo-text">Pratibha <span>Marketing</span></div>
+            </a>
+            <div class="header-actions">
+                <button onclick="showUpdateRateForm()" class="btn btn-primary">+ Update Rate</button>
+                <a href="/" class="btn btn-ghost">Dashboard</a>
             </div>
         </div>
+    </header>
 
-        <!-- Messages -->
-        <div id="successMessage" class="hidden fixed top-4 right-4 p-4 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-lg"></div>
-        <div id="errorMessage" class="hidden fixed top-4 right-4 p-4 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-lg"></div>
+    <!-- Main Content -->
+    <main class="main">
+        <div class="page-title">
+            <h1>Market Rates</h1>
+            <p>Current product pricing and trends</p>
+        </div>
+
+        <div id="ratesList" class="rates-grid">
+            <div class="empty-state">
+                <div class="icon">📊</div>
+                <p>Loading market rates...</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Update Rate Modal -->
+    <div id="rateModal" class="modal-overlay">
+        <div class="modal">
+            <h2>Update Market Rate</h2>
+            <form id="rateForm">
+                <div class="form-group">
+                    <label class="form-label" for="productId">Select Product *</label>
+                    <select id="productId" class="form-select" required>
+                        <option value="">Loading products...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="rateValue">New Rate (₹) *</label>
+                    <input id="rateValue" type="number" step="0.01" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="rateSource">Source</label>
+                    <input id="rateSource" type="text" placeholder="e.g., Local Market, Wholesale" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="rateNotes">Notes</label>
+                    <textarea id="rateNotes" rows="2" class="form-textarea"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="submit" class="btn btn-primary">Update Rate</button>
+                    <button type="button" onclick="closeModal()" class="btn btn-secondary">Cancel</button>
+                </div>
+            </form>
+        </div>
     </div>
+
+    <!-- Toast Messages -->
+    <div id="successMessage" class="toast toast-success"></div>
+    <div id="errorMessage" class="toast toast-error"></div>
+
+    <!-- Shared Modules -->
+    <script src="/js/auth.js"></script>
+    <script src="/js/api.js"></script>
 
     <script>
         let products = [];
@@ -103,48 +476,39 @@
 
         function displayRates(rates) {
             const container = document.getElementById('ratesList');
-            if (rates.length === 0) {
-                container.innerHTML = '<p class="col-span-full text-center text-gray-500 py-8">No market rates available</p>';
+            if (!rates || rates.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="icon">📊</div><p>No market rates available</p></div>';
                 return;
             }
 
-            container.innerHTML = rates.map(rate => {
-                const trendColor = rate.trend === 'up' ? 'text-green-600' : rate.trend === 'down' ? 'text-red-600' : 'text-gray-600';
-                const trendIcon = rate.trend === 'up' ? 'trending_up' : rate.trend === 'down' ? 'trending_down' : 'trending_flat';
+            container.innerHTML = rates.map((rate, index) => {
+                const trendIcon = rate.trend === 'up' ? '↑' : rate.trend === 'down' ? '↓' : '→';
+                const trendClass = rate.trend === 'up' ? 'trend-up' : rate.trend === 'down' ? 'trend-down' : 'trend-flat';
 
                 return `
-                    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow">
-                        <div class="flex justify-between items-start mb-4">
-                            <h3 class="text-lg font-bold">${rate.productName}</h3>
-                            <span class="${trendColor}">
-                                <span class="material-symbols-outlined">${trendIcon}</span>
-                            </span>
+                    <div class="rate-card" style="animation-delay: ${index * 0.05}s">
+                        <div class="rate-card-header">
+                            <h3>${rate.productName}</h3>
+                            <span class="trend-icon ${trendClass}">${trendIcon}</span>
                         </div>
-                        <div class="space-y-2">
-                            <div class="flex justify-between">
-                                <span class="text-gray-600 dark:text-gray-400">Current Rate:</span>
-                                <span class="text-xl font-bold">₹${rate.rate.toFixed(2)}</span>
-                            </div>
+                        <div class="rate-value">₹${rate.rate.toFixed(2)}</div>
+                        <div class="rate-details">
                             ${rate.previousRate ? `
-                            <div class="flex justify-between text-sm">
-                                <span class="text-gray-600 dark:text-gray-400">Previous:</span>
+                            <div>
+                                <span>Previous:</span>
                                 <span>₹${rate.previousRate.toFixed(2)}</span>
                             </div>
                             ` : ''}
                             ${rate.changePercentage ? `
-                            <div class="flex justify-between text-sm ${trendColor}">
+                            <div>
                                 <span>Change:</span>
-                                <span>${rate.changePercentage > 0 ? '+' : ''}${rate.changePercentage}%</span>
+                                <span class="rate-change ${trendClass}">${rate.changePercentage > 0 ? '+' : ''}${rate.changePercentage}%</span>
                             </div>
                             ` : ''}
-                            ${rate.source ? `
-                            <div class="text-xs text-gray-500 mt-2">
-                                Source: ${rate.source}
-                            </div>
-                            ` : ''}
-                            <div class="text-xs text-gray-500">
-                                Updated: ${new Date(rate.effectiveDate).toLocaleDateString()}
-                            </div>
+                        </div>
+                        <div class="rate-meta">
+                            ${rate.source ? `Source: ${rate.source} • ` : ''}
+                            Updated: ${new Date(rate.effectiveDate).toLocaleDateString()}
                         </div>
                     </div>
                 `;
@@ -164,25 +528,25 @@
 
         function showUpdateRateForm() {
             document.getElementById('rateForm').reset();
-            document.getElementById('rateModal').classList.remove('hidden');
+            document.getElementById('rateModal').classList.add('show');
         }
 
         function closeModal() {
-            document.getElementById('rateModal').classList.add('hidden');
+            document.getElementById('rateModal').classList.remove('show');
         }
 
         function showSuccess(message) {
             const div = document.getElementById('successMessage');
             div.textContent = message;
-            div.classList.remove('hidden');
-            setTimeout(() => div.classList.add('hidden'), 3000);
+            div.classList.add('show');
+            setTimeout(() => div.classList.remove('show'), 3000);
         }
 
         function showError(message) {
             const div = document.getElementById('errorMessage');
             div.textContent = message;
-            div.classList.remove('hidden');
-            setTimeout(() => div.classList.add('hidden'), 3000);
+            div.classList.add('show');
+            setTimeout(() => div.classList.remove('show'), 3000);
         }
 
         document.getElementById('rateForm').addEventListener('submit', async (e) => {
@@ -219,6 +583,15 @@
 
         // Load data on page load
         loadData();
+
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(reg => console.log('Service Worker registered:', reg.scope))
+                    .catch(err => console.error('Service Worker registration failed:', err));
+            });
+        }
     </script>
 </body>
 </html>

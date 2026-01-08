@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate PWA Icons - Pratibha Marketing</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .icon-preview {
+            display: inline-block;
+            margin: 10px;
+            text-align: center;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            background: white;
+        }
+        button {
+            display: block;
+            margin: 5px auto;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        h1 { color: #102210; }
+        .instructions {
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>PWA Icon Generator</h1>
+    <div class="instructions">
+        <p><strong>Instructions:</strong></p>
+        <ol>
+            <li>The icons below are automatically generated</li>
+            <li>Click "Download" under each icon to save it</li>
+            <li>Save the 192px and 512px icons to the <code>/frontend/icons/</code> folder</li>
+        </ol>
+    </div>
+
+    <div id="icons"></div>
+
+    <script>
+        const sizes = [192, 512];
+        const container = document.getElementById('icons');
+
+        // SVG content (embedded)
+        const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+            <circle cx="256" cy="256" r="256" fill="#102210"/>
+            <circle cx="256" cy="256" r="200" fill="#1a3a1a"/>
+            <g transform="translate(256, 256)">
+                <path d="M-80 60 Q-100 -40 -20 -100 Q60 -140 100 -60 Q120 20 60 80 Q0 120 -60 100 Q-100 80 -80 60 Z"
+                      fill="#13ec13" stroke="#0fb80f" stroke-width="4"/>
+                <path d="M-40 40 Q0 -20 60 -40" fill="none" stroke="#0fb80f" stroke-width="6" stroke-linecap="round"/>
+                <path d="M-20 20 Q10 0 30 -10" fill="none" stroke="#0fb80f" stroke-width="3" stroke-linecap="round"/>
+                <path d="M0 50 Q20 30 40 20" fill="none" stroke="#0fb80f" stroke-width="3" stroke-linecap="round"/>
+                <path d="M-60 80 Q-80 120 -70 140" fill="none" stroke="#13ec13" stroke-width="8" stroke-linecap="round"/>
+            </g>
+            <text x="256" y="380" font-family="Arial, sans-serif" font-size="80" font-weight="bold" fill="#13ec13" text-anchor="middle">P</text>
+        </svg>`;
+
+        sizes.forEach(size => {
+            const div = document.createElement('div');
+            div.className = 'icon-preview';
+
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+
+            const img = new Image();
+            const svgBlob = new Blob([svgContent], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(svgBlob);
+
+            img.onload = function() {
+                ctx.drawImage(img, 0, 0, size, size);
+                URL.revokeObjectURL(url);
+            };
+            img.src = url;
+
+            const label = document.createElement('p');
+            label.textContent = `${size}x${size}`;
+
+            const button = document.createElement('button');
+            button.textContent = 'Download';
+            button.onclick = function() {
+                const link = document.createElement('a');
+                link.download = `icon-${size}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            };
+
+            div.appendChild(canvas);
+            div.appendChild(label);
+            div.appendChild(button);
+            container.appendChild(div);
+        });
+    </script>
+</body>
+</html>

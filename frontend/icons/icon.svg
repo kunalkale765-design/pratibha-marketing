@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="256" fill="#102210"/>
+
+  <!-- Inner circle with gradient -->
+  <circle cx="256" cy="256" r="200" fill="#1a3a1a"/>
+
+  <!-- Leaf/vegetable icon -->
+  <g transform="translate(256, 256)">
+    <!-- Main leaf shape -->
+    <path d="M-80 60 Q-100 -40 -20 -100 Q60 -140 100 -60 Q120 20 60 80 Q0 120 -60 100 Q-100 80 -80 60 Z"
+          fill="#13ec13"
+          stroke="#0fb80f"
+          stroke-width="4"/>
+
+    <!-- Leaf vein -->
+    <path d="M-40 40 Q0 -20 60 -40"
+          fill="none"
+          stroke="#0fb80f"
+          stroke-width="6"
+          stroke-linecap="round"/>
+
+    <!-- Secondary veins -->
+    <path d="M-20 20 Q10 0 30 -10"
+          fill="none"
+          stroke="#0fb80f"
+          stroke-width="3"
+          stroke-linecap="round"/>
+    <path d="M0 50 Q20 30 40 20"
+          fill="none"
+          stroke="#0fb80f"
+          stroke-width="3"
+          stroke-linecap="round"/>
+
+    <!-- Stem -->
+    <path d="M-60 80 Q-80 120 -70 140"
+          fill="none"
+          stroke="#13ec13"
+          stroke-width="8"
+          stroke-linecap="round"/>
+  </g>
+
+  <!-- "P" letter for Pratibha -->
+  <text x="256" y="380"
+        font-family="Arial, sans-serif"
+        font-size="80"
+        font-weight="bold"
+        fill="#13ec13"
+        text-anchor="middle">P</text>
+</svg>

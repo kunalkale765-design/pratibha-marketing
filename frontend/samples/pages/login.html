@@ -4,14 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Pratibha Marketing</title>
-    <!-- PWA Meta Tags -->
-    <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#7e9181">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Pratibha">
-    <link rel="apple-touch-icon" href="/icons/icon.svg">
-    <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -30,10 +22,13 @@
             --text-secondary: #5a6560;
             --text-muted: #8a918c;
             --error: #9a6565;
-            --error-bg: rgba(154, 101, 101, 0.1);
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
         body {
             font-family: 'DM Sans', sans-serif;
@@ -44,6 +39,7 @@
             overflow: hidden;
         }
 
+        /* Decorative background */
         body::before {
             content: '';
             position: absolute;
@@ -76,6 +72,7 @@
             z-index: 2;
         }
 
+        /* Left side - branding */
         .brand-side {
             flex: 1;
             display: flex;
@@ -133,6 +130,7 @@
             max-width: 380px;
         }
 
+        /* Right side - form */
         .form-side {
             width: 480px;
             display: flex;
@@ -167,21 +165,6 @@
         .login-header p {
             color: var(--text-muted);
             font-size: 0.9375rem;
-        }
-
-        .error-message {
-            background: var(--error-bg);
-            border: 1px solid rgba(154, 101, 101, 0.3);
-            color: var(--error);
-            padding: 0.875rem 1rem;
-            border-radius: 10px;
-            font-size: 0.875rem;
-            margin-bottom: 1.5rem;
-            display: none;
-        }
-
-        .error-message.show {
-            display: block;
         }
 
         .form-group {
@@ -235,7 +218,37 @@
             color: var(--text-muted);
             cursor: pointer;
             font-size: 1.125rem;
-            padding: 0;
+        }
+
+        .form-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            font-size: 0.875rem;
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+        }
+
+        .remember-me input {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--dusty-olive);
+        }
+
+        .forgot-password {
+            color: var(--dusty-olive-dark);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .forgot-password:hover {
+            text-decoration: underline;
         }
 
         .btn-login {
@@ -258,10 +271,8 @@
             box-shadow: 0 6px 20px rgba(126, 145, 129, 0.4);
         }
 
-        .btn-login:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
+        .btn-login:active {
+            transform: translateY(0);
         }
 
         .divider {
@@ -300,21 +311,7 @@
             text-decoration: underline;
         }
 
-        .back-link {
-            text-align: center;
-            margin-top: 1rem;
-        }
-
-        .back-link a {
-            color: var(--text-muted);
-            font-size: 0.875rem;
-            text-decoration: none;
-        }
-
-        .back-link a:hover {
-            color: var(--dusty-olive);
-        }
-
+        /* Responsive */
         @media (max-width: 900px) {
             body::before {
                 display: none;
@@ -348,22 +345,41 @@
             }
         }
 
+        /* Animations */
         @keyframes slideInRight {
-            from { opacity: 0; transform: translateX(30px); }
-            to { opacity: 1; transform: translateX(0); }
+            from {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
         }
 
         @keyframes slideInLeft {
-            from { opacity: 0; transform: translateX(-30px); }
-            to { opacity: 1; transform: translateX(0); }
+            from {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
         }
 
-        .brand-side { animation: slideInLeft 0.6s ease; }
-        .login-card { animation: slideInRight 0.6s ease; }
+        .brand-side {
+            animation: slideInLeft 0.6s ease;
+        }
+
+        .login-card {
+            animation: slideInRight 0.6s ease;
+        }
     </style>
 </head>
 <body>
     <div class="login-container">
+        <!-- Brand Side -->
         <div class="brand-side">
             <div class="brand-logo">
                 <div class="logo-mark">🌿</div>
@@ -376,6 +392,7 @@
             </p>
         </div>
 
+        <!-- Form Side -->
         <div class="form-side">
             <div class="login-card">
                 <div class="login-header">
@@ -383,46 +400,41 @@
                     <p>Sign in to your account</p>
                 </div>
 
-                <div id="errorMessage" class="error-message"></div>
-
                 <form id="loginForm">
                     <div class="form-group">
-                        <label class="form-label" for="email">Email Address</label>
-                        <input type="email" id="email" class="form-input" placeholder="you@example.com" required autocomplete="email">
+                        <label class="form-label" for="email">Email or Phone</label>
+                        <input type="text" id="email" class="form-input" placeholder="Enter your email or phone">
                     </div>
 
                     <div class="form-group">
                         <label class="form-label" for="password">Password</label>
                         <div class="password-wrapper">
-                            <input type="password" id="password" class="form-input" placeholder="Enter your password" required autocomplete="current-password">
+                            <input type="password" id="password" class="form-input" placeholder="Enter your password">
                             <button type="button" class="password-toggle" onclick="togglePassword()">👁️</button>
                         </div>
                     </div>
 
-                    <button type="submit" id="loginBtn" class="btn-login">Sign In</button>
+                    <div class="form-footer">
+                        <label class="remember-me">
+                            <input type="checkbox">
+                            Remember me
+                        </label>
+                        <a href="#" class="forgot-password">Forgot password?</a>
+                    </div>
+
+                    <button type="submit" class="btn-login">Sign In</button>
 
                     <div class="divider"><span>or</span></div>
 
                     <p class="signup-link">
-                        Don't have an account? <a href="/signup.html">Sign up</a>
+                        Don't have an account? <a href="signup.html">Sign up</a>
                     </p>
-
-                    <div class="back-link">
-                        <a href="/">← Back to Home</a>
-                    </div>
                 </form>
             </div>
         </div>
     </div>
 
-    <script src="/js/auth.js"></script>
-    <script src="/js/api.js"></script>
-
     <script>
-        const loginForm = document.getElementById('loginForm');
-        const loginBtn = document.getElementById('loginBtn');
-        const errorMessage = document.getElementById('errorMessage');
-
         function togglePassword() {
             const input = document.getElementById('password');
             const btn = document.querySelector('.password-toggle');
@@ -435,79 +447,11 @@
             }
         }
 
-        checkAuth();
-
-        async function checkAuth() {
-            try {
-                const response = await fetch('/api/auth/me', {
-                    credentials: 'include'
-                });
-                if (response.ok) {
-                    window.location.href = '/';
-                }
-            } catch (error) {}
-        }
-
-        loginForm.addEventListener('submit', async (e) => {
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
             e.preventDefault();
-
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
-
-            if (!email || !password) {
-                showError('Please fill in all fields');
-                return;
-            }
-
-            loginBtn.disabled = true;
-            loginBtn.textContent = 'Signing in...';
-            hideError();
-
-            try {
-                const response = await fetch('/api/auth/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ email, password })
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    localStorage.setItem('user', JSON.stringify(data.user));
-                    if (data.user.role === 'customer') {
-                        window.location.href = '/customer-order-form.html';
-                    } else {
-                        window.location.href = '/';
-                    }
-                } else {
-                    showError(data.message || 'Login failed. Please check your credentials.');
-                }
-            } catch (error) {
-                console.error('Login error:', error);
-                showError('Network error. Please try again.');
-            } finally {
-                loginBtn.disabled = false;
-                loginBtn.textContent = 'Sign In';
-            }
+            // Handle login
+            console.log('Login submitted');
         });
-
-        function showError(message) {
-            errorMessage.textContent = message;
-            errorMessage.classList.add('show');
-        }
-
-        function hideError() {
-            errorMessage.classList.remove('show');
-        }
-
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js')
-                    .then(reg => console.log('Service Worker registered:', reg.scope))
-                    .catch(err => console.error('Service Worker registration failed:', err));
-            });
-        }
     </script>
 </body>
 </html>

@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Rates - Pratibha Marketing</title>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gunmetal: #2e3532;
+            --gunmetal-light: #3d4542;
+            --dusty-olive: #7e9181;
+            --dusty-olive-light: #97a99a;
+            --dusty-olive-dark: #5d6b5f;
+            --pale-slate: #c7cedb;
+            --pale-slate-light: #e8ebf0;
+            --cream: #f9f7f3;
+            --cream-dark: #efe9df;
+            --warm-white: #fefdfb;
+            --terracotta: #c4a77d;
+            --text-primary: #1f2421;
+            --text-secondary: #5a6560;
+            --text-muted: #8a918c;
+            --success: #5d7a5f;
+            --warning: #b89a5a;
+            --error: #9a6565;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--cream);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body > * { position: relative; z-index: 1; }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--gunmetal) 0%, var(--gunmetal-light) 100%);
+            color: var(--warm-white);
+            padding: 1.25rem 1.5rem;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, var(--dusty-olive), var(--terracotta), var(--dusty-olive));
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-mark {
+            width: 42px; height: 42px;
+            background: linear-gradient(135deg, var(--dusty-olive) 0%, var(--dusty-olive-dark) 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .logo-text {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .logo-text span { color: var(--dusty-olive-light); font-weight: 400; }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            color: var(--pale-slate);
+            text-decoration: none;
+            font-size: 0.9375rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover,
+        .nav-links a.active { color: var(--warm-white); }
+
+        /* Main */
+        .main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        /* Page Header */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 2rem;
+        }
+
+        .page-title h1 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--gunmetal);
+            margin-bottom: 0.25rem;
+        }
+
+        .page-title p {
+            color: var(--text-muted);
+            font-size: 0.9375rem;
+        }
+
+        .page-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .btn {
+            padding: 0.625rem 1.25rem;
+            border-radius: 8px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--dusty-olive) 0%, var(--dusty-olive-dark) 100%);
+            color: white;
+            border: none;
+            box-shadow: 0 2px 4px rgba(126, 145, 129, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(126, 145, 129, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--cream);
+            color: var(--gunmetal);
+            border: 1px solid var(--pale-slate);
+        }
+
+        .btn-secondary:hover { background: var(--pale-slate-light); }
+
+        /* Alert */
+        .alert {
+            background: rgba(184, 154, 90, 0.15);
+            border: 1px solid rgba(184, 154, 90, 0.3);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .alert-icon { font-size: 1.25rem; }
+
+        .alert-text {
+            font-size: 0.9375rem;
+            color: #8a7340;
+        }
+
+        .alert-text strong { font-weight: 600; }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--warm-white);
+            border-radius: 12px;
+            padding: 1.25rem;
+            border: 1px solid var(--pale-slate-light);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--gunmetal);
+        }
+
+        .stat-change {
+            font-size: 0.8125rem;
+            margin-top: 0.375rem;
+        }
+
+        .stat-change.positive { color: var(--success); }
+        .stat-change.negative { color: var(--error); }
+
+        /* Section Card */
+        .section-card {
+            background: var(--warm-white);
+            border-radius: 14px;
+            border: 1px solid var(--pale-slate-light);
+            overflow: hidden;
+        }
+
+        .section-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--pale-slate-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(180deg, var(--warm-white) 0%, var(--cream) 100%);
+        }
+
+        .section-title {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--gunmetal);
+        }
+
+        /* Rates Table */
+        .rates-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .rates-table thead { background: var(--cream); }
+
+        .rates-table th {
+            padding: 0.875rem 1.5rem;
+            text-align: left;
+            font-size: 0.6875rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            border-bottom: 2px solid var(--pale-slate-light);
+        }
+
+        .rates-table td {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--pale-slate-light);
+            vertical-align: middle;
+        }
+
+        .rates-table tbody tr {
+            transition: all 0.15s ease;
+        }
+
+        .rates-table tbody tr:hover { background: var(--cream); }
+
+        .product-cell {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .product-icon {
+            width: 40px; height: 40px;
+            background: var(--cream-dark);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .product-name { font-weight: 600; color: var(--gunmetal); }
+        .product-hindi { font-size: 0.8125rem; color: var(--text-muted); }
+
+        .rate-cell {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .rate-input {
+            width: 100px;
+            padding: 0.5rem 0.75rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9375rem;
+            font-weight: 500;
+            border: 1.5px solid var(--pale-slate);
+            border-radius: 8px;
+            text-align: right;
+            background: var(--cream);
+            transition: all 0.2s ease;
+        }
+
+        .rate-input:focus {
+            outline: none;
+            border-color: var(--dusty-olive);
+            box-shadow: 0 0 0 3px rgba(126, 145, 129, 0.15);
+            background: var(--warm-white);
+        }
+
+        .change-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.8125rem;
+            font-weight: 500;
+        }
+
+        .change-indicator.up { color: var(--success); }
+        .change-indicator.down { color: var(--error); }
+        .change-indicator.same { color: var(--text-muted); }
+
+        .last-updated {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+        }
+
+        /* Footer Actions */
+        .table-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--pale-slate-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--cream);
+        }
+
+        .footer-info {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .stats-grid { grid-template-columns: 1fr; }
+            .nav-links { display: none; }
+            .page-header { flex-direction: column; gap: 1rem; }
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .stat-card, .section-card {
+            animation: fadeInUp 0.4s ease backwards;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-mark">🌿</div>
+                <div class="logo-text">Pratibha <span>Marketing</span></div>
+            </div>
+            <nav class="nav-links">
+                <a href="sample-earthy.html">Dashboard</a>
+                <a href="#">Products</a>
+                <a href="#" class="active">Market Rates</a>
+                <a href="#">Orders</a>
+                <a href="#">Customers</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="page-header">
+            <div class="page-title">
+                <h1>Market Rates</h1>
+                <p>Update today's purchase rates from the market</p>
+            </div>
+            <div class="page-actions">
+                <button class="btn btn-secondary">Reset to Yesterday</button>
+                <button class="btn btn-primary">Save All Rates</button>
+            </div>
+        </div>
+
+        <!-- Alert -->
+        <div class="alert">
+            <span class="alert-icon">⚠️</span>
+            <span class="alert-text">
+                <strong>8 products</strong> don't have today's rates yet. Update them before confirming orders.
+            </span>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Products Updated</div>
+                <div class="stat-value">14 / 22</div>
+                <div class="stat-change">8 remaining</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Avg. Rate Change</div>
+                <div class="stat-value">+₹2.40</div>
+                <div class="stat-change positive">↑ 3.2% from yesterday</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Last Updated</div>
+                <div class="stat-value">9:45 AM</div>
+                <div class="stat-change">Today, Jan 8</div>
+            </div>
+        </div>
+
+        <!-- Rates Table -->
+        <div class="section-card">
+            <div class="section-header">
+                <h2 class="section-title">Today's Purchase Rates</h2>
+                <input type="text" placeholder="Search products..." style="padding: 0.5rem 1rem; border: 1px solid var(--pale-slate); border-radius: 8px; font-size: 0.875rem;">
+            </div>
+            <table class="rates-table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Unit</th>
+                        <th>Yesterday</th>
+                        <th>Today's Rate</th>
+                        <th>Change</th>
+                        <th>Last Updated</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <div class="product-cell">
+                                <div class="product-icon">🥔</div>
+                                <div>
+                                    <div class="product-name">Potato</div>
+                                    <div class="product-hindi">Aloo</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>kg</td>
+                        <td class="rate-cell">₹26</td>
+                        <td><input type="text" class="rate-input" value="28" placeholder="₹"></td>
+                        <td><span class="change-indicator up">↑ +₹2</span></td>
+                        <td class="last-updated">9:30 AM</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="product-cell">
+                                <div class="product-icon">🍅</div>
+                                <div>
+                                    <div class="product-name">Tomato</div>
+                                    <div class="product-hindi">Tamatar</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>kg</td>
+                        <td class="rate-cell">₹38</td>
+                        <td><input type="text" class="rate-input" value="35" placeholder="₹"></td>
+                        <td><span class="change-indicator down">↓ -₹3</span></td>
+                        <td class="last-updated">9:32 AM</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="product-cell">
+                                <div class="product-icon">🧅</div>
+                                <div>
+                                    <div class="product-name">Onion</div>
+                                    <div class="product-hindi">Pyaz</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>kg</td>
+                        <td class="rate-cell">₹32</td>
+                        <td><input type="text" class="rate-input" value="32" placeholder="₹"></td>
+                        <td><span class="change-indicator same">— ₹0</span></td>
+                        <td class="last-updated">9:35 AM</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="product-cell">
+                                <div class="product-icon">🥕</div>
+                                <div>
+                                    <div class="product-name">Carrot</div>
+                                    <div class="product-hindi">Gajar</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>kg</td>
+                        <td class="rate-cell">₹38</td>
+                        <td><input type="text" class="rate-input" value="40" placeholder="₹"></td>
+                        <td><span class="change-indicator up">↑ +₹2</span></td>
+                        <td class="last-updated">9:40 AM</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="product-cell">
+                                <div class="product-icon">🥬</div>
+                                <div>
+                                    <div class="product-name">Cabbage</div>
+                                    <div class="product-hindi">Patta Gobi</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>kg</td>
+                        <td class="rate-cell">₹22</td>
+                        <td><input type="text" class="rate-input" value="25" placeholder="₹"></td>
+                        <td><span class="change-indicator up">↑ +₹3</span></td>
+                        <td class="last-updated">9:42 AM</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="product-cell">
+                                <div class="product-icon">🌶️</div>
+                                <div>
+                                    <div class="product-name">Green Chilli</div>
+                                    <div class="product-hindi">Hari Mirch</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>kg</td>
+                        <td class="rate-cell">₹55</td>
+                        <td><input type="text" class="rate-input" value="60" placeholder="₹"></td>
+                        <td><span class="change-indicator up">↑ +₹5</span></td>
+                        <td class="last-updated">9:45 AM</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="product-cell">
+                                <div class="product-icon">🥦</div>
+                                <div>
+                                    <div class="product-name">Cauliflower</div>
+                                    <div class="product-hindi">Phool Gobi</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>kg</td>
+                        <td class="rate-cell">₹35</td>
+                        <td><input type="text" class="rate-input" value="" placeholder="₹"></td>
+                        <td><span class="change-indicator same">—</span></td>
+                        <td class="last-updated" style="color: var(--warning);">Not set</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="product-cell">
+                                <div class="product-icon">🍆</div>
+                                <div>
+                                    <div class="product-name">Brinjal</div>
+                                    <div class="product-hindi">Baingan</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>kg</td>
+                        <td class="rate-cell">₹28</td>
+                        <td><input type="text" class="rate-input" value="" placeholder="₹"></td>
+                        <td><span class="change-indicator same">—</span></td>
+                        <td class="last-updated" style="color: var(--warning);">Not set</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="table-footer">
+                <span class="footer-info">Showing 8 of 22 products</span>
+                <button class="btn btn-primary">Save All Rates</button>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

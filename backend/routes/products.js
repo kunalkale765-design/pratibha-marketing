@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
 const Product = require('../models/Product');
+const { protect, authorize } = require('../middleware/auth');
 
 // Validation middleware
 const validateProduct = [
@@ -68,8 +69,8 @@ router.get('/:id', async (req, res, next) => {
 
 // @route   POST /api/products
 // @desc    Create new product
-// @access  Public
-router.post('/', validateProduct, async (req, res, next) => {
+// @access  Private (Admin, Staff)
+router.post('/', protect, authorize('admin', 'staff'), validateProduct, async (req, res, next) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -92,8 +93,8 @@ router.post('/', validateProduct, async (req, res, next) => {
 
 // @route   PUT /api/products/:id
 // @desc    Update product
-// @access  Public
-router.put('/:id', validateProduct, async (req, res, next) => {
+// @access  Private (Admin, Staff)
+router.put('/:id', protect, authorize('admin', 'staff'), validateProduct, async (req, res, next) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -125,8 +126,8 @@ router.put('/:id', validateProduct, async (req, res, next) => {
 
 // @route   DELETE /api/products/:id
 // @desc    Delete product (soft delete)
-// @access  Public
-router.delete('/:id', async (req, res, next) => {
+// @access  Private (Admin only)
+router.delete('/:id', protect, authorize('admin'), async (req, res, next) => {
   try {
     const product = await Product.findByIdAndUpdate(
       req.params.id,
@@ -150,8 +151,8 @@ router.delete('/:id', async (req, res, next) => {
 
 // @route   PUT /api/products/:id/stock
 // @desc    Update product stock
-// @access  Public
-router.put('/:id/stock', [
+// @access  Private (Admin, Staff)
+router.put('/:id/stock', protect, authorize('admin', 'staff'), [
   body('quantity').isFloat().withMessage('Quantity must be a number')
 ], async (req, res, next) => {
   try {

@@ -56,11 +56,16 @@ const limiter = rateLimit({
 // Apply rate limiting to API routes only
 app.use('/api', limiter);
 
-// Stricter rate limiting for sensitive routes
+// Stricter rate limiting for login/register endpoints only
+// Applied directly in auth routes to avoid limiting /me and /logout
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
-  message: 'Too many login attempts, please try again later.'
+  max: 10, // Allow 10 attempts per 15 minutes
+  message: 'Too many login attempts, please try again later.',
+  skip: (req) => {
+    // Skip rate limiting for non-sensitive auth routes
+    return req.path === '/me' || req.path === '/logout';
+  }
 });
 
 // Body Parser Middleware
@@ -86,7 +91,8 @@ if (process.env.NODE_ENV === 'development') {
 
 // API Routes
 // ===========
-app.use('/api/auth', require('./routes/auth'));
+// Apply stricter rate limiting to auth routes
+app.use('/api/auth', authLimiter, require('./routes/auth'));
 app.use('/api/customers', require('./routes/customers'));
 app.use('/api/orders', require('./routes/orders'));
 app.use('/api/products', require('./routes/products'));
@@ -107,7 +113,7 @@ app.use(express.static(path.join(__dirname, '../frontend')));
 
 // Serve HTML pages
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/customer-order-form.html'));
+  res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
 
 // Catch-all route for frontend (SPA support)
@@ -115,7 +121,13 @@ app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api')) {
     return next();
   }
-  res.sendFile(path.join(__dirname, '../frontend/customer-order-form.html'));
+  // Try to serve the specific file, fallback to index.html
+  const filePath = path.join(__dirname, '../frontend', req.path);
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      res.sendFile(path.join(__dirname, '../frontend/index.html'));
+    }
+  });
 });
 
 // Error Handling Middleware (must be last)

@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pratibha Marketing - Warm Organic</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --terracotta: #c4704c;
+            --terracotta-light: #d4896a;
+            --terracotta-dark: #a85a3a;
+            --terracotta-muted: rgba(196, 112, 76, 0.12);
+
+            --olive: #6b7c52;
+            --olive-light: #8a9d6d;
+            --olive-dark: #525f3f;
+            --olive-muted: rgba(107, 124, 82, 0.12);
+
+            --cream: #faf7f2;
+            --cream-dark: #f0e9dd;
+            --cream-darker: #e5dac9;
+            --warm-white: #fffefb;
+
+            --bark: #4a3f35;
+            --bark-light: #6b5d50;
+            --bark-lighter: #8c7b6a;
+
+            --text-primary: #3d342c;
+            --text-secondary: #6b5d50;
+            --text-muted: #9a8a78;
+
+            --success: #6b7c52;
+            --warning: #c4944c;
+            --error: #b85c4c;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Source Sans 3', sans-serif;
+            background: var(--cream);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.7;
+        }
+
+        /* Linen texture */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c4704c' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(180deg, var(--bark) 0%, var(--bark-light) 100%);
+            color: var(--cream);
+            padding: 1.25rem 1.5rem;
+            position: relative;
+            border-bottom: 4px solid var(--terracotta);
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='100' height='20' viewBox='0 0 100 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M21.184 20c.357-.13.72-.264 1.088-.402l1.768-.661C33.64 15.347 39.647 14 50 14c10.271 0 15.362 1.222 24.629 4.928.955.383 1.869.74 2.75 1.072h6.225c-2.51-.73-5.139-1.691-8.233-2.928C65.888 13.278 60.562 12 50 12c-10.626 0-16.855 1.397-26.66 5.063l-1.767.662c-2.475.923-4.66 1.674-6.724 2.275h6.335zm0-20C13.258 2.892 8.077 4 0 4V2c5.744 0 9.951-.574 14.85-2h6.334zM77.38 0C85.239 2.966 90.502 4 100 4V2c-6.842 0-11.386-.542-16.396-2h-6.225zM0 14c8.44 0 13.718-1.21 22.272-4.402l1.768-.661C33.64 5.347 39.647 4 50 4c10.271 0 15.362 1.222 24.629 4.928C84.112 12.722 89.438 14 100 14v-2c-10.271 0-15.362-1.222-24.629-4.928C65.888 3.278 60.562 2 50 2 39.374 2 33.145 3.397 23.34 7.063l-1.767.662C13.223 10.84 8.163 12 0 12v2z' fill='%23ffffff' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E");
+            opacity: 0.5;
+        }
+
+        .header-content {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.875rem;
+        }
+
+        .logo-mark {
+            width: 48px;
+            height: 48px;
+            background: var(--terracotta);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            border: 3px solid var(--cream-dark);
+        }
+
+        .logo-text {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.75rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+        }
+
+        .logo-tagline {
+            font-size: 0.6875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: var(--cream-dark);
+            margin-top: 0.125rem;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .btn-logout {
+            background: transparent;
+            color: var(--cream-dark);
+            border: 1px solid var(--bark-lighter);
+            padding: 0.5rem 1.25rem;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-logout:hover {
+            background: var(--terracotta);
+            border-color: var(--terracotta);
+            color: var(--cream);
+        }
+
+        /* Main Container */
+        .main {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 2.5rem 1.5rem;
+        }
+
+        /* Welcome Section */
+        .welcome {
+            text-align: center;
+            margin-bottom: 2.5rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--cream-darker);
+        }
+
+        .welcome h1 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2.5rem;
+            font-weight: 600;
+            color: var(--bark);
+            margin-bottom: 0.5rem;
+        }
+
+        .welcome p {
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.25rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .stat-card {
+            background: var(--warm-white);
+            border-radius: 8px;
+            padding: 1.5rem;
+            border: 1px solid var(--cream-darker);
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 3px;
+            background: var(--terracotta);
+            border-radius: 0 0 2px 2px;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(74, 63, 53, 0.1);
+        }
+
+        .stat-icon {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .stat-value {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--bark);
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 600;
+        }
+
+        .stat-change {
+            font-size: 0.75rem;
+            margin-top: 0.5rem;
+            font-weight: 500;
+        }
+
+        .stat-change.positive { color: var(--success); }
+        .stat-change.negative { color: var(--error); }
+
+        /* Section Card */
+        .section-card {
+            background: var(--warm-white);
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            border: 1px solid var(--cream-darker);
+            overflow: hidden;
+        }
+
+        .section-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--cream-darker);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(180deg, var(--cream) 0%, var(--warm-white) 100%);
+        }
+
+        .section-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.375rem;
+            font-weight: 600;
+            color: var(--bark);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .section-title .icon {
+            width: 36px;
+            height: 36px;
+            background: var(--terracotta);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .section-subtitle {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+            font-style: italic;
+        }
+
+        .section-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .btn-primary {
+            background: var(--terracotta);
+            color: var(--cream);
+            border: none;
+            padding: 0.625rem 1.5rem;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .btn-primary:hover {
+            background: var(--terracotta-dark);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--bark);
+            border: 1px solid var(--cream-darker);
+            padding: 0.625rem 1.5rem;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-secondary:hover {
+            background: var(--cream);
+            border-color: var(--bark-lighter);
+        }
+
+        /* Shopping Table */
+        .shopping-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .shopping-table thead {
+            background: var(--cream);
+        }
+
+        .shopping-table th {
+            padding: 1rem 1.5rem;
+            text-align: left;
+            font-size: 0.6875rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--text-muted);
+            border-bottom: 2px solid var(--cream-darker);
+        }
+
+        .shopping-table th:last-child {
+            text-align: right;
+        }
+
+        .shopping-table td {
+            padding: 1.125rem 1.5rem;
+            border-bottom: 1px solid var(--cream-dark);
+            vertical-align: middle;
+        }
+
+        .shopping-table tbody tr {
+            transition: all 0.2s ease;
+        }
+
+        .shopping-table tbody tr:hover {
+            background: var(--cream);
+        }
+
+        .item-name {
+            font-weight: 600;
+            color: var(--bark);
+            display: flex;
+            align-items: center;
+            gap: 0.875rem;
+        }
+
+        .item-icon {
+            width: 42px;
+            height: 42px;
+            background: var(--olive-muted);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            border: 2px solid var(--cream-darker);
+        }
+
+        .item-qty {
+            font-family: 'Cormorant Garamond', serif;
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--olive-dark);
+        }
+
+        .rate-input {
+            width: 100px;
+            padding: 0.625rem 0.875rem;
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 600;
+            border: 1px solid var(--cream-darker);
+            border-radius: 4px;
+            text-align: right;
+            background: var(--cream);
+            color: var(--bark);
+            transition: all 0.2s ease;
+        }
+
+        .rate-input:focus {
+            outline: none;
+            border-color: var(--terracotta);
+            box-shadow: 0 0 0 3px var(--terracotta-muted);
+        }
+
+        .value-cell {
+            text-align: right;
+            font-family: 'Cormorant Garamond', serif;
+            font-weight: 700;
+            font-size: 1.125rem;
+            color: var(--bark);
+        }
+
+        /* Total Row */
+        .total-row {
+            background: var(--olive-muted);
+        }
+
+        .total-row td {
+            padding: 1.25rem 1.5rem;
+            font-weight: 700;
+            border-bottom: none;
+        }
+
+        /* Orders Table */
+        .orders-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .orders-table thead {
+            background: var(--cream);
+        }
+
+        .orders-table th {
+            padding: 0.875rem 1.5rem;
+            text-align: left;
+            font-size: 0.625rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--text-muted);
+            border-bottom: 2px solid var(--cream-darker);
+        }
+
+        .orders-table td {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--cream-dark);
+            font-size: 0.9375rem;
+        }
+
+        .orders-table tbody tr:hover {
+            background: var(--cream);
+        }
+
+        .invoice-num {
+            font-family: 'Cormorant Garamond', serif;
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--bark);
+        }
+
+        .customer-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .amount {
+            font-family: 'Cormorant Garamond', serif;
+            font-weight: 700;
+            font-size: 1rem;
+        }
+
+        .profit {
+            font-family: 'Cormorant Garamond', serif;
+            font-weight: 700;
+            color: var(--success);
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.625rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            border-radius: 2px;
+        }
+
+        .badge-pending {
+            background: var(--terracotta-muted);
+            color: var(--terracotta-dark);
+            border: 1px solid var(--terracotta);
+        }
+
+        .badge-delivered {
+            background: var(--olive-muted);
+            color: var(--olive-dark);
+            border: 1px solid var(--olive);
+        }
+
+        .badge-paid {
+            background: var(--olive-muted);
+            color: var(--olive-dark);
+            border: 1px solid var(--olive);
+        }
+
+        .badge-partial {
+            background: rgba(196, 148, 76, 0.15);
+            color: #8a6a30;
+            border: 1px solid #c4944c;
+        }
+
+        .badge-unpaid {
+            background: rgba(184, 92, 76, 0.12);
+            color: #8a4030;
+            border: 1px solid #b85c4c;
+        }
+
+        /* Action Button */
+        .btn-table {
+            padding: 0.375rem 0.875rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: transparent;
+            border: 1px solid var(--cream-darker);
+            border-radius: 2px;
+            color: var(--bark);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .btn-table:hover {
+            background: var(--terracotta);
+            border-color: var(--terracotta);
+            color: var(--cream);
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .section-header {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+
+            .welcome h1 {
+                font-size: 1.875rem;
+            }
+
+            .shopping-table th,
+            .shopping-table td,
+            .orders-table th,
+            .orders-table td {
+                padding: 0.75rem 1rem;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .stat-card {
+            animation: fadeIn 0.5s ease backwards;
+        }
+        .stat-card:nth-child(1) { animation-delay: 0.1s; }
+        .stat-card:nth-child(2) { animation-delay: 0.15s; }
+        .stat-card:nth-child(3) { animation-delay: 0.2s; }
+        .stat-card:nth-child(4) { animation-delay: 0.25s; }
+
+        .section-card {
+            animation: fadeIn 0.6s ease backwards;
+            animation-delay: 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-mark">🌿</div>
+                <div>
+                    <div class="logo-text">Pratibha Marketing</div>
+                    <div class="logo-tagline">Fresh from Farm to Table</div>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="btn-logout">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <!-- Welcome -->
+        <div class="welcome">
+            <h1>Welcome back, Kunal</h1>
+            <p>Wednesday, January 8, 2026 — The market awaits</p>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">🧺</div>
+                <div class="stat-value">12</div>
+                <div class="stat-label">Items to Buy</div>
+                <div class="stat-change positive">+3 from yesterday</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📦</div>
+                <div class="stat-value">8</div>
+                <div class="stat-label">Pending Orders</div>
+                <div class="stat-change">for delivery today</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">💰</div>
+                <div class="stat-value">₹12,450</div>
+                <div class="stat-label">Today's Revenue</div>
+                <div class="stat-change positive">+₹2,100</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">⏳</div>
+                <div class="stat-value">₹45,200</div>
+                <div class="stat-label">Outstanding</div>
+                <div class="stat-change negative">3 overdue</div>
+            </div>
+        </div>
+
+        <!-- Shopping List Section -->
+        <div class="section-card">
+            <div class="section-header">
+                <div>
+                    <div class="section-title">
+                        <div class="icon">🛒</div>
+                        Market Shopping List
+                    </div>
+                    <div class="section-subtitle">12 items aggregated from 8 pending orders</div>
+                </div>
+                <div class="section-actions">
+                    <button class="btn-secondary">Print List</button>
+                    <button class="btn-primary">Save Rates</button>
+                </div>
+            </div>
+            <table class="shopping-table">
+                <thead>
+                    <tr>
+                        <th>Vegetable</th>
+                        <th>Quantity</th>
+                        <th>Purchase Rate</th>
+                        <th>Est. Cost</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <div class="item-name">
+                                <div class="item-icon">🥔</div>
+                                Potato (Aloo)
+                            </div>
+                        </td>
+                        <td><span class="item-qty">45 kg</span></td>
+                        <td><input type="text" class="rate-input" value="₹28"></td>
+                        <td class="value-cell">₹1,260</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="item-name">
+                                <div class="item-icon">🍅</div>
+                                Tomato (Tamatar)
+                            </div>
+                        </td>
+                        <td><span class="item-qty">32 kg</span></td>
+                        <td><input type="text" class="rate-input" value="₹35"></td>
+                        <td class="value-cell">₹1,120</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="item-name">
+                                <div class="item-icon">🧅</div>
+                                Onion (Pyaz)
+                            </div>
+                        </td>
+                        <td><span class="item-qty">28 kg</span></td>
+                        <td><input type="text" class="rate-input" value="₹32"></td>
+                        <td class="value-cell">₹896</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="item-name">
+                                <div class="item-icon">🥕</div>
+                                Carrot (Gajar)
+                            </div>
+                        </td>
+                        <td><span class="item-qty">18 kg</span></td>
+                        <td><input type="text" class="rate-input" value="₹40"></td>
+                        <td class="value-cell">₹720</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="item-name">
+                                <div class="item-icon">🥬</div>
+                                Cabbage (Patta Gobi)
+                            </div>
+                        </td>
+                        <td><span class="item-qty">15 kg</span></td>
+                        <td><input type="text" class="rate-input" value="₹25"></td>
+                        <td class="value-cell">₹375</td>
+                    </tr>
+                    <tr class="total-row">
+                        <td colspan="3" style="text-align: right; color: var(--text-muted);">Total Estimated Cost:</td>
+                        <td class="value-cell" style="font-size: 1.375rem; color: var(--olive-dark);">₹4,371</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Recent Orders Section -->
+        <div class="section-card">
+            <div class="section-header">
+                <div>
+                    <div class="section-title">
+                        <div class="icon">📋</div>
+                        Recent Orders
+                    </div>
+                    <div class="section-subtitle">Your latest transactions</div>
+                </div>
+                <button class="btn-secondary">View All Orders</button>
+            </div>
+            <table class="orders-table">
+                <thead>
+                    <tr>
+                        <th>Invoice</th>
+                        <th>Customer</th>
+                        <th>Delivery</th>
+                        <th>Amount</th>
+                        <th>Profit</th>
+                        <th>Status</th>
+                        <th>Payment</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="invoice-num">INV-1042</span></td>
+                        <td><span class="customer-name">Hotel Sunrise</span></td>
+                        <td>Today, 3 PM</td>
+                        <td><span class="amount">₹2,450</span></td>
+                        <td><span class="profit">+₹485</span></td>
+                        <td><span class="badge badge-pending">Pending</span></td>
+                        <td><span class="badge badge-unpaid">Unpaid</span></td>
+                        <td><button class="btn-table">View</button></td>
+                    </tr>
+                    <tr>
+                        <td><span class="invoice-num">INV-1041</span></td>
+                        <td><span class="customer-name">Green Leaf Restaurant</span></td>
+                        <td>Today, 4 PM</td>
+                        <td><span class="amount">₹1,875</span></td>
+                        <td><span class="profit">+₹320</span></td>
+                        <td><span class="badge badge-pending">Pending</span></td>
+                        <td><span class="badge badge-partial">Partial</span></td>
+                        <td><button class="btn-table">View</button></td>
+                    </tr>
+                    <tr>
+                        <td><span class="invoice-num">INV-1040</span></td>
+                        <td><span class="customer-name">Taj Kitchen</span></td>
+                        <td>Yesterday</td>
+                        <td><span class="amount">₹3,200</span></td>
+                        <td><span class="profit">+₹640</span></td>
+                        <td><span class="badge badge-delivered">Delivered</span></td>
+                        <td><span class="badge badge-paid">Paid</span></td>
+                        <td><button class="btn-table">View</button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+</body>
+</html>
