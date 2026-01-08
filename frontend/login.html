@@ -443,7 +443,13 @@
                     credentials: 'include'
                 });
                 if (response.ok) {
-                    window.location.href = '/';
+                    const data = await response.json();
+                    if (data.user.role === 'customer') {
+                        window.location.href = '/customer-order-form.html';
+                    } else {
+                        // Staff/admin go to market rates first (daily workflow)
+                        window.location.href = '/market-rates.html';
+                    }
                 }
             } catch (error) {}
         }
@@ -478,7 +484,8 @@
                     if (data.user.role === 'customer') {
                         window.location.href = '/customer-order-form.html';
                     } else {
-                        window.location.href = '/';
+                        // Staff/admin go to market rates first (daily workflow)
+                        window.location.href = '/market-rates.html';
                     }
                 } else {
                     showError(data.message || 'Login failed. Please check your credentials.');

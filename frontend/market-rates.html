@@ -458,8 +458,8 @@
         async function loadData() {
             try {
                 const [ratesRes, productsRes] = await Promise.all([
-                    fetch('/api/market-rates'),
-                    fetch('/api/products')
+                    fetch('/api/market-rates', { credentials: 'include' }),
+                    fetch('/api/products', { credentials: 'include' })
                 ]);
 
                 const ratesData = await ratesRes.json();
@@ -564,6 +564,7 @@
                 const response = await fetch('/api/market-rates', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
                     body: JSON.stringify(rateData)
                 });
 
@@ -581,8 +582,21 @@
             }
         });
 
-        // Load data on page load
-        loadData();
+        // Initialize with authentication check
+        async function init() {
+            const user = await Auth.requireAuth(['admin', 'staff']);
+            if (!user) return;
+
+            // Update user badge if it exists
+            const userBadge = document.getElementById('userBadge');
+            if (userBadge) {
+                userBadge.textContent = user.name || user.email || 'User';
+            }
+
+            loadData();
+        }
+
+        init();
 
         // Register Service Worker for PWA
         if ('serviceWorker' in navigator) {
