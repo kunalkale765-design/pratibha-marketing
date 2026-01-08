@@ -60,19 +60,34 @@ const validateOrder = [
 ];
 
 // @route   GET /api/orders
-// @desc    Get all orders
+// @desc    Get all orders (filtered for customers to see only their own)
 // @access  Private
 router.get('/', protect, async (req, res, next) => {
   try {
     const { status, customer, startDate, endDate, limit = 50 } = req.query;
     const filter = {};
 
-    if (status) {
-      filter.status = status;
+    // SECURITY: Customers can only see their own orders
+    if (req.user.role === 'customer') {
+      if (!req.user.customer) {
+        return res.status(403).json({
+          success: false,
+          message: 'Customer account not properly linked'
+        });
+      }
+      const customerId = typeof req.user.customer === 'object'
+        ? req.user.customer._id
+        : req.user.customer;
+      filter.customer = customerId;
+    } else {
+      // Staff/admin can filter by customer if specified
+      if (customer) {
+        filter.customer = customer;
+      }
     }
 
-    if (customer) {
-      filter.customer = customer;
+    if (status) {
+      filter.status = status;
     }
 
     if (startDate || endDate) {
@@ -111,6 +126,23 @@ router.get('/:id', protect, async (req, res, next) => {
     if (!order) {
       res.status(404);
       throw new Error('Order not found');
+    }
+
+    // SECURITY: Customers can only view their own orders
+    if (req.user.role === 'customer') {
+      const userCustomerId = typeof req.user.customer === 'object'
+        ? req.user.customer._id.toString()
+        : req.user.customer?.toString();
+      const orderCustomerId = typeof order.customer === 'object'
+        ? order.customer._id.toString()
+        : order.customer.toString();
+
+      if (userCustomerId !== orderCustomerId) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. You can only view your own orders.'
+        });
+      }
     }
 
     res.json({

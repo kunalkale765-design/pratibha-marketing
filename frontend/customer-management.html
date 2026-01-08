@@ -643,6 +643,17 @@
         let allProducts = [];
         let currentContractPrices = {};
 
+        // XSS Prevention Utility
+        function escapeHtml(unsafe) {
+            if (unsafe === null || unsafe === undefined) return '';
+            return String(unsafe)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
         async function loadProducts() {
             try {
                 const response = await fetch('/api/products');
@@ -688,25 +699,25 @@
                 <div class="customer-card">
                     <div class="customer-info">
                         <div class="customer-header">
-                            <h3 class="customer-name">${customer.name}</h3>
+                            <h3 class="customer-name">${escapeHtml(customer.name)}</h3>
                             ${getPricingBadge(customer)}
                         </div>
                         <div class="customer-details">
-                            <span>📞 ${customer.phone}</span>
-                            ${customer.whatsapp ? `<span>💬 ${customer.whatsapp}</span>` : ''}
-                            ${customer.address ? `<span>📍 ${customer.address}</span>` : ''}
+                            <span>📞 ${escapeHtml(customer.phone)}</span>
+                            ${customer.whatsapp ? `<span>💬 ${escapeHtml(customer.whatsapp)}</span>` : ''}
+                            ${customer.address ? `<span>📍 ${escapeHtml(customer.address)}</span>` : ''}
                         </div>
                         <div class="customer-credit">
-                            <span><span class="label">Credit Limit:</span> <span class="value">₹${customer.creditLimit}</span></span>
-                            <span><span class="label">Current:</span> <span class="value ${customer.currentCredit > 0 ? 'negative' : ''}">₹${customer.currentCredit}</span></span>
+                            <span><span class="label">Credit Limit:</span> <span class="value">₹${escapeHtml(customer.creditLimit)}</span></span>
+                            <span><span class="label">Current:</span> <span class="value ${customer.currentCredit > 0 ? 'negative' : ''}">₹${escapeHtml(customer.currentCredit)}</span></span>
                         </div>
                     </div>
                     <div class="customer-actions">
                         ${customer.pricingType === 'contract' ? `
-                        <button onclick="openContractPrices('${customer._id}', '${customer.name}')" class="btn btn-icon btn-pricing" title="Set Contract Prices">💰</button>
+                        <button onclick="openContractPrices('${escapeHtml(customer._id)}', '${escapeHtml(customer.name)}')" class="btn btn-icon btn-pricing" title="Set Contract Prices">💰</button>
                         ` : ''}
                         <button onclick='editCustomer(${JSON.stringify(customer).replace(/'/g, "&#39;")})' class="btn btn-icon btn-edit" title="Edit">✏️</button>
-                        <button onclick="deleteCustomer('${customer._id}')" class="btn btn-icon btn-delete" title="Delete">🗑️</button>
+                        <button onclick="deleteCustomer('${escapeHtml(customer._id)}')" class="btn btn-icon btn-delete" title="Delete">🗑️</button>
                     </div>
                 </div>
             `).join('');
@@ -854,15 +865,15 @@
                 return `
                     <div class="contract-item">
                         <div class="contract-item-info">
-                            <div class="contract-item-name">${product.name}</div>
-                            <div class="contract-item-base">Base: ₹${product.basePrice}/${product.unit}</div>
+                            <div class="contract-item-name">${escapeHtml(product.name)}</div>
+                            <div class="contract-item-base">Base: ₹${escapeHtml(product.basePrice)}/${escapeHtml(product.unit)}</div>
                         </div>
                         <input type="number" step="0.01" min="0"
                                class="contract-price-input"
-                               data-product-id="${product._id}"
-                               value="${existingPrice}"
+                               data-product-id="${escapeHtml(product._id)}"
+                               value="${escapeHtml(existingPrice)}"
                                placeholder="₹">
-                        <span class="contract-item-unit">/${product.unit}</span>
+                        <span class="contract-item-unit">/${escapeHtml(product.unit)}</span>
                     </div>
                 `;
             }).join('');
@@ -913,9 +924,14 @@
             document.getElementById('productSearch').value = '';
         }
 
-        // Load data on page load
-        loadCustomers();
-        loadProducts();
+        // Initialize with authentication check - Staff/Admin only
+        async function init() {
+            const user = await Auth.requireAuth(['admin', 'staff']);
+            if (!user) return;
+            loadCustomers();
+            loadProducts();
+        }
+        init();
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {

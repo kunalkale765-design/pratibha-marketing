@@ -599,10 +599,22 @@
     <script>
         let allOrders = [];
         let currentOrderId = null;
+        let currentUser = null;
+
+        // XSS Prevention Utility
+        function escapeHtml(unsafe) {
+            if (unsafe === null || unsafe === undefined) return '';
+            return String(unsafe)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
 
         async function loadOrders() {
             try {
-                const response = await fetch('/api/orders?limit=100');
+                const response = await fetch('/api/orders?limit=100', { credentials: 'include' });
                 const data = await response.json();
                 allOrders = data.data;
                 displayOrders(allOrders);
@@ -621,19 +633,19 @@
             }
 
             tbody.innerHTML = orders.map(order => {
-                const customerName = order.customer?.name || 'Unknown';
+                const customerName = escapeHtml(order.customer?.name || 'Unknown');
                 const orderDate = new Date(order.createdAt).toLocaleDateString();
 
                 return `
-                    <tr onclick="viewOrder('${order._id}')">
-                        <td><span class="order-number">${order.orderNumber}</span></td>
+                    <tr onclick="viewOrder('${escapeHtml(order._id)}')">
+                        <td><span class="order-number">${escapeHtml(order.orderNumber)}</span></td>
                         <td><span class="customer-name">${customerName}</span></td>
                         <td>${orderDate}</td>
-                        <td class="order-amount">₹${order.totalAmount}</td>
-                        <td class="text-center"><span class="badge badge-${order.status}">${order.status}</span></td>
-                        <td class="text-center"><span class="badge badge-${order.paymentStatus}">${order.paymentStatus}</span></td>
+                        <td class="order-amount">₹${escapeHtml(order.totalAmount)}</td>
+                        <td class="text-center"><span class="badge badge-${escapeHtml(order.status)}">${escapeHtml(order.status)}</span></td>
+                        <td class="text-center"><span class="badge badge-${escapeHtml(order.paymentStatus)}">${escapeHtml(order.paymentStatus)}</span></td>
                         <td class="text-center">
-                            <button onclick="event.stopPropagation(); viewOrder('${order._id}')" class="btn-view">View</button>
+                            <button onclick="event.stopPropagation(); viewOrder('${escapeHtml(order._id)}')" class="btn-view">View</button>
                         </td>
                     </tr>
                 `;
@@ -680,15 +692,15 @@
                     <div class="order-info-grid">
                         <div class="order-info-section">
                             <h3>Customer Information</h3>
-                            <p><strong>Name:</strong> ${order.customer.name}</p>
-                            <p><strong>Phone:</strong> ${order.customer.phone}</p>
-                            ${order.deliveryAddress ? `<p><strong>Address:</strong> ${order.deliveryAddress}</p>` : ''}
+                            <p><strong>Name:</strong> ${escapeHtml(order.customer.name)}</p>
+                            <p><strong>Phone:</strong> ${escapeHtml(order.customer.phone)}</p>
+                            ${order.deliveryAddress ? `<p><strong>Address:</strong> ${escapeHtml(order.deliveryAddress)}</p>` : ''}
                         </div>
                         <div class="order-info-section">
                             <h3>Order Information</h3>
                             <p><strong>Date:</strong> ${new Date(order.createdAt).toLocaleString()}</p>
-                            <p><strong>Status:</strong> <span class="badge badge-${order.status}">${order.status}</span></p>
-                            <p><strong>Payment:</strong> <span class="badge badge-${order.paymentStatus}">${order.paymentStatus}</span></p>
+                            <p><strong>Status:</strong> <span class="badge badge-${escapeHtml(order.status)}">${escapeHtml(order.status)}</span></p>
+                            <p><strong>Payment:</strong> <span class="badge badge-${escapeHtml(order.paymentStatus)}">${escapeHtml(order.paymentStatus)}</span></p>
                         </div>
                     </div>
 
@@ -705,10 +717,10 @@
                         <tbody>
                             ${order.products.map(item => `
                                 <tr>
-                                    <td>${item.productName}</td>
-                                    <td class="text-right">${item.quantity} ${item.unit}</td>
-                                    <td class="text-right">₹${item.rate}</td>
-                                    <td class="text-right" style="font-weight: 600;">₹${item.amount}</td>
+                                    <td>${escapeHtml(item.productName)}</td>
+                                    <td class="text-right">${escapeHtml(item.quantity)} ${escapeHtml(item.unit)}</td>
+                                    <td class="text-right">₹${escapeHtml(item.rate)}</td>
+                                    <td class="text-right" style="font-weight: 600;">₹${escapeHtml(item.amount)}</td>
                                 </tr>
                             `).join('')}
                         </tbody>
@@ -717,11 +729,11 @@
                     <div class="order-total">
                         <div class="order-total-row total">
                             <span>Total Amount:</span>
-                            <span>₹${order.totalAmount}</span>
+                            <span>₹${escapeHtml(order.totalAmount)}</span>
                         </div>
                         <div class="order-total-row">
                             <span>Paid Amount:</span>
-                            <span>₹${order.paidAmount || 0}</span>
+                            <span>₹${escapeHtml(order.paidAmount || 0)}</span>
                         </div>
                         <div class="order-total-row" style="color: var(--error);">
                             <span>Balance:</span>
@@ -732,7 +744,7 @@
                     ${order.notes ? `
                         <div style="margin-top: 1rem;">
                             <h3 style="font-weight: 600; margin-bottom: 0.5rem;">Notes</h3>
-                            <p style="color: var(--text-secondary);">${order.notes}</p>
+                            <p style="color: var(--text-secondary);">${escapeHtml(order.notes)}</p>
                         </div>
                     ` : ''}
                 `;
@@ -793,7 +805,20 @@
             setTimeout(() => div.classList.remove('show'), 3000);
         }
 
-        loadOrders();
+        // Initialize with authentication check - All logged-in users
+        async function init() {
+            currentUser = await Auth.requireAuth();
+            if (!currentUser) return;
+
+            // Hide status update controls for customers
+            if (currentUser.role === 'customer') {
+                const modalFooter = document.querySelector('.modal-footer');
+                if (modalFooter) modalFooter.style.display = 'none';
+            }
+
+            loadOrders();
+        }
+        init();
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {

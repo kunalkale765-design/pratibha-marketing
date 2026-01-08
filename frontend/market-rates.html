@@ -455,6 +455,17 @@
     <script>
         let products = [];
 
+        // XSS Prevention Utility
+        function escapeHtml(unsafe) {
+            if (unsafe === null || unsafe === undefined) return '';
+            return String(unsafe)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
         async function loadData() {
             try {
                 const [ratesRes, productsRes] = await Promise.all([
@@ -488,7 +499,7 @@
                 return `
                     <div class="rate-card" style="animation-delay: ${index * 0.05}s">
                         <div class="rate-card-header">
-                            <h3>${rate.productName}</h3>
+                            <h3>${escapeHtml(rate.productName)}</h3>
                             <span class="trend-icon ${trendClass}">${trendIcon}</span>
                         </div>
                         <div class="rate-value">₹${rate.rate.toFixed(2)}</div>
@@ -502,12 +513,12 @@
                             ${rate.changePercentage ? `
                             <div>
                                 <span>Change:</span>
-                                <span class="rate-change ${trendClass}">${rate.changePercentage > 0 ? '+' : ''}${rate.changePercentage}%</span>
+                                <span class="rate-change ${trendClass}">${rate.changePercentage > 0 ? '+' : ''}${escapeHtml(rate.changePercentage)}%</span>
                             </div>
                             ` : ''}
                         </div>
                         <div class="rate-meta">
-                            ${rate.source ? `Source: ${rate.source} • ` : ''}
+                            ${rate.source ? `Source: ${escapeHtml(rate.source)} • ` : ''}
                             Updated: ${new Date(rate.effectiveDate).toLocaleDateString()}
                         </div>
                     </div>
@@ -582,9 +593,9 @@
             }
         });
 
-        // Initialize with authentication check
+        // Initialize with authentication check - Admin only for purchase rates
         async function init() {
-            const user = await Auth.requireAuth(['admin', 'staff']);
+            const user = await Auth.requireAuth(['admin']);
             if (!user) return;
 
             // Update user badge if it exists

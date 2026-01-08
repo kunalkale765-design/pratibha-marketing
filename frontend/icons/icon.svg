@@ -1,50 +1,90 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Background circle -->
-  <circle cx="256" cy="256" r="256" fill="#102210"/>
+  <defs>
+    <!-- Premium gradient for the letter -->
+    <linearGradient id="freshGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4ade80"/>
+      <stop offset="50%" stop-color="#22c55e"/>
+      <stop offset="100%" stop-color="#16a34a"/>
+    </linearGradient>
 
-  <!-- Inner circle with gradient -->
-  <circle cx="256" cy="256" r="200" fill="#1a3a1a"/>
+    <!-- Subtle inner shadow -->
+    <filter id="innerGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="8" result="blur"/>
+      <feOffset in="blur" dx="0" dy="4" result="offsetBlur"/>
+      <feComposite in="SourceGraphic" in2="offsetBlur" operator="over"/>
+    </filter>
 
-  <!-- Leaf/vegetable icon -->
+    <!-- Background texture pattern -->
+    <pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse">
+      <rect width="100" height="100" fill="#0d1f0d"/>
+      <circle cx="25" cy="25" r="0.5" fill="#1a2f1a" opacity="0.5"/>
+      <circle cx="75" cy="75" r="0.5" fill="#1a2f1a" opacity="0.5"/>
+      <circle cx="50" cy="10" r="0.3" fill="#1a2f1a" opacity="0.4"/>
+      <circle cx="10" cy="60" r="0.4" fill="#1a2f1a" opacity="0.3"/>
+      <circle cx="90" cy="40" r="0.3" fill="#1a2f1a" opacity="0.4"/>
+    </pattern>
+  </defs>
+
+  <!-- Background with subtle rounded corners -->
+  <rect width="512" height="512" rx="108" fill="#0a1a0a"/>
+
+  <!-- Inner frame with texture -->
+  <rect x="20" y="20" width="472" height="472" rx="88" fill="url(#grain)"/>
+
+  <!-- Decorative corner accents -->
+  <path d="M108 40 L40 40 Q20 40 20 60 L20 108"
+        fill="none" stroke="#22c55e" stroke-width="2" opacity="0.4"/>
+  <path d="M404 40 L472 40 Q492 40 492 60 L492 108"
+        fill="none" stroke="#22c55e" stroke-width="2" opacity="0.4"/>
+  <path d="M108 472 L40 472 Q20 472 20 452 L20 404"
+        fill="none" stroke="#22c55e" stroke-width="2" opacity="0.4"/>
+  <path d="M404 472 L472 472 Q492 472 492 452 L492 404"
+        fill="none" stroke="#22c55e" stroke-width="2" opacity="0.4"/>
+
+  <!-- The "P" - Custom designed letterform with organic curves -->
   <g transform="translate(256, 256)">
-    <!-- Main leaf shape -->
-    <path d="M-80 60 Q-100 -40 -20 -100 Q60 -140 100 -60 Q120 20 60 80 Q0 120 -60 100 Q-100 80 -80 60 Z"
-          fill="#13ec13"
-          stroke="#0fb80f"
-          stroke-width="4"/>
+    <!-- Main P shape - thick stem with elegant bowl -->
+    <path d="
+      M -70 140
+      L -70 -100
+      Q -70 -130 -40 -130
+      L 40 -130
+      Q 110 -130 110 -60
+      Q 110 10 40 10
+      L -20 10
+      L -20 140
+      Q -20 150 -30 150
+      L -60 150
+      Q -70 150 -70 140
+      Z
+    " fill="url(#freshGradient)" filter="url(#innerGlow)"/>
 
-    <!-- Leaf vein -->
-    <path d="M-40 40 Q0 -20 60 -40"
-          fill="none"
-          stroke="#0fb80f"
-          stroke-width="6"
-          stroke-linecap="round"/>
+    <!-- Inner bowl cutout -->
+    <path d="
+      M -20 -85
+      L 30 -85
+      Q 60 -85 60 -55
+      Q 60 -30 30 -30
+      L -20 -30
+      Z
+    " fill="#0d1f0d"/>
 
-    <!-- Secondary veins -->
-    <path d="M-20 20 Q10 0 30 -10"
-          fill="none"
-          stroke="#0fb80f"
-          stroke-width="3"
-          stroke-linecap="round"/>
-    <path d="M0 50 Q20 30 40 20"
-          fill="none"
-          stroke="#0fb80f"
-          stroke-width="3"
-          stroke-linecap="round"/>
+    <!-- Organic leaf accent emerging from the P -->
+    <path d="
+      M 85 -20
+      Q 130 -60 120 -100
+      Q 100 -80 85 -20
+    " fill="#4ade80" opacity="0.9"/>
 
-    <!-- Stem -->
-    <path d="M-60 80 Q-80 120 -70 140"
-          fill="none"
-          stroke="#13ec13"
-          stroke-width="8"
-          stroke-linecap="round"/>
+    <path d="
+      M 88 -25
+      Q 115 -65 108 -90
+    " fill="none" stroke="#22c55e" stroke-width="2" opacity="0.6"/>
   </g>
 
-  <!-- "P" letter for Pratibha -->
-  <text x="256" y="380"
-        font-family="Arial, sans-serif"
-        font-size="80"
-        font-weight="bold"
-        fill="#13ec13"
-        text-anchor="middle">P</text>
+  <!-- Subtle bottom accent line -->
+  <rect x="156" y="420" width="200" height="3" rx="1.5" fill="#22c55e" opacity="0.5"/>
+
+  <!-- Small decorative dot -->
+  <circle cx="256" cy="450" r="4" fill="#4ade80" opacity="0.6"/>
 </svg>

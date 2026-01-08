@@ -555,6 +555,17 @@
     <script>
         let allProducts = [];
 
+        // XSS Prevention Utility
+        function escapeHtml(unsafe) {
+            if (unsafe === null || unsafe === undefined) return '';
+            return String(unsafe)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
         async function loadProducts() {
             try {
                 const response = await fetch('/api/products');
@@ -579,26 +590,26 @@
                 <div class="product-card" style="animation-delay: ${index * 0.05}s">
                     <div class="product-header">
                         <div>
-                            <h3 class="product-name">${product.name}</h3>
-                            <span class="product-category">${product.category}</span>
+                            <h3 class="product-name">${escapeHtml(product.name)}</h3>
+                            <span class="product-category">${escapeHtml(product.category)}</span>
                         </div>
                         <div class="product-actions">
-                            <button onclick='editProduct(${JSON.stringify(product)})' class="btn btn-icon btn-edit" title="Edit">✏️</button>
-                            <button onclick="deleteProduct('${product._id}')" class="btn btn-icon btn-delete" title="Delete">🗑️</button>
+                            <button onclick='editProduct(${JSON.stringify(product).replace(/'/g, "&#39;")})' class="btn btn-icon btn-edit" title="Edit">✏️</button>
+                            <button onclick="deleteProduct('${escapeHtml(product._id)}')" class="btn btn-icon btn-delete" title="Delete">🗑️</button>
                         </div>
                     </div>
                     <div class="product-details">
                         <div class="product-detail-row">
                             <span class="product-detail-label">Price:</span>
-                            <span class="product-detail-value product-price">₹${product.basePrice}/${product.unit}</span>
+                            <span class="product-detail-value product-price">₹${escapeHtml(product.basePrice)}/${escapeHtml(product.unit)}</span>
                         </div>
                         <div class="product-detail-row">
                             <span class="product-detail-label">Stock:</span>
-                            <span class="product-detail-value ${product.stockQuantity <= product.minStockLevel ? 'low-stock' : ''}">${product.stockQuantity} ${product.unit}</span>
+                            <span class="product-detail-value ${product.stockQuantity <= product.minStockLevel ? 'low-stock' : ''}">${escapeHtml(product.stockQuantity)} ${escapeHtml(product.unit)}</span>
                         </div>
                     </div>
                     ${product.stockQuantity <= product.minStockLevel ? '<div class="low-stock-badge">⚠️ Low Stock!</div>' : ''}
-                    ${product.description ? `<p class="product-description">${product.description}</p>` : ''}
+                    ${product.description ? `<p class="product-description">${escapeHtml(product.description)}</p>` : ''}
                 </div>
             `).join('');
         }
@@ -713,7 +724,13 @@
             }
         });
 
-        loadProducts();
+        // Initialize with authentication check - Staff/Admin only
+        async function init() {
+            const user = await Auth.requireAuth(['admin', 'staff']);
+            if (!user) return;
+            loadProducts();
+        }
+        init();
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
