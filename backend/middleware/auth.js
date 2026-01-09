@@ -143,8 +143,15 @@ const optionalAuth = async (req, res, next) => {
 
     next();
   } catch (error) {
-    // Token invalid or expired, continue without user
-    next();
+    // Only silently continue for JWT-related errors (invalid/expired tokens)
+    if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+      // Token invalid or expired, continue without user
+      next();
+    } else {
+      // Unexpected error (DB failure, programming error) - log but continue
+      console.error('Unexpected error in optional auth middleware:', error.message, error.stack);
+      next();
+    }
   }
 };
 

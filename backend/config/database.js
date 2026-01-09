@@ -36,6 +36,9 @@ const connectDB = async () => {
 
   } catch (error) {
     console.error(`Error connecting to MongoDB: ${error.message}`);
+    console.error('Stack:', error.stack);
+    // Log critical startup failure - this should trigger alerts
+    console.error('[CRITICAL] Database connection failed at startup - application cannot function');
     process.exit(1);
   }
 };

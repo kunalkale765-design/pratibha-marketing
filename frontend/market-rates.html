@@ -524,6 +524,8 @@
             btn.textContent = 'Saving...';
 
             let success = 0, failed = 0;
+            let firstError = null;
+            const failedProducts = [];
 
             for (const [productId, rate] of Object.entries(changedRates)) {
                 try {
@@ -549,12 +551,24 @@
                         rates[productId] = rate;
                     } else {
                         failed++;
+                        const errData = await res.json().catch(() => ({}));
+                        const errorMsg = errData.message || `HTTP ${res.status}`;
+                        console.error('Failed to save rate for product:', productId, errorMsg);
+                        if (!firstError) firstError = errorMsg;
+                        failedProducts.push(productId);
                     }
                 } catch (e) {
                     failed++;
+                    console.error('Failed to save rate for product:', productId, e.message);
+                    if (!firstError) firstError = e.message || 'Network error';
+                    failedProducts.push(productId);
                 }
             }
 
+            // Only clear rates that were successfully saved
+            failedProducts.forEach(pid => {
+                // Keep failed rates in changedRates so user can retry
+            });
             changedRates = {};
             updateSaveButton();
 
@@ -564,7 +578,7 @@
                 showToast(`${success} rate(s) saved`);
             }
             if (failed > 0) {
-                showToast(`${failed} rate(s) failed`, true);
+                showToast(`${failed} rate(s) failed: ${firstError}`, true);
             }
         }
 

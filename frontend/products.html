@@ -824,7 +824,12 @@
                     showToast(err.message || 'Failed to save', true);
                 }
             } catch (e) {
-                showToast('Network error', true);
+                console.error('Save product error:', e);
+                if (!navigator.onLine) {
+                    showToast('No internet connection', true);
+                } else {
+                    showToast('Failed to save product. Please try again.', true);
+                }
             }
         });
 
@@ -844,7 +849,12 @@
                     showToast(err.message || 'Failed to delete', true);
                 }
             } catch (e) {
-                showToast('Network error', true);
+                console.error('Delete product error:', e);
+                if (!navigator.onLine) {
+                    showToast('No internet connection', true);
+                } else {
+                    showToast('Failed to delete product. Please try again.', true);
+                }
             }
         }
 

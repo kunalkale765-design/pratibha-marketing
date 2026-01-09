@@ -98,11 +98,20 @@ const Auth = {
                 this.setUser(data.user);
                 return data.user;
             } else {
+                // Server responded with auth error - clear local auth
                 this.clearAuth();
                 return null;
             }
         } catch (error) {
             console.error('Auth verification failed:', error);
+            // Check if this is a network error vs other errors
+            if (!navigator.onLine || error.name === 'TypeError' || error.message.includes('network') || error.message.includes('fetch') || error.message.includes('Failed to fetch')) {
+                // Network issue - don't clear auth, return cached user if available
+                console.warn('Network issue during auth verification - using cached user');
+                return this.getUser();
+            }
+            // Other errors - clear auth to be safe
+            this.clearAuth();
             return null;
         }
     },
@@ -142,13 +151,19 @@ const Auth = {
      */
     async logout() {
         try {
-            await fetch('/api/auth/logout', {
+            const response = await fetch('/api/auth/logout', {
                 method: 'POST',
                 credentials: 'include'
             });
+            if (!response.ok) {
+                console.warn('Server-side logout returned error:', response.status);
+            }
         } catch (error) {
             console.error('Logout error:', error);
+            // Warn about potential server session remaining active
+            console.warn('Server-side session may still be active due to:', error.message);
         } finally {
+            // Always clear local auth and redirect regardless of server response
             this.clearAuth();
             window.location.href = '/login.html';
         }

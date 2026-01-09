@@ -38,9 +38,10 @@ const errorHandler = (err, req, res, next) => {
     res.status(400);
   }
 
-  // Log error in development
+  // Always log errors - essential for debugging in any environment
+  console.error(`[${process.env.NODE_ENV || 'unknown'}] Error:`, err.message);
   if (process.env.NODE_ENV === 'development') {
-    console.error('Error:', err);
+    console.error('Stack:', err.stack);
   }
 
   res.json(errorResponse);

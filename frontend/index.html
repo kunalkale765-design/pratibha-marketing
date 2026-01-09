@@ -965,7 +965,11 @@
                 // Load analytics charts with orders data
                 loadAnalytics(ordersList);
             } catch (error) {
-                console.error('Error loading stats:', error);
+                console.error('Error loading dashboard stats:', error);
+                // Show user-friendly error for dashboard data load failure
+                document.getElementById('totalSale').textContent = 'Error';
+                document.getElementById('totalProfit').textContent = 'Error';
+                document.getElementById('procurementList').innerHTML = '<div class="empty-state">Failed to load data. Please refresh.</div>';
             }
         }
 

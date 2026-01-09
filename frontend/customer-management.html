@@ -709,10 +709,14 @@
         async function loadProducts() {
             try {
                 const res = await fetch('/api/products', { credentials: 'include' });
+                if (!res.ok) {
+                    throw new Error(`Server returned ${res.status}`);
+                }
                 const data = await res.json();
                 allProducts = data.data || [];
             } catch (e) {
-                console.error('Failed to load products');
+                console.error('Failed to load products:', e);
+                showToast('Failed to load products for contract pricing.', true);
             }
         }
 
@@ -844,7 +848,12 @@
                     showToast(msg, true);
                 }
             } catch (e) {
-                showToast('Network error', true);
+                console.error('Save customer error:', e);
+                if (!navigator.onLine) {
+                    showToast('No internet connection', true);
+                } else {
+                    showToast('Failed to save customer. Please try again.', true);
+                }
             }
         });
 
@@ -864,8 +873,12 @@
                     showToast(err.message || 'Failed to delete', true);
                 }
             } catch (e) {
-                console.error('Delete error:', e);
-                showToast('Network error', true);
+                console.error('Delete customer error:', e);
+                if (!navigator.onLine) {
+                    showToast('No internet connection', true);
+                } else {
+                    showToast('Failed to delete customer. Please try again.', true);
+                }
             }
         }
 
@@ -911,7 +924,11 @@
                                 url: link
                             });
                         } catch (shareErr) {
-                            // User cancelled or share failed, link already copied
+                            // Only silence AbortError (user cancelled)
+                            if (shareErr.name !== 'AbortError') {
+                                console.warn('Share API failed:', shareErr.name, shareErr.message);
+                            }
+                            // Link already copied to clipboard, so no user action needed
                         }
                     }
                 } else {
@@ -919,7 +936,11 @@
                 }
             } catch (e) {
                 console.error('Magic link error:', e);
-                showToast('Network error', true);
+                if (!navigator.onLine) {
+                    showToast('No internet connection', true);
+                } else {
+                    showToast('Failed to generate link. Please try again.', true);
+                }
             }
         }
 
@@ -1017,7 +1038,12 @@
                     showToast(err.errors?.[0]?.msg || err.message || 'Failed to save', true);
                 }
             } catch (e) {
-                showToast('Network error', true);
+                console.error('Save contract prices error:', e);
+                if (!navigator.onLine) {
+                    showToast('No internet connection', true);
+                } else {
+                    showToast('Failed to save prices. Please try again.', true);
+                }
             }
         }
 

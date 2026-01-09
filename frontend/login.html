@@ -563,7 +563,14 @@
                 }
             } catch (error) {
                 console.error('Login error:', error);
-                showError('Network error. Please try again.');
+                // Distinguish network errors from other errors
+                if (!navigator.onLine) {
+                    showError('No internet connection. Please check your network.');
+                } else if (error.name === 'TypeError' || error.message.includes('fetch')) {
+                    showError('Cannot connect to server. Please try again later.');
+                } else {
+                    showError('An unexpected error occurred. Please try again.');
+                }
             } finally {
                 loginBtn.disabled = false;
                 loginBtn.textContent = 'Sign In';

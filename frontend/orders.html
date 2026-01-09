@@ -720,13 +720,17 @@
         async function loadMarketRates() {
             try {
                 const res = await fetch('/api/market-rates', { credentials: 'include' });
+                if (!res.ok) {
+                    throw new Error(`Server returned ${res.status}`);
+                }
                 const data = await res.json();
                 (data.data || []).forEach(r => {
                     const pid = typeof r.product === 'object' ? r.product._id : r.product;
                     marketRates[pid] = r.rate;
                 });
             } catch (e) {
-                console.error('Failed to load market rates');
+                console.error('Failed to load market rates:', e);
+                showToast('Failed to load market rates. Prices may be outdated.', true);
             }
         }
 
@@ -994,7 +998,12 @@
                     showToast(err.message || 'Failed to update', true);
                 }
             } catch (e) {
-                showToast('Network error', true);
+                console.error('Save prices error:', e);
+                if (!navigator.onLine) {
+                    showToast('No internet connection', true);
+                } else {
+                    showToast('Failed to save prices. Please try again.', true);
+                }
             }
 
             btn.textContent = 'Save Changes';

@@ -607,8 +607,13 @@
                     customers = data.data.filter(c => c.isActive !== false);
                 }
             } catch (e) {
-                console.error(e);
-                showToast('Failed to load data', true);
+                console.error('Failed to load data:', e);
+                // Provide more specific error message
+                if (!navigator.onLine) {
+                    showToast('No internet connection. Please check your network.', true);
+                } else {
+                    showToast('Failed to load products. Please refresh the page.', true);
+                }
             }
         }
 
@@ -837,7 +842,12 @@
                     showToast(data.message || 'Failed to place order', true);
                 }
             } catch (e) {
-                showToast('Network error', true);
+                console.error('Order placement error:', e);
+                if (!navigator.onLine) {
+                    showToast('No internet connection', true);
+                } else {
+                    showToast('Failed to place order. Please try again.', true);
+                }
             } finally {
                 btn.disabled = false;
                 btn.textContent = 'Place Order';

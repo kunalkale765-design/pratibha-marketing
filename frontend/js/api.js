@@ -38,7 +38,21 @@ const API = {
             }
 
             const response = await fetch(endpoint, fetchOptions);
-            const data = await response.json().catch(() => null);
+            let data;
+            try {
+                data = await response.json();
+            } catch (parseError) {
+                console.error('API response parse error:', parseError, 'Status:', response.status);
+                // If we can't parse the response, return a helpful error
+                return {
+                    success: false,
+                    error: response.ok
+                        ? 'Server returned an invalid response. Please try again.'
+                        : `Server error (${response.status}). Please try again later.`,
+                    status: response.status,
+                    parseError: true
+                };
+            }
 
             if (response.ok) {
                 return { success: true, data, status: response.status };

@@ -41,6 +41,8 @@ self.addEventListener('install', (event) => {
       .then(() => self.skipWaiting())
       .catch((err) => {
         console.error('[SW] Failed to cache static assets:', err);
+        // Propagate error to fail installation - degraded offline functionality
+        throw err;
       })
   );
 });
@@ -177,9 +179,24 @@ async function updateCacheInBackground(request) {
     if (networkResponse.ok) {
       const cache = await caches.open(CACHE_NAME);
       cache.put(request, networkResponse);
+    } else {
+      console.warn('[SW] Background cache update failed with status:', networkResponse.status, 'for:', request.url);
     }
   } catch (error) {
-    // Silently fail - we already served cached content
+    // Log the error for debugging - cached content was already served
+    console.warn('[SW] Background cache update failed:', error.message, 'for:', request.url);
+    // Notify main thread about cache update failure (for critical resources)
+    self.clients.matchAll().then(clients => {
+      clients.forEach(client => {
+        client.postMessage({
+          type: 'CACHE_UPDATE_FAILED',
+          url: request.url,
+          error: error.message
+        });
+      });
+    }).catch(() => {
+      // Ignore errors when notifying clients
+    });
   }
 }
 

@@ -9,10 +9,15 @@ const { protect, authorize } = require('../middleware/auth');
 
 // Helper function to get current market rate for a product
 async function getMarketRate(productId) {
-  const rate = await MarketRate.findOne({ product: productId })
-    .sort({ effectiveDate: -1 })
-    .limit(1);
-  return rate ? rate.rate : null;
+  try {
+    const rate = await MarketRate.findOne({ product: productId })
+      .sort({ effectiveDate: -1 })
+      .limit(1);
+    return rate ? rate.rate : null;
+  } catch (error) {
+    console.error('Failed to get market rate for product:', productId, error.message);
+    return null;
+  }
 }
 
 // Helper function to calculate price based on customer's pricing type
@@ -262,8 +267,14 @@ router.post('/', protect, validateOrder, async (req, res, next) => {
 
     // Update customer credit if payment is on credit
     if (req.body.paymentStatus === 'unpaid') {
-      customer.currentCredit += totalAmount;
-      await customer.save();
+      try {
+        customer.currentCredit += totalAmount;
+        await customer.save();
+      } catch (creditError) {
+        // Log but don't fail the order - credit can be reconciled later
+        console.error('Failed to update customer credit for order:', order._id, creditError.message);
+        console.warn('Customer credit update failed - order created but credit not updated for customer:', customer._id);
+      }
     }
 
     // Populate and return
