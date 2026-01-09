@@ -228,6 +228,9 @@ unpaid → partial → paid
 | `staff` | CRUD on orders, customers, products, market rates |
 | `customer` | View/create own orders only |
 
+### Customer-Facing UI Rules
+- **Never show prices to customers** - Customer pages (order form, order history) must not display product prices, rates, or order totals. Only staff/admin can see pricing information.
+
 ## Key Patterns
 
 - API responses: `{ success: boolean, data?, message?, error?, count? }`

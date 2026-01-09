@@ -263,6 +263,384 @@
             color: var(--text-muted);
         }
 
+        /* ==================
+           TAB NAVIGATION
+           ================== */
+        .order-tabs {
+            display: flex;
+            gap: 0;
+            background: var(--warm-white);
+            border-bottom: 2px solid var(--cream-dark);
+            padding: 0 1rem;
+        }
+
+        .order-tab {
+            flex: 1;
+            padding: 1rem;
+            border: none;
+            background: transparent;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+            min-height: 52px;
+        }
+
+        .order-tab.active {
+            color: var(--gunmetal);
+            border-bottom-color: var(--dusty-olive);
+        }
+
+        /* ==================
+           VIEW MANAGEMENT
+           ================== */
+        .order-view {
+            display: none;
+        }
+
+        .order-view.active {
+            display: block;
+        }
+
+        /* ==================
+           ORDERS LIST VIEW
+           ================== */
+        .status-filters {
+            display: flex;
+            gap: 0.5rem;
+            padding: 0.75rem 1rem;
+            background: var(--warm-white);
+            border-bottom: 1px solid var(--cream-dark);
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .status-filters::-webkit-scrollbar {
+            display: none;
+        }
+
+        .status-pill {
+            flex-shrink: 0;
+            padding: 0.5rem 1rem;
+            border: 1.5px solid var(--cream-dark);
+            border-radius: 20px;
+            background: var(--cream);
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            cursor: pointer;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+        }
+
+        .status-pill.active {
+            background: var(--gunmetal);
+            color: white;
+            border-color: var(--gunmetal);
+        }
+
+        .orders-container {
+            padding: 0.5rem;
+            padding-bottom: calc(2rem + env(safe-area-inset-bottom));
+        }
+
+        .order-card {
+            background: var(--warm-white);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 0.625rem;
+            cursor: pointer;
+            transition: all 0.15s;
+            border: 1px solid transparent;
+        }
+
+        .order-card:active {
+            transform: scale(0.98);
+            border-color: var(--dusty-olive);
+            background: rgba(126, 145, 129, 0.05);
+        }
+
+        .order-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.5rem;
+        }
+
+        .order-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            font-size: 0.9375rem;
+            color: var(--gunmetal);
+        }
+
+        .order-amount {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--gunmetal);
+        }
+
+        .order-products-summary {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .order-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .order-date {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .order-badges {
+            display: flex;
+            gap: 0.375rem;
+        }
+
+        /* ==================
+           ORDER DETAIL MODAL
+           ================== */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: none;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--warm-white);
+            border-radius: 16px 16px 0 0;
+            width: 100%;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+            }
+            to {
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid var(--cream-dark);
+            background: var(--warm-white);
+        }
+
+        .modal-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--gunmetal);
+            margin: 0;
+        }
+
+        .modal-close {
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: var(--cream);
+            border-radius: 50%;
+            font-size: 1.25rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+        }
+
+        .modal-body {
+            padding: 1rem;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .modal-footer {
+            padding: 1rem;
+            border-top: 1px solid var(--cream-dark);
+            display: flex;
+            gap: 0.75rem;
+            background: var(--warm-white);
+            padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+        }
+
+        .order-info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .info-label {
+            font-size: 0.6875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 0.25rem;
+            letter-spacing: 0.5px;
+        }
+
+        .info-value {
+            font-size: 0.9375rem;
+            color: var(--gunmetal);
+        }
+
+        .divider {
+            height: 1px;
+            background: var(--cream-dark);
+            margin: 1rem 0;
+        }
+
+        .product-item-edit {
+            background: var(--cream);
+            border-radius: 10px;
+            padding: 0.875rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .product-item-edit.readonly {
+            opacity: 0.85;
+        }
+
+        .product-item-edit .product-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .product-item-edit .product-name {
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--gunmetal);
+        }
+
+        .product-item-edit .product-meta {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+            margin-top: 0.125rem;
+        }
+
+        .product-amount {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            color: var(--gunmetal);
+        }
+
+        .btn {
+            padding: 0.875rem 1.5rem;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            min-height: 48px;
+        }
+
+        .btn-primary {
+            background: var(--dusty-olive);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--cream);
+            color: var(--gunmetal);
+        }
+
+        .btn-block {
+            width: 100%;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.6875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-pending {
+            background: rgba(184, 154, 90, 0.15);
+            color: #8b7355;
+        }
+
+        .badge-confirmed {
+            background: rgba(93, 122, 95, 0.15);
+            color: #4a6b4c;
+        }
+
+        .badge-processing {
+            background: rgba(126, 145, 129, 0.15);
+            color: #5d7a5f;
+        }
+
+        .badge-packed {
+            background: rgba(126, 145, 129, 0.2);
+            color: #4a6b4c;
+        }
+
+        .badge-shipped {
+            background: rgba(93, 107, 95, 0.15);
+            color: #4a5c4c;
+        }
+
+        .badge-delivered {
+            background: rgba(93, 122, 95, 0.2);
+            color: #3d5a3f;
+        }
+
+        .badge-cancelled {
+            background: rgba(154, 101, 101, 0.15);
+            color: #8b5a5a;
+        }
+
+        .badge-unpaid {
+            background: rgba(154, 101, 101, 0.15);
+            color: #8b5a5a;
+        }
+
+        .badge-partial {
+            background: rgba(184, 154, 90, 0.15);
+            color: #8b7355;
+        }
+
+        .badge-paid {
+            background: rgba(93, 122, 95, 0.15);
+            color: #4a6b4c;
+        }
+
         /* Extra small screens */
         @media (max-width: 360px) {
             .header {
@@ -393,6 +771,38 @@
                 grid-template-columns: repeat(3, 1fr);
             }
         }
+
+        /* Tablet+ responsive for new components */
+        @media (min-width: 768px) {
+            .order-tabs {
+                padding: 0 2rem;
+                max-width: 1200px;
+                margin: 0 auto;
+            }
+
+            .status-filters {
+                padding: 0.75rem 2rem;
+                max-width: 1200px;
+                margin: 0 auto;
+            }
+
+            .orders-container {
+                padding: 1rem 2rem;
+                max-width: 1200px;
+                margin: 0 auto;
+            }
+
+            .modal {
+                max-width: 500px;
+                border-radius: 16px;
+                margin: auto;
+                max-height: 80vh;
+            }
+
+            .modal-overlay {
+                align-items: center;
+            }
+        }
     </style>
 </head>
 <body>
@@ -403,7 +813,15 @@
         </div>
     </header>
 
-    <div class="customer-bar" id="customerBar">
+    <!-- Tab Navigation -->
+    <div class="order-tabs">
+        <button class="order-tab active" data-tab="new" id="newOrderTab">New Order</button>
+        <button class="order-tab" data-tab="list" id="myOrdersTab">My Orders</button>
+    </div>
+
+    <!-- New Order View (existing content wrapped) -->
+    <div id="newOrderView" class="order-view active">
+        <div class="customer-bar" id="customerBar">
         <select id="customerSelect" class="customer-select">
             <option value="">Select Customer</option>
         </select>
@@ -423,16 +841,46 @@
         <div class="loading">Loading products...</div>
     </div>
 
-    <div class="order-summary">
-        <div class="summary-info">
-            <div class="summary-stat">
-                <div class="value" id="itemCount">0</div>
-                <div class="label">Items</div>
+        <div class="order-summary">
+            <div class="summary-info">
+                <div class="summary-stat">
+                    <div class="value" id="itemCount">0</div>
+                    <div class="label">Items</div>
+                </div>
+            </div>
+            <button class="btn-order" id="orderBtn" disabled onclick="placeOrder()">
+                Place Order
+            </button>
+        </div>
+    </div><!-- End newOrderView -->
+
+    <!-- My Orders View -->
+    <div id="ordersListView" class="order-view">
+        <div class="status-filters">
+            <button class="status-pill active" data-status="all">All</button>
+            <button class="status-pill" data-status="pending">Pending</button>
+            <button class="status-pill" data-status="confirmed">Confirmed</button>
+            <button class="status-pill" data-status="delivered">Delivered</button>
+        </div>
+        <div id="ordersContainer" class="orders-container">
+            <div class="loading">Loading orders...</div>
+        </div>
+    </div>
+
+    <!-- Order Detail/Edit Modal -->
+    <div id="orderModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title" id="orderModalTitle"></h2>
+                <button class="modal-close" onclick="closeOrderModal()">×</button>
+            </div>
+            <div class="modal-body" id="orderModalBody">
+                <!-- Content rendered dynamically -->
+            </div>
+            <div class="modal-footer" id="orderModalFooter">
+                <!-- Buttons rendered dynamically -->
             </div>
         </div>
-        <button class="btn-order" id="orderBtn" disabled onclick="placeOrder()">
-            Place Order
-        </button>
     </div>
 
     <script src="/js/auth.js"></script>
@@ -636,7 +1084,7 @@
                         <div class="product-item" data-id="${p._id}" data-category="${cat}" data-price="${price}">
                             <div class="product-info">
                                 <div class="product-name">${escapeHtml(p.name)}</div>
-                                <div class="product-meta">₹${price}/${escapeHtml(p.unit)}</div>
+                                <div class="product-meta">${escapeHtml(p.unit)}</div>
                             </div>
                             <div class="qty-controls">
                                 <button class="qty-btn" onclick="changeQty('${p._id}', -1)">−</button>
@@ -808,6 +1256,354 @@
                 updateSummary();
             }
         }
+
+        // ====================
+        // TAB MANAGEMENT
+        // ====================
+        let activeTab = 'new';
+
+        function switchTab(tabName) {
+            activeTab = tabName;
+
+            // Update tab buttons
+            document.querySelectorAll('.order-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.tab === tabName);
+            });
+
+            // Update views
+            document.querySelectorAll('.order-view').forEach(view => {
+                view.classList.remove('active');
+            });
+
+            if (tabName === 'new') {
+                document.getElementById('newOrderView').classList.add('active');
+            } else if (tabName === 'list') {
+                document.getElementById('ordersListView').classList.add('active');
+                loadMyOrders();
+            }
+        }
+
+        document.getElementById('newOrderTab').addEventListener('click', () => switchTab('new'));
+        document.getElementById('myOrdersTab').addEventListener('click', () => switchTab('list'));
+
+        // ====================
+        // ORDERS LIST
+        // ====================
+        let myOrders = [];
+        let currentStatusFilter = 'all';
+
+        async function loadMyOrders() {
+            const container = document.getElementById('ordersContainer');
+            container.innerHTML = '<div class="loading">Loading orders...</div>';
+
+            try {
+                const res = await fetch('/api/orders', { credentials: 'include' });
+                const data = await res.json();
+
+                if (res.ok) {
+                    myOrders = data.data || [];
+                    renderOrdersList();
+                } else {
+                    container.innerHTML = `<div class="empty-state">${escapeHtml(data.message || 'Failed to load orders')}</div>`;
+                }
+            } catch (e) {
+                console.error('Load orders error:', e);
+                if (!navigator.onLine) {
+                    showToast('No internet connection', 'error');
+                } else {
+                    showToast('Failed to load orders', 'error');
+                }
+                container.innerHTML = '<div class="empty-state">Failed to load orders. Please try again.</div>';
+            }
+        }
+
+        function renderOrdersList() {
+            const container = document.getElementById('ordersContainer');
+
+            let filtered = myOrders;
+            if (currentStatusFilter !== 'all') {
+                filtered = myOrders.filter(o => o.status === currentStatusFilter);
+            }
+
+            if (!filtered.length) {
+                container.innerHTML = '<div class="empty-state">No orders found</div>';
+                return;
+            }
+
+            let html = '';
+            filtered.forEach(order => {
+                const date = new Date(order.createdAt).toLocaleDateString('en-IN', {
+                    month: 'short', day: 'numeric', year: 'numeric'
+                });
+
+                html += `
+                    <div class="order-card" onclick="openOrderDetail('${order._id}')">
+                        <div class="order-top">
+                            <div class="order-number">${escapeHtml(order.orderNumber)}</div>
+                            <div class="order-products-summary">
+                                ${order.products.length} item${order.products.length !== 1 ? 's' : ''}
+                            </div>
+                        </div>
+                        <div class="order-bottom">
+                            <div class="order-date">${date}</div>
+                            <div class="order-badges">
+                                <span class="badge badge-${order.status}">${order.status}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function filterOrdersByStatus(status) {
+            currentStatusFilter = status;
+
+            document.querySelectorAll('.status-pill').forEach(pill => {
+                pill.classList.toggle('active', pill.dataset.status === status);
+            });
+
+            renderOrdersList();
+        }
+
+        // Setup filter event listeners
+        document.querySelectorAll('.status-pill').forEach(pill => {
+            pill.addEventListener('click', () => filterOrdersByStatus(pill.dataset.status));
+        });
+
+        // ====================
+        // ORDER DETAIL/EDIT MODAL
+        // ====================
+        let currentOrder = null;
+        let editedProducts = [];
+
+        window.openOrderDetail = async function(orderId) {
+            try {
+                const res = await fetch(`/api/orders/${orderId}`, { credentials: 'include' });
+                const data = await res.json();
+
+                if (res.ok) {
+                    currentOrder = data.data;
+                    editedProducts = JSON.parse(JSON.stringify(currentOrder.products));
+                    renderOrderModal();
+                    document.getElementById('orderModal').classList.add('show');
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    showToast(data.message || 'Failed to load order', 'error');
+                }
+            } catch (e) {
+                console.error('Load order detail error:', e);
+                showToast('Failed to load order details', 'error');
+            }
+        }
+
+        window.closeOrderModal = function() {
+            document.getElementById('orderModal').classList.remove('show');
+            document.body.style.overflow = '';
+            currentOrder = null;
+            editedProducts = [];
+        }
+
+        function renderOrderModal() {
+            const isPending = currentOrder.status === 'pending';
+            const titleEl = document.getElementById('orderModalTitle');
+            const bodyEl = document.getElementById('orderModalBody');
+            const footerEl = document.getElementById('orderModalFooter');
+
+            titleEl.textContent = currentOrder.orderNumber;
+
+            // Render body
+            let bodyHtml = `
+                <div class="order-info-section">
+                    <div class="order-info-grid">
+                        <div>
+                            <div class="info-label">Status</div>
+                            <span class="badge badge-${currentOrder.status}">${currentOrder.status}</span>
+                        </div>
+                        <div>
+                            <div class="info-label">Date</div>
+                            <div class="info-value">${new Date(currentOrder.createdAt).toLocaleDateString('en-IN', {
+                                month: 'short', day: 'numeric', year: 'numeric'
+                            })}</div>
+                        </div>
+                    </div>
+                    ${currentOrder.deliveryAddress ? `
+                        <div style="margin-top: 1rem;">
+                            <div class="info-label">Delivery Address</div>
+                            <div class="info-value">${escapeHtml(currentOrder.deliveryAddress)}</div>
+                        </div>
+                    ` : ''}
+                    ${currentOrder.notes ? `
+                        <div style="margin-top: 1rem;">
+                            <div class="info-label">Notes</div>
+                            <div class="info-value">${escapeHtml(currentOrder.notes)}</div>
+                        </div>
+                    ` : ''}
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="info-label" style="margin-bottom: 0.5rem;">Products</div>
+                <div id="orderProductsList">
+                    ${renderOrderProducts(isPending)}
+                </div>
+            `;
+
+            bodyEl.innerHTML = bodyHtml;
+
+            // Render footer
+            if (isPending) {
+                footerEl.innerHTML = `
+                    <button class="btn btn-secondary" onclick="closeOrderModal()">Cancel</button>
+                    <button class="btn btn-primary" style="flex: 1;" onclick="saveOrderEdit()">Save Changes</button>
+                `;
+            } else {
+                footerEl.innerHTML = `
+                    <button class="btn btn-primary btn-block" onclick="closeOrderModal()">Close</button>
+                `;
+            }
+        }
+
+        function renderOrderProducts(editable) {
+            let html = '';
+
+            editedProducts.forEach((item, index) => {
+                if (editable) {
+                    html += `
+                        <div class="product-item-edit" data-index="${index}">
+                            <div class="product-info">
+                                <div class="product-name">${escapeHtml(item.productName)}</div>
+                                <div class="product-meta">${item.unit}</div>
+                            </div>
+                            <div class="qty-controls">
+                                <button class="qty-btn" onclick="changeOrderQty(${index}, -1)">−</button>
+                                <input type="number" class="qty-input" id="order-qty-${index}"
+                                    value="${item.quantity}" min="0" inputmode="numeric"
+                                    onchange="updateOrderQtyFromInput(${index})">
+                                <button class="qty-btn" onclick="changeOrderQty(${index}, 1)">+</button>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    html += `
+                        <div class="product-item-edit readonly">
+                            <div class="product-info">
+                                <div class="product-name">${escapeHtml(item.productName)}</div>
+                                <div class="product-meta">${item.quantity} ${item.unit}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            return html;
+        }
+
+        window.changeOrderQty = function(index, delta) {
+            const input = document.getElementById(`order-qty-${index}`);
+            let val = parseInt(input.value) || 0;
+            val = Math.max(0, val + delta);
+            input.value = val;
+            editedProducts[index].quantity = val;
+        }
+
+        window.updateOrderQtyFromInput = function(index) {
+            const input = document.getElementById(`order-qty-${index}`);
+            const val = Math.max(0, parseInt(input.value) || 0);
+            input.value = val;
+            editedProducts[index].quantity = val;
+        }
+
+        window.saveOrderEdit = async function() {
+            try {
+                // Filter out zero-quantity items
+                const products = editedProducts
+                    .filter(p => p.quantity > 0)
+                    .map(p => ({
+                        product: typeof p.product === 'object' ? p.product._id : p.product,
+                        quantity: p.quantity
+                    }));
+
+                if (!products.length) {
+                    showToast('Order must have at least one product', 'error');
+                    return;
+                }
+
+                const saveBtn = document.querySelector('#orderModalFooter .btn-primary');
+                if (saveBtn) {
+                    saveBtn.disabled = true;
+                    saveBtn.textContent = 'Saving...';
+                }
+
+                const headers = { 'Content-Type': 'application/json' };
+                const csrfToken = await Auth.ensureCsrfToken();
+                if (csrfToken) {
+                    headers['X-CSRF-Token'] = csrfToken;
+                }
+
+                const payload = { products };
+
+                let res = await fetch(`/api/orders/${currentOrder._id}/customer-edit`, {
+                    method: 'PUT',
+                    headers,
+                    credentials: 'include',
+                    body: JSON.stringify(payload)
+                });
+
+                let data = await res.json();
+
+                // Handle CSRF retry
+                if (res.status === 403 && data?.message?.toLowerCase().includes('csrf')) {
+                    const newToken = await Auth.refreshCsrfToken();
+                    if (newToken) {
+                        headers['X-CSRF-Token'] = newToken;
+                        res = await fetch(`/api/orders/${currentOrder._id}/customer-edit`, {
+                            method: 'PUT',
+                            headers,
+                            credentials: 'include',
+                            body: JSON.stringify(payload)
+                        });
+                        data = await res.json();
+                    }
+                }
+
+                if (res.ok) {
+                    showToast('Order updated successfully', 'success');
+                    closeOrderModal();
+                    loadMyOrders(); // Refresh list
+                } else {
+                    showToast(data.message || 'Failed to update order', 'error');
+                }
+            } catch (e) {
+                console.error('Order edit error:', e);
+                if (!navigator.onLine) {
+                    showToast('No internet connection', 'error');
+                } else {
+                    showToast('Failed to update order. Please try again.', 'error');
+                }
+            } finally {
+                const saveBtn = document.querySelector('#orderModalFooter .btn-primary');
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Save Changes';
+                }
+            }
+        }
+
+        // Close modal on overlay click
+        document.getElementById('orderModal').addEventListener('click', (e) => {
+            if (e.target.id === 'orderModal') {
+                closeOrderModal();
+            }
+        });
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && document.getElementById('orderModal').classList.contains('show')) {
+                closeOrderModal();
+            }
+        });
 
         init();
     </script>

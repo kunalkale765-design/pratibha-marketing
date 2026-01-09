@@ -352,6 +352,105 @@ router.put('/:id', protect, authorize('admin', 'staff'), async (req, res, next) 
   }
 });
 
+// @route   PUT /api/orders/:id/customer-edit
+// @desc    Update order products/quantities (customer can edit their own pending orders)
+// @access  Private (Customers can edit own pending orders, Admin/Staff can edit any pending order)
+router.put('/:id/customer-edit', protect, async (req, res, next) => {
+  try {
+    const order = await Order.findById(req.params.id).populate('customer');
+
+    if (!order) {
+      res.status(404);
+      throw new Error('Order not found');
+    }
+
+    // SECURITY: Customers can only edit their own orders
+    if (req.user.role === 'customer') {
+      const userCustomerId = typeof req.user.customer === 'object'
+        ? req.user.customer._id.toString()
+        : req.user.customer?.toString();
+      const orderCustomerId = typeof order.customer === 'object'
+        ? order.customer._id.toString()
+        : order.customer.toString();
+
+      if (userCustomerId !== orderCustomerId) {
+        return res.status(403).json({
+          success: false,
+          message: 'You can only edit your own orders'
+        });
+      }
+    }
+
+    // SECURITY: Only pending orders can be edited
+    if (order.status !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        message: 'Only pending orders can be edited'
+      });
+    }
+
+    // Validate products array
+    if (!req.body.products || !Array.isArray(req.body.products) || req.body.products.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one product is required'
+      });
+    }
+
+    // Get customer for pricing calculation
+    const customer = await Customer.findById(order.customer._id || order.customer);
+    if (!customer) {
+      res.status(404);
+      throw new Error('Customer not found');
+    }
+
+    // Update products with recalculated prices
+    let totalAmount = 0;
+    const updatedProducts = await Promise.all(
+      req.body.products.map(async (item) => {
+        const product = await Product.findById(item.product);
+        if (!product) {
+          throw new Error(`Product ${item.product} not found`);
+        }
+
+        if (!item.quantity || item.quantity <= 0) {
+          throw new Error('Quantity must be greater than 0');
+        }
+
+        // Recalculate rate based on customer's pricing type (never trust client prices)
+        const rate = await calculatePrice(customer, product);
+        const amount = item.quantity * rate;
+        totalAmount += amount;
+
+        return {
+          product: item.product,
+          productName: product.name,
+          quantity: item.quantity,
+          unit: product.unit,
+          rate: rate,
+          amount: amount
+        };
+      })
+    );
+
+    order.products = updatedProducts;
+    order.totalAmount = totalAmount;
+
+    await order.save();
+
+    const populatedOrder = await Order.findById(order._id)
+      .populate('customer', 'name phone')
+      .populate('products.product', 'name unit');
+
+    res.json({
+      success: true,
+      data: populatedOrder
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // @route   PUT /api/orders/:id/status
 // @desc    Update order status
 // @access  Private (Admin, Staff)

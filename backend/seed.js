@@ -136,6 +136,15 @@ const seedDatabase = async () => {
     }
     console.log('✓ 2 customer user accounts created\n');
 
+    // Generate a magic link for the first customer (for testing)
+    const crypto = require('crypto');
+    const testMagicToken = crypto.randomBytes(32).toString('hex');
+    await Customer.findByIdAndUpdate(customers[0]._id, {
+      magicLinkToken: testMagicToken,
+      magicLinkCreatedAt: new Date()
+    });
+    console.log('✓ Magic link generated for Rajesh Kumar\n');
+
     // Seed Market Rates for all products
     console.log('Seeding market rates...');
     const marketRates = products.map(product => ({
@@ -260,6 +269,8 @@ const seedDatabase = async () => {
     console.log(`   Password: Pass1234\n`);
     console.log(`   Email: priya.sharma@example.com`);
     console.log(`   Password: Pass1234\n`);
+    console.log('[*] Magic Link for Testing (Rajesh Kumar):');
+    console.log(`   http://localhost:5000/customer-order-form.html?token=${testMagicToken}\n`);
     console.log('═══════════════════════════════════════\n');
 
   } catch (error) {
