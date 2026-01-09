@@ -32,6 +32,8 @@ const userSchema = new mongoose.Schema({
   phone: {
     type: String,
     trim: true,
+    unique: true,
+    sparse: true,  // Allows multiple null/empty values
     match: [/^[0-9]{10}$/, 'Please enter a valid 10-digit phone number']
   },
   role: {

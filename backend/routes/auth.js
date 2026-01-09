@@ -45,13 +45,24 @@ router.post('/register', [
     // Note: role is intentionally NOT accepted from user input to prevent privilege escalation
     const { name, email, password, phone } = req.body;
 
-    // Check if user already exists
+    // Check if username already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
         success: false,
-        message: 'Email already registered'
+        message: 'Username already registered'
       });
+    }
+
+    // Check if phone already exists (if provided)
+    if (phone) {
+      const existingPhone = await User.findOne({ phone });
+      if (existingPhone) {
+        return res.status(400).json({
+          success: false,
+          message: 'Phone number already registered'
+        });
+      }
     }
 
     // Create user - always as customer for public registration

@@ -17,6 +17,7 @@ const connectDB = require('./config/database');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
+const { startScheduler, stopScheduler } = require('./services/marketRateScheduler');
 
 // Initialize Sentry (only in production/development, not in test)
 if (process.env.SENTRY_DSN && process.env.NODE_ENV !== 'test') {
@@ -219,6 +220,8 @@ if (process.env.NODE_ENV !== 'test') {
 ║   MongoDB: Connected                          ║
 ╚═══════════════════════════════════════════════╝
     `);
+    // Start the market rate scheduler after server is ready
+    startScheduler();
   });
 }
 
@@ -244,6 +247,19 @@ process.on('uncaughtException', (err) => {
   if (process.env.NODE_ENV === 'production') {
     process.exit(1);
   }
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received. Shutting down gracefully...');
+  stopScheduler();
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received. Shutting down gracefully...');
+  stopScheduler();
+  process.exit(0);
 });
 
 // Export app for testing

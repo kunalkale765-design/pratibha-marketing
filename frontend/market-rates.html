@@ -7,6 +7,9 @@
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#2e3532">
     <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@500;600&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <!-- jsPDF for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     <style>
         :root {
             --gunmetal: #2e3532;
@@ -357,6 +360,215 @@
                 grid-template-columns: repeat(4, 1fr);
             }
         }
+
+        /* History Section Styles */
+        .history-section {
+            padding: 1rem;
+            padding-bottom: 180px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .history-card {
+            background: var(--warm-white);
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+
+        .history-header {
+            background: var(--gunmetal);
+            color: white;
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .history-title {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .history-controls {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .history-select {
+            padding: 0.5rem 1rem;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 6px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.875rem;
+            cursor: pointer;
+            min-height: 40px;
+        }
+
+        .history-select option {
+            background: var(--gunmetal);
+            color: white;
+        }
+
+        .btn-export {
+            background: var(--terracotta);
+            color: white;
+            border: none;
+            padding: 0.5rem 1.25rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            min-height: 40px;
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        .btn-export:hover {
+            background: #b08f66;
+        }
+
+        .btn-export:active {
+            transform: scale(0.97);
+        }
+
+        .history-content {
+            padding: 1.5rem;
+            overflow-x: auto;
+        }
+
+        .history-loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+
+        .history-table th,
+        .history-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--cream-dark);
+        }
+
+        .history-table th {
+            background: var(--cream);
+            font-weight: 600;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+        }
+
+        .history-table th:first-child {
+            position: sticky;
+            left: 0;
+            z-index: 2;
+        }
+
+        .history-table td:first-child {
+            font-weight: 600;
+            color: var(--gunmetal);
+            position: sticky;
+            left: 0;
+            background: var(--warm-white);
+            min-width: 140px;
+        }
+
+        .history-table tr:hover td {
+            background: var(--cream);
+        }
+
+        .history-table tr:hover td:first-child {
+            background: var(--cream);
+        }
+
+        .rate-cell {
+            font-family: 'JetBrains Mono', monospace;
+            text-align: right;
+            min-width: 80px;
+        }
+
+        .rate-cell.up {
+            color: var(--success);
+        }
+
+        .rate-cell.down {
+            color: #9a6565;
+        }
+
+        .rate-cell.stable {
+            color: var(--text-muted);
+        }
+
+        .rate-null {
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .trend-indicator {
+            font-size: 0.75rem;
+            margin-left: 0.25rem;
+        }
+
+        .date-header {
+            font-size: 0.7rem;
+            white-space: nowrap;
+        }
+
+        .date-day {
+            display: block;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        /* Mobile adjustments for history */
+        @media (max-width: 480px) {
+            .history-section {
+                padding: 0.75rem;
+                padding-bottom: 180px;
+            }
+
+            .history-header {
+                padding: 1rem;
+            }
+
+            .history-title {
+                font-size: 1.125rem;
+            }
+
+            .history-controls {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .history-content {
+                padding: 0.75rem;
+            }
+
+            .history-table th,
+            .history-table td {
+                padding: 0.5rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -375,6 +587,26 @@
         <div class="loading">Loading products...</div>
     </div>
 
+    <!-- 7-Day History Section -->
+    <section class="history-section">
+        <div class="history-card">
+            <div class="history-header">
+                <h2 class="history-title">7-Day Rate History</h2>
+                <div class="history-controls">
+                    <select id="historyCategory" class="history-select" onchange="loadHistory()">
+                        <option value="all">All Categories</option>
+                    </select>
+                    <button class="btn-export" onclick="exportToPDF()">
+                        <span>Export PDF</span>
+                    </button>
+                </div>
+            </div>
+            <div class="history-content" id="historyContent">
+                <div class="history-loading">Loading history...</div>
+            </div>
+        </div>
+    </section>
+
     <div class="bottom-bar">
         <div class="changes-count"><span id="changesCount">0</span> changed</div>
         <button class="btn-save" id="saveBtn" disabled onclick="saveRates()">Save Rates</button>
@@ -386,6 +618,7 @@
         let products = [];
         let rates = {};
         let changedRates = {};
+        let historyData = null;
 
         async function init() {
             const user = await Auth.requireAuth(['admin', 'staff']);
@@ -396,6 +629,7 @@
             });
 
             await loadData();
+            await loadHistory();
         }
 
         async function loadData() {
@@ -565,11 +799,14 @@
                 }
             }
 
-            // Only clear rates that were successfully saved
-            failedProducts.forEach(pid => {
-                // Keep failed rates in changedRates so user can retry
+            // Only clear rates that were successfully saved (keep failed ones for retry)
+            const successfulRates = {};
+            Object.keys(changedRates).forEach(pid => {
+                if (failedProducts.includes(pid)) {
+                    successfulRates[pid] = changedRates[pid];
+                }
             });
-            changedRates = {};
+            changedRates = successfulRates;
             updateSaveButton();
 
             btn.textContent = 'Save Rates';
@@ -587,6 +824,177 @@
             toast.textContent = message;
             toast.className = 'toast show' + (isError ? ' error' : '');
             setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // History functions
+        async function loadHistory() {
+            const container = document.getElementById('historyContent');
+            const categorySelect = document.getElementById('historyCategory');
+            const selectedCategory = categorySelect.value;
+
+            container.innerHTML = '<div class="history-loading">Loading history...</div>';
+
+            try {
+                const url = `/api/market-rates/history-summary?days=7${selectedCategory !== 'all' ? `&category=${encodeURIComponent(selectedCategory)}` : ''}`;
+                const res = await fetch(url, { credentials: 'include' });
+
+                if (!res.ok) {
+                    throw new Error('Failed to load history');
+                }
+
+                const data = await res.json();
+                historyData = data;
+
+                // Populate category dropdown (only on first load)
+                if (categorySelect.options.length <= 1 && data.categories) {
+                    data.categories.forEach(cat => {
+                        const option = document.createElement('option');
+                        option.value = cat;
+                        option.textContent = cat.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                        categorySelect.appendChild(option);
+                    });
+                }
+
+                renderHistory(data);
+            } catch (e) {
+                console.error('Failed to load history:', e);
+                container.innerHTML = '<div class="history-loading">Failed to load history</div>';
+            }
+        }
+
+        function renderHistory(data) {
+            const container = document.getElementById('historyContent');
+
+            if (!data.data || data.data.length === 0) {
+                container.innerHTML = '<div class="history-loading">No history data available</div>';
+                return;
+            }
+
+            // Build date headers
+            const dates = data.data[0].rates.map(r => r.date);
+            const dateHeaders = dates.map(dateStr => {
+                const date = new Date(dateStr);
+                const day = date.toLocaleDateString('en-IN', { weekday: 'short' });
+                const formatted = date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+                return `<th class="date-header">${formatted}<span class="date-day">${day}</span></th>`;
+            }).join('');
+
+            // Build table rows
+            const rows = data.data.map(product => {
+                const rateCells = product.rates.map(r => {
+                    if (r.rate === null) {
+                        return '<td class="rate-cell rate-null">-</td>';
+                    }
+                    const trendClass = r.trend || 'stable';
+                    const trendIcon = r.trend === 'up' ? '↑' : (r.trend === 'down' ? '↓' : '');
+                    return `<td class="rate-cell ${trendClass}">${r.rate.toFixed(2)}${trendIcon ? `<span class="trend-indicator">${trendIcon}</span>` : ''}</td>`;
+                }).join('');
+
+                return `
+                    <tr>
+                        <td>${escapeHtml(product.name)}<br><small style="color: var(--text-muted); font-weight: 400;">per ${escapeHtml(product.unit)}</small></td>
+                        ${rateCells}
+                    </tr>
+                `;
+            }).join('');
+
+            container.innerHTML = `
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            ${dateHeaders}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function exportToPDF() {
+            if (!historyData || !historyData.data || historyData.data.length === 0) {
+                showToast('No data to export', true);
+                return;
+            }
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({
+                    orientation: 'landscape',
+                    unit: 'mm',
+                    format: 'a4'
+                });
+
+                // Title
+                doc.setFontSize(18);
+                doc.setTextColor(46, 53, 50);
+                doc.text('Pratibha Marketing - 7-Day Market Rate History', 14, 20);
+
+                // Subtitle with date range
+                doc.setFontSize(10);
+                doc.setTextColor(138, 145, 140);
+                const categorySelect = document.getElementById('historyCategory');
+                const selectedCategory = categorySelect.value === 'all' ? 'All Categories' : categorySelect.options[categorySelect.selectedIndex].text;
+                doc.text(`${historyData.startDate} to ${historyData.endDate} | ${selectedCategory}`, 14, 27);
+
+                // Prepare table data
+                const dates = historyData.data[0].rates.map(r => {
+                    const date = new Date(r.date);
+                    return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+                });
+
+                const tableHead = [['Product', 'Unit', ...dates]];
+                const tableBody = historyData.data.map(product => {
+                    const rates = product.rates.map(r => r.rate !== null ? r.rate.toFixed(2) : '-');
+                    return [product.name, product.unit, ...rates];
+                });
+
+                // Generate table
+                doc.autoTable({
+                    startY: 32,
+                    head: tableHead,
+                    body: tableBody,
+                    theme: 'grid',
+                    headStyles: {
+                        fillColor: [46, 53, 50],
+                        textColor: [255, 255, 255],
+                        fontSize: 8,
+                        fontStyle: 'bold'
+                    },
+                    bodyStyles: {
+                        fontSize: 8,
+                        textColor: [31, 36, 33]
+                    },
+                    columnStyles: {
+                        0: { fontStyle: 'bold', cellWidth: 40 },
+                        1: { cellWidth: 20 }
+                    },
+                    alternateRowStyles: {
+                        fillColor: [249, 247, 243]
+                    },
+                    margin: { left: 14, right: 14 }
+                });
+
+                // Footer
+                const pageCount = doc.internal.getNumberOfPages();
+                for (let i = 1; i <= pageCount; i++) {
+                    doc.setPage(i);
+                    doc.setFontSize(8);
+                    doc.setTextColor(138, 145, 140);
+                    doc.text(`Generated on ${new Date().toLocaleString('en-IN')} | Page ${i} of ${pageCount}`, 14, doc.internal.pageSize.height - 10);
+                }
+
+                // Save the PDF
+                const filename = `market-rates-${historyData.startDate}-to-${historyData.endDate}.pdf`;
+                doc.save(filename);
+
+                showToast('PDF exported successfully');
+            } catch (e) {
+                console.error('PDF export failed:', e);
+                showToast('Failed to export PDF', true);
+            }
         }
 
         init();
