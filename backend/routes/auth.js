@@ -157,6 +157,13 @@ router.post('/login', [
       maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
     });
 
+    // Only return essential customer data (exclude payment/credit info)
+    const safeCustomer = user.customer ? {
+      _id: user.customer._id,
+      name: user.customer.name,
+      pricingType: user.customer.pricingType
+    } : null;
+
     res.json({
       success: true,
       user: {
@@ -164,7 +171,7 @@ router.post('/login', [
         name: user.name,
         email: user.email,
         role: user.role,
-        customer: user.customer || null  // Full customer object with pricing data
+        customer: safeCustomer
       },
       token
     });
@@ -216,6 +223,7 @@ router.get('/me', async (req, res, next) => {
           message: 'Invalid session'
         });
       }
+      // Only return essential customer data (exclude payment/credit info)
       return res.json({
         success: true,
         user: {
@@ -223,7 +231,11 @@ router.get('/me', async (req, res, next) => {
           name: customer.name,
           email: null,
           role: 'customer',
-          customer: customer,
+          customer: {
+            _id: customer._id,
+            name: customer.name,
+            pricingType: customer.pricingType
+          },
           isMagicLink: true
         }
       });
@@ -239,9 +251,22 @@ router.get('/me', async (req, res, next) => {
       });
     }
 
+    // Only return essential user/customer data (exclude payment/credit info)
+    const safeCustomer = user.customer ? {
+      _id: user.customer._id,
+      name: user.customer.name,
+      pricingType: user.customer.pricingType
+    } : null;
+
     res.json({
       success: true,
-      user
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        customer: safeCustomer
+      }
     });
   } catch (error) {
     next(error);
@@ -275,8 +300,8 @@ router.get('/magic/:token', async (req, res, next) => {
       });
     }
 
-    // Check if magic link is expired (48 hours validity)
-    const MAGIC_LINK_EXPIRY_HOURS = 48;
+    // Check if magic link is expired (configurable, default 48 hours)
+    const MAGIC_LINK_EXPIRY_HOURS = parseInt(process.env.MAGIC_LINK_EXPIRY_HOURS) || 48;
     if (customer.magicLinkCreatedAt) {
       const expiryTime = new Date(customer.magicLinkCreatedAt.getTime() + (MAGIC_LINK_EXPIRY_HOURS * 60 * 60 * 1000));
       if (new Date() > expiryTime) {
@@ -307,6 +332,7 @@ router.get('/magic/:token', async (req, res, next) => {
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
       });
 
+      // Only return essential customer data (exclude payment/credit info)
       return res.json({
         success: true,
         user: {
@@ -314,7 +340,11 @@ router.get('/magic/:token', async (req, res, next) => {
           name: customer.name,
           email: null,
           role: 'customer',
-          customer: customer
+          customer: {
+            _id: customer._id,
+            name: customer.name,
+            pricingType: customer.pricingType
+          }
         },
         message: 'Magic link authenticated'
       });
@@ -330,6 +360,7 @@ router.get('/magic/:token', async (req, res, next) => {
       maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
     });
 
+    // Only return essential customer data (exclude payment/credit info)
     res.json({
       success: true,
       user: {
@@ -337,7 +368,11 @@ router.get('/magic/:token', async (req, res, next) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        customer: customer
+        customer: {
+          _id: customer._id,
+          name: customer.name,
+          pricingType: customer.pricingType
+        }
       },
       message: 'Magic link authenticated'
     });

@@ -766,7 +766,7 @@
             }
 
             container.innerHTML = filtered.map(o => `
-                <div class="order-card" onclick="viewOrder('${o._id}')">
+                <div class="order-card" onclick="viewOrder('${escapeHtml(o._id)}')">
                     <div class="order-top">
                         <div class="order-number">#${escapeHtml(o.orderNumber)}</div>
                         <div class="order-amount">₹${(o.totalAmount || 0).toLocaleString('en-IN')}</div>
@@ -775,8 +775,8 @@
                     <div class="order-bottom">
                         <div class="order-date">${new Date(o.createdAt).toLocaleDateString('en-IN')}</div>
                         <div class="order-badges">
-                            <span class="badge badge-${o.status}">${o.status}</span>
-                            <span class="badge badge-${o.paymentStatus}">${o.paymentStatus}</span>
+                            <span class="badge badge-${escapeHtml(o.status)}">${escapeHtml(o.status)}</span>
+                            <span class="badge badge-${escapeHtml(o.paymentStatus)}">${escapeHtml(o.paymentStatus)}</span>
                         </div>
                     </div>
                 </div>
@@ -830,7 +830,7 @@
                         </div>
                         <div>
                             <div class="info-label">Status</div>
-                            <div class="info-value"><span class="badge badge-${order.status}">${order.status}</span></div>
+                            <div class="info-value"><span class="badge badge-${escapeHtml(order.status)}">${escapeHtml(order.status)}</span></div>
                         </div>
                     </div>
 

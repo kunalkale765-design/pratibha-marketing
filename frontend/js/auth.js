@@ -31,10 +31,24 @@ const Auth = {
 
     /**
      * Store user data after login
+     * Only stores essential fields to minimize exposure in localStorage
      * @param {Object} user
      */
     setUser(user) {
-        localStorage.setItem(this.USER_KEY, JSON.stringify(user));
+        // Only store essential data - exclude sensitive info like payment/credit
+        const safeUser = {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            customer: user.customer ? {
+                _id: user.customer._id,
+                name: user.customer.name,
+                pricingType: user.customer.pricingType
+            } : null,
+            isMagicLink: user.isMagicLink || false
+        };
+        localStorage.setItem(this.USER_KEY, JSON.stringify(safeUser));
     },
 
     /**

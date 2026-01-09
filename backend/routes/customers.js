@@ -18,8 +18,13 @@ const validateCustomer = [
 // @access  Private (Admin, Staff)
 router.get('/', protect, authorize('admin', 'staff'), async (req, res, next) => {
   try {
-    const { search, isActive } = req.query;
+    const { search, isActive, limit: rawLimit, page: rawPage } = req.query;
     const filter = {};
+
+    // Validate and cap limit to prevent DoS (min 1, max 500, default 100)
+    const limit = Math.min(Math.max(parseInt(rawLimit) || 100, 1), 500);
+    const page = Math.max(parseInt(rawPage) || 1, 1);
+    const skip = (page - 1) * limit;
 
     if (search) {
       filter.$or = [
@@ -38,13 +43,21 @@ router.get('/', protect, authorize('admin', 'staff'), async (req, res, next) => 
       filter.isActive = true;
     }
 
-    const customers = await Customer.find(filter)
-      .select('-__v')
-      .sort({ name: 1 });
+    const [customers, total] = await Promise.all([
+      Customer.find(filter)
+        .select('-__v')
+        .sort({ name: 1 })
+        .skip(skip)
+        .limit(limit),
+      Customer.countDocuments(filter)
+    ]);
 
     res.json({
       success: true,
       count: customers.length,
+      total,
+      page,
+      pages: Math.ceil(total / limit),
       data: customers
     });
   } catch (error) {

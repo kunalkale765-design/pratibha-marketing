@@ -59,13 +59,15 @@ router.get('/', protect, async (req, res, next) => {
 // @access  Private (All authenticated users)
 router.get('/all', protect, async (req, res, next) => {
   try {
-    const { limit = 100 } = req.query;
+    const { limit: rawLimit } = req.query;
+    // Validate and cap limit to prevent DoS (min 1, max 1000, default 100)
+    const limit = Math.min(Math.max(parseInt(rawLimit) || 100, 1), 1000);
 
     const rates = await MarketRate.find()
       .populate('product', 'name unit')
       .select('-__v')
       .sort({ effectiveDate: -1 })
-      .limit(parseInt(limit));
+      .limit(limit);
 
     res.json({
       success: true,
@@ -82,12 +84,14 @@ router.get('/all', protect, async (req, res, next) => {
 // @access  Private (All authenticated users)
 router.get('/history/:productId', protect, async (req, res, next) => {
   try {
-    const { limit = 30 } = req.query;
+    const { limit: rawLimit } = req.query;
+    // Validate and cap limit to prevent DoS (min 1, max 500, default 30)
+    const limit = Math.min(Math.max(parseInt(rawLimit) || 30, 1), 500);
 
     const history = await MarketRate.find({ product: req.params.productId })
       .select('-__v')
       .sort({ effectiveDate: -1 })
-      .limit(parseInt(limit));
+      .limit(limit);
 
     if (history.length === 0) {
       res.status(404);

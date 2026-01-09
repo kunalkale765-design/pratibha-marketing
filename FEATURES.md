@@ -652,3 +652,194 @@ transition: all 0.3s ease; /* Cards */
 **Icons:**
 - SVG icon at `/icons/icon.svg`
 - Apple touch icon support
+
+---
+
+## Future Features (Planned)
+
+### 1. Email/SMS Notification System
+
+**Priority:** Medium
+**Status:** Planned
+
+#### Notification Types
+
+| # | Trigger Event | Message | Channel | Recipient |
+|---|---------------|---------|---------|-----------|
+| **Order Lifecycle** |
+| 1 | Order created | "Order #ORD2401001 placed for ₹25,000" | Email + SMS | Customer |
+| 2 | Order confirmed | "Your order has been confirmed" | SMS | Customer |
+| 3 | Order packed | "Your order is packed and ready" | SMS | Customer |
+| 4 | Order shipped | "Your order is on the way" | Email + SMS | Customer |
+| 5 | Order delivered | "Order delivered successfully" | SMS | Customer |
+| 6 | Order cancelled | "Order #X has been cancelled" | Email | Customer |
+| **Payments** |
+| 7 | Payment received | "Payment of ₹5,000 received. Balance: ₹20,000" | SMS | Customer |
+| 8 | Payment reminder | "Reminder: ₹15,000 pending for order #X" | Email + SMS | Customer |
+| **Admin Alerts** |
+| 9 | New order alert | "New order from ABC Traders - ₹25,000" | Email | Admin/Staff |
+| 10 | Daily summary | "Today: 15 orders, ₹2.5L revenue, 3 pending" | Email | Admin |
+| **Market Rates** |
+| 11 | Price change alert | "Wheat price changed: ₹2400 → ₹2600 (+8%)" | SMS | Subscribed customers |
+
+#### Technical Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Your Application                        │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Routes (orders.js, customers.js)                           │
+│       │                                                      │
+│       ▼                                                      │
+│  ┌─────────────────────┐                                    │
+│  │ NotificationService │ ◄── Centralized notification logic │
+│  └─────────────────────┘                                    │
+│       │           │                                          │
+│       ▼           ▼                                          │
+│  ┌─────────┐ ┌─────────┐                                    │
+│  │  Email  │ │   SMS   │                                    │
+│  │ Service │ │ Service │                                    │
+│  └────┬────┘ └────┬────┘                                    │
+│       │           │                                          │
+└───────┼───────────┼──────────────────────────────────────────┘
+        │           │
+        ▼           ▼
+   ┌─────────┐ ┌─────────┐
+   │ SendGrid│ │ Twilio/ │
+   │   API   │ │  MSG91  │
+   └─────────┘ └─────────┘
+```
+
+#### Files to Create
+
+```
+backend/
+├── config/
+│   └── notification.js      # Provider API keys, settings
+├── services/
+│   ├── emailService.js      # SendGrid/Nodemailer integration
+│   ├── smsService.js        # Twilio/MSG91 integration
+│   └── notificationService.js  # Main orchestrator
+├── templates/
+│   └── emails/
+│       ├── orderConfirmation.html
+│       ├── orderShipped.html
+│       ├── paymentReceived.html
+│       └── dailySummary.html
+└── jobs/
+    └── scheduledNotifications.js  # Daily summary cron job
+```
+
+#### Provider Recommendations
+
+**Email:**
+| Provider | Free Tier | Cost After | Notes |
+|----------|-----------|------------|-------|
+| **SendGrid** | 100/day | $15/mo for 50K | Best choice - reliable, easy setup |
+| **Nodemailer + Gmail** | 500/day | Free | Budget option - may hit spam |
+| **AWS SES** | 62K/mo (EC2) | $0.10/1000 | Best at scale |
+
+**SMS:**
+| Provider | Cost per SMS | Notes |
+|----------|--------------|-------|
+| **MSG91** | ₹0.15-0.25 | Best for India - cheapest |
+| **Twilio** | ₹0.50-0.80 | Best for global - most reliable |
+| **AWS SNS** | ₹0.40-0.50 | Good if using AWS |
+
+#### Database Changes Required
+
+Add to Customer schema:
+
+```javascript
+notificationPreferences: {
+  email: { type: Boolean, default: true },
+  sms: { type: Boolean, default: true },
+  orderUpdates: { type: Boolean, default: true },
+  paymentReminders: { type: Boolean, default: true },
+  marketAlerts: { type: Boolean, default: false }
+}
+```
+
+#### Environment Variables Required
+
+```bash
+# Email (SendGrid)
+SENDGRID_API_KEY=SG.xxxxxxxxxxxx
+FROM_EMAIL=orders@pratibhamarketing.com
+
+# SMS (MSG91)
+MSG91_API_KEY=xxxxxxxxxxxx
+MSG91_SENDER_ID=PRATBH    # 6 char sender ID
+
+# OR SMS (Twilio)
+TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxx
+TWILIO_AUTH_TOKEN=xxxxxxxxxxxx
+TWILIO_PHONE_NUMBER=+1234567890
+```
+
+#### Cost Estimate (~50 orders/day)
+
+| Item | Volume | Cost/month |
+|------|--------|------------|
+| Emails (SendGrid free) | ~100/day | ₹0 |
+| SMS (MSG91) | ~200/day | ~₹900-1500 |
+| **Total** | | **~₹1,000-1,500/month** |
+
+---
+
+### 2. Downloadable Reports/Exports
+
+**Priority:** Medium
+**Status:** Planned
+
+#### Report Types
+- Orders export (CSV/PDF) with date filters
+- Customer list export
+- Payment history export
+- Daily/weekly/monthly sales summary
+- Product-wise sales report
+
+#### Implementation Notes
+- Use `json2csv` for CSV exports
+- Use `pdfkit` or `puppeteer` for PDF generation
+- Add export buttons to orders, customers, and dashboard pages
+
+---
+
+### 3. Inventory Stock Tracking
+
+**Priority:** Low
+**Status:** Planned
+
+#### Features
+- Add `stockQuantity` field to Product model
+- Auto-deduct stock on order confirmation
+- Low stock alerts (notification integration)
+- Stock history/audit log
+- Restock functionality
+
+#### Database Changes
+
+```javascript
+// Add to Product schema
+stockQuantity: { type: Number, default: 0 },
+lowStockThreshold: { type: Number, default: 10 },
+stockHistory: [{
+  quantity: Number,
+  type: { type: String, enum: ['add', 'deduct', 'adjust'] },
+  reason: String,
+  orderId: ObjectId,
+  date: Date
+}]
+```
+
+---
+
+### Implementation Priority
+
+| Feature | Priority | Dependencies |
+|---------|----------|--------------|
+| Email/SMS Notifications | Medium | External API accounts |
+| Report Exports | Medium | None |
+| Stock Tracking | Low | None |

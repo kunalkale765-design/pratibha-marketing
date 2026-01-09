@@ -63,7 +63,9 @@ const validateOrder = [
 // @access  Private
 router.get('/', protect, async (req, res, next) => {
   try {
-    const { status, customer, startDate, endDate, limit = 50 } = req.query;
+    const { status, customer, startDate, endDate, limit: rawLimit } = req.query;
+    // Validate and cap limit to prevent DoS (min 1, max 1000, default 50)
+    const limit = Math.min(Math.max(parseInt(rawLimit) || 50, 1), 1000);
     const filter = {};
 
     // SECURITY: Customers can only see their own orders
@@ -91,8 +93,24 @@ router.get('/', protect, async (req, res, next) => {
 
     if (startDate || endDate) {
       filter.createdAt = {};
-      if (startDate) filter.createdAt.$gte = new Date(startDate);
-      if (endDate) filter.createdAt.$lte = new Date(endDate);
+      if (startDate) {
+        const parsedStart = new Date(startDate);
+        if (isNaN(parsedStart.getTime())) {
+          return res.status(400).json({ success: false, message: 'Invalid startDate format' });
+        }
+        filter.createdAt.$gte = parsedStart;
+      }
+      if (endDate) {
+        const parsedEnd = new Date(endDate);
+        if (isNaN(parsedEnd.getTime())) {
+          return res.status(400).json({ success: false, message: 'Invalid endDate format' });
+        }
+        filter.createdAt.$lte = parsedEnd;
+      }
+      // Validate date range: endDate should be >= startDate
+      if (startDate && endDate && filter.createdAt.$gte > filter.createdAt.$lte) {
+        return res.status(400).json({ success: false, message: 'endDate must be greater than or equal to startDate' });
+      }
     }
 
     const orders = await Order.find(filter)
@@ -100,7 +118,7 @@ router.get('/', protect, async (req, res, next) => {
       .populate('products.product', 'name unit')
       .select('-__v')
       .sort({ createdAt: -1 })
-      .limit(parseInt(limit));
+      .limit(limit);
 
     res.json({
       success: true,

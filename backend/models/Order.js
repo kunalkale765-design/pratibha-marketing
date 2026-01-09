@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const Counter = require('./Counter');
 
 const orderSchema = new mongoose.Schema({
   orderNumber: {
@@ -79,26 +80,20 @@ const orderSchema = new mongoose.Schema({
 // Generate order number before saving using atomic counter to avoid race conditions
 orderSchema.pre('save', async function(next) {
   if (!this.orderNumber) {
-    const date = new Date();
-    const year = date.getFullYear().toString().slice(-2);
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const prefix = `ORD${year}${month}`;
+    try {
+      const date = new Date();
+      const year = date.getFullYear().toString().slice(-2);
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const prefix = `ORD${year}${month}`;
 
-    // Find the latest order with this prefix and increment atomically
-    const latestOrder = await mongoose.model('Order')
-      .findOneAndUpdate(
-        { orderNumber: { $regex: `^${prefix}` } },
-        { $inc: { _tempCounter: 0 } }, // No-op update just to lock
-        { sort: { orderNumber: -1 }, new: false }
-      );
+      // Use atomic counter for guaranteed unique sequence numbers
+      const counterName = `order_${prefix}`;
+      const seq = await Counter.getNextSequence(counterName);
 
-    let nextNum = 1;
-    if (latestOrder && latestOrder.orderNumber) {
-      const currentNum = parseInt(latestOrder.orderNumber.slice(-4), 10);
-      nextNum = currentNum + 1;
+      this.orderNumber = `${prefix}${seq.toString().padStart(4, '0')}`;
+    } catch (error) {
+      return next(new Error(`Failed to generate order number: ${error.message}`));
     }
-
-    this.orderNumber = `${prefix}${nextNum.toString().padStart(4, '0')}`;
   }
   next();
 });

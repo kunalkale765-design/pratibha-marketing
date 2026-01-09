@@ -442,7 +442,7 @@
             let html = '';
             for (const [cat, prods] of Object.entries(grouped)) {
                 const catName = cat.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                html += `<div class="category-header">${catName}</div>`;
+                html += `<div class="category-header">${escapeHtml(catName)}</div>`;
 
                 prods.forEach(p => {
                     const currentRate = rates[p._id] || 0;
@@ -453,10 +453,10 @@
                                 <div class="product-unit">per ${escapeHtml(p.unit)}</div>
                             </div>
                             <input type="number" class="rate-input"
-                                id="rate-${p._id}"
-                                data-id="${p._id}"
-                                data-original="${currentRate}"
-                                value="${currentRate}"
+                                id="rate-${escapeHtml(p._id)}"
+                                data-id="${escapeHtml(p._id)}"
+                                data-original="${escapeHtml(String(currentRate))}"
+                                value="${escapeHtml(String(currentRate))}"
                                 min="0" step="0.01"
                                 onfocus="clearZero(this)"
                                 onblur="restoreValue(this)"

@@ -13,6 +13,10 @@
     <link rel="apple-touch-icon" href="/icons/icon.svg">
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Chart.js for analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"
+            integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4"
+            crossorigin="anonymous"></script>
     <style>
         :root {
             --gunmetal: #2e3532;
@@ -627,6 +631,115 @@
             animation: fadeInUp 0.4s ease backwards;
             animation-delay: 0.3s;
         }
+
+        /* Analytics Section */
+        .analytics-section {
+            margin-top: 1.5rem;
+            animation: fadeInUp 0.4s ease backwards;
+            animation-delay: 0.4s;
+        }
+
+        .analytics-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .analytics-header h2 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--gunmetal);
+        }
+
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .analytics-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .analytics-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .analytics-card {
+            background: var(--warm-white);
+            border-radius: 12px;
+            border: 1px solid var(--pale-slate-light);
+            padding: 1rem;
+            overflow: hidden;
+        }
+
+        .analytics-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--pale-slate-light);
+        }
+
+        .analytics-card-title {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--gunmetal);
+        }
+
+        .analytics-card-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 200px;
+            width: 100%;
+        }
+
+        .analytics-summary {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px dashed var(--pale-slate-light);
+        }
+
+        .summary-item {
+            text-align: center;
+        }
+
+        .summary-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--dusty-olive-dark);
+        }
+
+        .summary-label {
+            font-size: 0.6875rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .analytics-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
     </style>
 </head>
 <body>
@@ -714,6 +827,77 @@
             </div>
         </div>
 
+        <!-- Analytics Section -->
+        <section class="analytics-section">
+            <div class="analytics-header">
+                <h2>Analytics</h2>
+            </div>
+            <div class="analytics-grid">
+                <!-- Order Status Chart -->
+                <div class="analytics-card">
+                    <div class="analytics-card-header">
+                        <div>
+                            <div class="analytics-card-title">Order Status</div>
+                            <div class="analytics-card-subtitle">Distribution by status</div>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="orderStatusChart"></canvas>
+                    </div>
+                    <div class="analytics-summary" id="orderStatusSummary">
+                        <div class="summary-item">
+                            <div class="summary-value" id="pendingCount">-</div>
+                            <div class="summary-label">Pending</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-value" id="processingCount">-</div>
+                            <div class="summary-label">Processing</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-value" id="deliveredCount">-</div>
+                            <div class="summary-label">Delivered</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Revenue Trend Chart -->
+                <div class="analytics-card">
+                    <div class="analytics-card-header">
+                        <div>
+                            <div class="analytics-card-title">Revenue Trend</div>
+                            <div class="analytics-card-subtitle">Last 7 days</div>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                    <div class="analytics-summary">
+                        <div class="summary-item">
+                            <div class="summary-value" id="weekTotal">-</div>
+                            <div class="summary-label">This Week</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-value" id="avgDaily">-</div>
+                            <div class="summary-label">Avg/Day</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top Products Chart -->
+                <div class="analytics-card">
+                    <div class="analytics-card-header">
+                        <div>
+                            <div class="analytics-card-title">Top Products</div>
+                            <div class="analytics-card-subtitle">By quantity ordered</div>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="topProductsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <div class="api-status">
             <span class="api-dot" id="apiDot"></span>
             <span id="apiStatus">Checking API...</span>
@@ -777,6 +961,9 @@
                 document.getElementById('totalProfit').textContent = '₹' + totalProfit.toLocaleString('en-IN');
 
                 displayProcurementList();
+
+                // Load analytics charts with orders data
+                loadAnalytics(ordersList);
             } catch (error) {
                 console.error('Error loading stats:', error);
             }
@@ -957,28 +1144,56 @@
             btn.textContent = 'Saving...';
             btn.disabled = true;
 
-            for (const rateData of Object.values(changedRates)) {
+            const failures = [];
+            const successfulProducts = [];
+
+            for (const [productId, rateData] of Object.entries(changedRates)) {
                 try {
-                    await fetch('/api/market-rates', {
+                    const response = await fetch('/api/market-rates', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         credentials: 'include',
                         body: JSON.stringify({ product: rateData.product, rate: rateData.rate, effectiveDate: new Date().toISOString() })
                     });
+
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        failures.push({ productName: rateData.productName || productId, error: errorData.message || `HTTP ${response.status}` });
+                    } else {
+                        successfulProducts.push(productId);
+                    }
                 } catch (error) {
                     console.error('Error saving rate:', error);
+                    failures.push({ productName: rateData.productName || productId, error: error.message || 'Network error' });
                 }
             }
 
-            changedRates = {};
+            // Only clear successful rates from changedRates
+            for (const productId of successfulProducts) {
+                delete changedRates[productId];
+            }
+
             btn.textContent = 'Save Rates';
             btn.disabled = false;
-            btn.classList.remove('show');
 
-            document.querySelectorAll('.item-rate-input').forEach(input => {
-                input.value = '';
-                input.classList.remove('changed');
-            });
+            // Show appropriate message based on results
+            if (failures.length > 0) {
+                const failedNames = failures.map(f => f.productName).join(', ');
+                alert(`Failed to save rates for: ${failedNames}\n\nPlease try again.`);
+                // Keep button visible if there are still failed rates
+                if (Object.keys(changedRates).length > 0) {
+                    btn.classList.add('show');
+                } else {
+                    btn.classList.remove('show');
+                }
+            } else {
+                btn.classList.remove('show');
+                // Clear input fields only if all succeeded
+                document.querySelectorAll('.item-rate-input').forEach(input => {
+                    input.value = '';
+                    input.classList.remove('changed');
+                });
+            }
 
             loadDashboardStats();
         }
@@ -998,6 +1213,210 @@
             } catch (error) {
                 document.getElementById('apiDot').classList.add('offline');
                 document.getElementById('apiStatus').textContent = 'API Offline';
+            }
+        }
+
+        // Analytics Charts
+        let orderStatusChart = null;
+        let revenueChart = null;
+        let topProductsChart = null;
+
+        const chartColors = {
+            olive: 'rgb(126, 145, 129)',
+            oliveLight: 'rgba(126, 145, 129, 0.2)',
+            gunmetal: 'rgb(46, 53, 50)',
+            terracotta: 'rgb(196, 167, 125)',
+            success: 'rgb(93, 122, 95)',
+            warning: 'rgb(184, 154, 90)',
+            error: 'rgb(154, 101, 101)',
+            slate: 'rgb(199, 206, 219)'
+        };
+
+        async function loadAnalytics(ordersList) {
+            try {
+                // Order Status Distribution
+                const statusCounts = {
+                    pending: 0,
+                    confirmed: 0,
+                    processing: 0,
+                    packed: 0,
+                    shipped: 0,
+                    delivered: 0,
+                    cancelled: 0
+                };
+
+                ordersList.forEach(order => {
+                    if (statusCounts.hasOwnProperty(order.status)) {
+                        statusCounts[order.status]++;
+                    }
+                });
+
+                // Update summary counts
+                document.getElementById('pendingCount').textContent = statusCounts.pending;
+                document.getElementById('processingCount').textContent =
+                    statusCounts.processing + statusCounts.packed + statusCounts.shipped;
+                document.getElementById('deliveredCount').textContent = statusCounts.delivered;
+
+                // Order Status Doughnut Chart
+                const statusCtx = document.getElementById('orderStatusChart');
+                if (orderStatusChart) orderStatusChart.destroy();
+
+                orderStatusChart = new Chart(statusCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Pending', 'Confirmed', 'Processing', 'Packed', 'Shipped', 'Delivered', 'Cancelled'],
+                        datasets: [{
+                            data: [
+                                statusCounts.pending,
+                                statusCounts.confirmed,
+                                statusCounts.processing,
+                                statusCounts.packed,
+                                statusCounts.shipped,
+                                statusCounts.delivered,
+                                statusCounts.cancelled
+                            ],
+                            backgroundColor: [
+                                chartColors.warning,
+                                chartColors.olive,
+                                chartColors.terracotta,
+                                chartColors.gunmetal,
+                                chartColors.slate,
+                                chartColors.success,
+                                chartColors.error
+                            ],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '60%',
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+
+                // Revenue Trend (Last 7 Days)
+                const last7Days = [];
+                const revenueByDay = {};
+
+                for (let i = 6; i >= 0; i--) {
+                    const date = new Date();
+                    date.setDate(date.getDate() - i);
+                    const dateStr = date.toISOString().split('T')[0];
+                    last7Days.push(dateStr);
+                    revenueByDay[dateStr] = 0;
+                }
+
+                ordersList.forEach(order => {
+                    if (order.status !== 'cancelled') {
+                        const orderDate = new Date(order.createdAt).toISOString().split('T')[0];
+                        if (revenueByDay.hasOwnProperty(orderDate)) {
+                            revenueByDay[orderDate] += order.totalAmount || 0;
+                        }
+                    }
+                });
+
+                const revenueData = last7Days.map(date => revenueByDay[date]);
+                const weekTotal = revenueData.reduce((sum, val) => sum + val, 0);
+                const avgDaily = weekTotal / 7;
+
+                document.getElementById('weekTotal').textContent = '₹' + weekTotal.toLocaleString('en-IN');
+                document.getElementById('avgDaily').textContent = '₹' + Math.round(avgDaily).toLocaleString('en-IN');
+
+                const revenueCtx = document.getElementById('revenueChart');
+                if (revenueChart) revenueChart.destroy();
+
+                revenueChart = new Chart(revenueCtx, {
+                    type: 'line',
+                    data: {
+                        labels: last7Days.map(d => {
+                            const date = new Date(d);
+                            return date.toLocaleDateString('en-IN', { weekday: 'short' });
+                        }),
+                        datasets: [{
+                            label: 'Revenue',
+                            data: revenueData,
+                            borderColor: chartColors.olive,
+                            backgroundColor: chartColors.oliveLight,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 4,
+                            pointBackgroundColor: chartColors.olive
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: value => '₹' + value.toLocaleString('en-IN')
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Top Products by Quantity
+                const productQuantities = {};
+                ordersList.forEach(order => {
+                    if (order.status !== 'cancelled' && order.products) {
+                        order.products.forEach(item => {
+                            const name = item.productName || 'Unknown';
+                            productQuantities[name] = (productQuantities[name] || 0) + (item.quantity || 0);
+                        });
+                    }
+                });
+
+                const sortedProducts = Object.entries(productQuantities)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 5);
+
+                const topProductsCtx = document.getElementById('topProductsChart');
+                if (topProductsChart) topProductsChart.destroy();
+
+                topProductsChart = new Chart(topProductsCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: sortedProducts.map(([name]) => name.length > 12 ? name.slice(0, 12) + '...' : name),
+                        datasets: [{
+                            label: 'Quantity',
+                            data: sortedProducts.map(([, qty]) => qty),
+                            backgroundColor: [
+                                chartColors.olive,
+                                chartColors.terracotta,
+                                chartColors.gunmetal,
+                                chartColors.success,
+                                chartColors.warning
+                            ],
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: 'y',
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            x: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+
+            } catch (error) {
+                console.error('Error loading analytics:', error);
             }
         }
 

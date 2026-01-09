@@ -47,12 +47,6 @@ const customerSchema = new mongoose.Schema({
     of: Number,
     default: new Map()
   },
-  // Legacy field - kept for backward compatibility
-  personalizedPricing: {
-    type: Map,
-    of: Number,
-    default: new Map()
-  },
   creditLimit: {
     type: Number,
     default: 0,

@@ -1,4 +1,10 @@
+// Preserve NODE_ENV if set (for tests)
+const preservedNodeEnv = process.env.NODE_ENV;
 require('dotenv').config();
+if (preservedNodeEnv) {
+  process.env.NODE_ENV = preservedNodeEnv;
+}
+const Sentry = require('@sentry/node');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -9,12 +15,30 @@ const cookieParser = require('cookie-parser');
 const path = require('path');
 const connectDB = require('./config/database');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./config/swagger');
+
+// Initialize Sentry (only in production/development, not in test)
+if (process.env.SENTRY_DSN && process.env.NODE_ENV !== 'test') {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || 'development',
+    tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+    integrations: [
+      Sentry.httpIntegration({ tracing: true }),
+      Sentry.expressIntegration(),
+    ],
+  });
+  console.log('Sentry error monitoring initialized');
+}
 
 // Initialize Express app
 const app = express();
 
-// Connect to MongoDB
-connectDB();
+// Connect to MongoDB (skip in test mode - tests use in-memory database)
+if (process.env.NODE_ENV !== 'test') {
+  connectDB();
+}
 
 // Security Middleware
 // ====================
@@ -44,13 +68,14 @@ app.use(cors({
   credentials: true
 }));
 
-// Rate Limiting - Prevent brute force attacks
+// Rate Limiting - Prevent brute force attacks (disabled in test mode)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // Limit each IP to 100 requests per windowMs
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === 'test' // Skip in test mode
 });
 
 // Apply rate limiting to API routes only
@@ -63,8 +88,21 @@ const authLimiter = rateLimit({
   max: 10, // Allow 10 attempts per 15 minutes
   message: 'Too many login attempts, please try again later.',
   skip: (req) => {
-    // Skip rate limiting for non-sensitive auth routes
-    return req.path === '/me' || req.path === '/logout';
+    // Skip rate limiting for non-sensitive auth routes or in test mode
+    return req.path === '/me' || req.path === '/logout' || process.env.NODE_ENV === 'test';
+  }
+});
+
+// Rate limiting for write operations (create/update/delete) on sensitive resources
+const writeOperationsLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 50, // Allow 50 write operations per 15 minutes
+  message: 'Too many requests, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => {
+    // Only limit POST, PUT, DELETE methods; skip in test mode
+    return req.method === 'GET' || process.env.NODE_ENV === 'test';
   }
 });
 
@@ -89,12 +127,26 @@ if (process.env.NODE_ENV === 'development') {
   });
 }
 
+// API Documentation (Swagger UI)
+// ================================
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Pratibha Marketing API Docs'
+}));
+
+// Serve OpenAPI spec as JSON
+app.get('/api/docs.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+
 // API Routes
 // ===========
 // Apply stricter rate limiting to auth routes
 app.use('/api/auth', authLimiter, require('./routes/auth'));
-app.use('/api/customers', require('./routes/customers'));
-app.use('/api/orders', require('./routes/orders'));
+// Apply write operations rate limiting to sensitive resources
+app.use('/api/customers', writeOperationsLimiter, require('./routes/customers'));
+app.use('/api/orders', writeOperationsLimiter, require('./routes/orders'));
 app.use('/api/products', require('./routes/products'));
 app.use('/api/market-rates', require('./routes/marketRates'));
 app.use('/api/supplier', require('./routes/supplier'));
@@ -104,9 +156,21 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     message: 'Server is running',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    sentry: process.env.SENTRY_DSN ? 'configured' : 'not configured'
   });
 });
+
+// Debug endpoint to test Sentry (only in development)
+if (process.env.NODE_ENV === 'development') {
+  app.get('/api/debug-sentry', (req, res, next) => {
+    try {
+      throw new Error('Sentry test error - this is a test!');
+    } catch (err) {
+      next(err);
+    }
+  });
+}
 
 // Serve static frontend files
 app.use(express.static(path.join(__dirname, '../frontend')));
@@ -133,26 +197,54 @@ app.get('*', (req, res, next) => {
 // Error Handling Middleware (must be last)
 // ==========================================
 app.use(notFound);
+
+// Sentry error handler - captures errors and sends to Sentry
+if (process.env.SENTRY_DSN && process.env.NODE_ENV !== 'test') {
+  app.use(Sentry.expressErrorHandler());
+}
+
 app.use(errorHandler);
 
 // Start Server
 // =============
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`
+// Only start server if not in test mode (Supertest handles server in tests)
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`
 ╔═══════════════════════════════════════════════╗
 ║   Server running in ${process.env.NODE_ENV} mode   ║
 ║   Port: ${PORT}                                ║
 ║   MongoDB: Connected                          ║
 ╚═══════════════════════════════════════════════╝
-  `);
-});
+    `);
+  });
+}
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err) => {
   console.error(`Unhandled Rejection: ${err.message}`);
+  // Send to Sentry if configured
+  if (process.env.SENTRY_DSN) {
+    Sentry.captureException(err);
+  }
   if (process.env.NODE_ENV === 'production') {
     process.exit(1);
   }
 });
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error(`Uncaught Exception: ${err.message}`);
+  // Send to Sentry if configured
+  if (process.env.SENTRY_DSN) {
+    Sentry.captureException(err);
+  }
+  if (process.env.NODE_ENV === 'production') {
+    process.exit(1);
+  }
+});
+
+// Export app for testing
+module.exports = app;

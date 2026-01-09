@@ -733,7 +733,7 @@
             if (type === 'contract') {
                 return '<span class="badge badge-contract">Contract</span>';
             } else if (type === 'markup') {
-                return `<span class="badge badge-markup">+${customer.markupPercentage || 0}%</span>`;
+                return `<span class="badge badge-markup">+${escapeHtml(String(customer.markupPercentage || 0))}%</span>`;
             }
             return '<span class="badge badge-market">Market</span>';
         }
@@ -757,12 +757,12 @@
                         ${c.address ? `<span>${escapeHtml(c.address)}</span>` : ''}
                     </div>
                     <div class="customer-actions">
-                        <button onclick="shareMagicLink('${c._id}')" class="btn-action link" title="Share order link">Link</button>
+                        <button onclick="shareMagicLink('${escapeHtml(c._id)}')" class="btn-action link" title="Share order link">Link</button>
                         ${c.pricingType === 'contract' ? `
-                            <button onclick="openContractPrices('${c._id}')" class="btn-action">Prices</button>
+                            <button onclick="openContractPrices('${escapeHtml(c._id)}')" class="btn-action">Prices</button>
                         ` : ''}
-                        <button onclick="editCustomerById('${c._id}')" class="btn-action primary">Edit</button>
-                        <button onclick="deleteCustomer('${c._id}')" class="btn-action danger">Delete</button>
+                        <button onclick="editCustomerById('${escapeHtml(c._id)}')" class="btn-action primary">Edit</button>
+                        <button onclick="deleteCustomer('${escapeHtml(c._id)}')" class="btn-action danger">Delete</button>
                     </div>
                 </div>
             `).join('');
@@ -958,14 +958,14 @@
                     <div class="contract-item">
                         <div class="contract-item-info">
                             <div class="contract-item-name">${escapeHtml(p.name)}</div>
-                            <div class="contract-item-base">per ${p.unit}</div>
+                            <div class="contract-item-base">per ${escapeHtml(p.unit)}</div>
                         </div>
                         <input type="number" step="0.01" min="0"
                             class="contract-price-input"
-                            data-product-id="${p._id}"
-                            value="${price}"
+                            data-product-id="${escapeHtml(p._id)}"
+                            value="${escapeHtml(String(price))}"
                             placeholder="₹">
-                        <span class="contract-item-unit">/${p.unit}</span>
+                        <span class="contract-item-unit">/${escapeHtml(p.unit)}</span>
                     </div>
                 `;
             }).join('');
