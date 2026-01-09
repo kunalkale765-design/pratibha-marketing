@@ -109,8 +109,14 @@ export function initPage(options = {}) {
   const {
     serviceWorker = true,
     logout = true,
-    modalEscape = true
+    modalEscape = true,
+    csrfPreFetch = true
   } = options;
+
+  // Pre-fetch CSRF token to ensure it's ready before form submissions
+  if (csrfPreFetch && typeof Auth !== 'undefined' && Auth.ensureCsrfToken) {
+    Auth.ensureCsrfToken().catch(err => console.warn('CSRF pre-fetch failed:', err));
+  }
 
   // Register service worker
   if (serviceWorker) {

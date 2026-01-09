@@ -400,6 +400,9 @@
         // Initialize
         registerServiceWorker();
 
+        // Pre-fetch CSRF token to ensure it's ready before form submission
+        Auth.ensureCsrfToken().catch(err => console.warn('CSRF pre-fetch failed:', err));
+
         // Elements
         const signupForm = document.getElementById('signupForm');
         const signupBtn = document.getElementById('signupBtn');
