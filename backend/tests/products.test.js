@@ -38,11 +38,51 @@ describe('Product Endpoints', () => {
 
     it('should return products including inactive for admin', async () => {
       const res = await request(app)
-        .get('/api/products?includeInactive=true')
+        .get('/api/products?isActive=all')
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(res.statusCode).toBe(200);
-      // Admin should see all including inactive
+      expect(res.body.data.length).toBe(3); // All including inactive
+    });
+
+    it('should filter by search term', async () => {
+      const res = await request(app)
+        .get('/api/products?search=Product A')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.data.length).toBe(1);
+      expect(res.body.data[0].name).toBe('Product A');
+    });
+
+    it('should filter by category', async () => {
+      const res = await request(app)
+        .get('/api/products?category=Vegetables')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.statusCode).toBe(200);
+      res.body.data.forEach(product => {
+        expect(product.category).toBe('Vegetables');
+      });
+    });
+
+    it('should filter to show only inactive products', async () => {
+      const res = await request(app)
+        .get('/api/products?isActive=false')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.data.length).toBe(1);
+      expect(res.body.data[0].isActive).toBe(false);
+    });
+
+    it('should handle regex special characters in search safely', async () => {
+      const res = await request(app)
+        .get('/api/products?search=.*')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.statusCode).toBe(200);
+      // Should not throw regex error
     });
 
     it('should reject unauthenticated access', async () => {
@@ -205,6 +245,42 @@ describe('Product Endpoints', () => {
 
       expect(res.statusCode).toBe(403);
     });
+
+    it('should return 404 for non-existent product', async () => {
+      const fakeId = '507f1f77bcf86cd799439011';
+      const res = await request(app)
+        .put(`/api/products/${fakeId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          name: 'Updated Name',
+          unit: 'kg'
+        });
+
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('should reject invalid unit on update', async () => {
+      const res = await request(app)
+        .put(`/api/products/${testProduct._id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          name: 'Test Product',
+          unit: 'invalid_unit'
+        });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('should reject missing name on update', async () => {
+      const res = await request(app)
+        .put(`/api/products/${testProduct._id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          unit: 'kg'
+        });
+
+      expect(res.statusCode).toBe(400);
+    });
   });
 
   describe('DELETE /api/products/:id', () => {
@@ -240,6 +316,15 @@ describe('Product Endpoints', () => {
         .set('Authorization', `Bearer ${customerToken}`);
 
       expect(res.statusCode).toBe(403);
+    });
+
+    it('should return 404 for non-existent product', async () => {
+      const fakeId = '507f1f77bcf86cd799439011';
+      const res = await request(app)
+        .delete(`/api/products/${fakeId}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.statusCode).toBe(404);
     });
   });
 

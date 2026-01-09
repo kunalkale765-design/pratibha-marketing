@@ -217,6 +217,145 @@ describe('Order Endpoints', () => {
     });
   });
 
+  describe('PUT /api/orders/:id', () => {
+    let testOrder;
+
+    beforeEach(async () => {
+      testOrder = await testUtils.createTestOrder(testCustomer, testProduct, {
+        totalAmount: 1000,
+        notes: 'Original notes'
+      });
+    });
+
+    it('should allow admin to update order products', async () => {
+      const newProduct = await testUtils.createTestProduct({ name: 'New Product', unit: 'bag' });
+
+      const res = await request(app)
+        .put(`/api/orders/${testOrder._id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          products: [{
+            product: newProduct._id,
+            quantity: 10,
+            rate: 50
+          }]
+        });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.totalAmount).toBe(500); // 10 * 50
+    });
+
+    it('should allow staff to update order', async () => {
+      const res = await request(app)
+        .put(`/api/orders/${testOrder._id}`)
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send({
+          products: [{
+            product: testProduct._id,
+            quantity: 20,
+            rate: 100
+          }]
+        });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.data.totalAmount).toBe(2000);
+    });
+
+    it('should deny customer from updating order', async () => {
+      const res = await request(app)
+        .put(`/api/orders/${testOrder._id}`)
+        .set('Authorization', `Bearer ${customerToken}`)
+        .send({
+          products: [{
+            product: testProduct._id,
+            quantity: 5,
+            rate: 100
+          }]
+        });
+
+      expect(res.statusCode).toBe(403);
+    });
+
+    it('should return 404 for non-existent order', async () => {
+      const fakeId = '507f1f77bcf86cd799439011';
+      const res = await request(app)
+        .put(`/api/orders/${fakeId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          products: [{
+            product: testProduct._id,
+            quantity: 5,
+            rate: 100
+          }]
+        });
+
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('should update order notes', async () => {
+      const res = await request(app)
+        .put(`/api/orders/${testOrder._id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          notes: 'Updated notes'
+        });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.data.notes).toBe('Updated notes');
+    });
+
+    it('should handle non-existent product in update', async () => {
+      const fakeProductId = '507f1f77bcf86cd799439011';
+      const res = await request(app)
+        .put(`/api/orders/${testOrder._id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          products: [{
+            product: fakeProductId,
+            quantity: 5,
+            rate: 100
+          }]
+        });
+
+      expect(res.statusCode).toBe(500); // Product not found error
+    });
+
+    it('should update multiple products in order', async () => {
+      const product2 = await testUtils.createTestProduct({ name: 'Product 2', unit: 'kg' });
+
+      const res = await request(app)
+        .put(`/api/orders/${testOrder._id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          products: [
+            { product: testProduct._id, quantity: 5, rate: 100 },
+            { product: product2._id, quantity: 10, rate: 50 }
+          ]
+        });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.data.products.length).toBe(2);
+      expect(res.body.data.totalAmount).toBe(1000); // (5*100) + (10*50)
+    });
+
+    it('should use priceAtTime if provided', async () => {
+      const res = await request(app)
+        .put(`/api/orders/${testOrder._id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          products: [{
+            product: testProduct._id,
+            quantity: 5,
+            priceAtTime: 200
+          }]
+        });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.data.totalAmount).toBe(1000); // 5 * 200
+    });
+  });
+
   describe('PUT /api/orders/:id/status', () => {
     let testOrder;
 

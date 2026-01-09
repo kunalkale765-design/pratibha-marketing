@@ -346,6 +346,376 @@ describe('Market Rates Endpoints', () => {
     });
   });
 
+  describe('GET /api/market-rates with filters', () => {
+    let adminToken, product1, product2;
+
+    beforeEach(async () => {
+      const admin = await testUtils.createAdminUser();
+      adminToken = admin.token;
+      product1 = await testUtils.createTestProduct({ name: 'Tomato' });
+      product2 = await testUtils.createTestProduct({ name: 'Potato' });
+    });
+
+    it('should filter by search term', async () => {
+      await testUtils.createMarketRate(product1, 50);
+      await testUtils.createMarketRate(product2, 30);
+
+      const res = await request(app)
+        .get('/api/market-rates?search=Tomato')
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.length).toBe(1);
+      expect(res.body.data[0].productName).toBe('Tomato');
+    });
+
+    it('should filter by date range', async () => {
+      const yesterday = new Date(Date.now() - 86400000);
+      const today = new Date();
+
+      await MarketRate.create({
+        product: product1._id,
+        productName: product1.name,
+        rate: 40,
+        effectiveDate: yesterday
+      });
+
+      await MarketRate.create({
+        product: product2._id,
+        productName: product2.name,
+        rate: 50,
+        effectiveDate: today
+      });
+
+      const res = await request(app)
+        .get(`/api/market-rates?startDate=${today.toISOString().split('T')[0]}`)
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(200);
+    });
+
+    it('should handle regex special characters in search safely', async () => {
+      await testUtils.createMarketRate(product1, 50);
+
+      const res = await request(app)
+        .get('/api/market-rates?search=.*')
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(200);
+      // Should not throw regex error
+    });
+  });
+
+  describe('GET /api/market-rates/history-summary', () => {
+    let adminToken, staffToken, customerToken, product1, product2;
+
+    beforeEach(async () => {
+      const admin = await testUtils.createAdminUser();
+      const staff = await testUtils.createStaffUser();
+      const customer = await testUtils.createCustomerUser();
+      adminToken = admin.token;
+      staffToken = staff.token;
+      customerToken = customer.token;
+      product1 = await testUtils.createTestProduct({ name: 'Rice', category: 'Grains' });
+      product2 = await testUtils.createTestProduct({ name: 'Wheat', category: 'Grains' });
+    });
+
+    it('should return history summary for admin', async () => {
+      await testUtils.createMarketRate(product1, 100);
+      await testUtils.createMarketRate(product2, 80);
+
+      const res = await request(app)
+        .get('/api/market-rates/history-summary')
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.days).toBe(7);
+      expect(res.body.data).toBeInstanceOf(Array);
+      expect(res.body.categories).toBeInstanceOf(Array);
+    });
+
+    it('should return history summary for staff', async () => {
+      const res = await request(app)
+        .get('/api/market-rates/history-summary')
+        .set('Cookie', `token=${staffToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+    });
+
+    it('should deny access to customer', async () => {
+      const res = await request(app)
+        .get('/api/market-rates/history-summary')
+        .set('Cookie', `token=${customerToken}`);
+
+      expect(res.status).toBe(403);
+    });
+
+    it('should accept custom days parameter', async () => {
+      const res = await request(app)
+        .get('/api/market-rates/history-summary?days=14')
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.days).toBe(14);
+    });
+
+    it('should reject invalid days parameter', async () => {
+      const res = await request(app)
+        .get('/api/market-rates/history-summary?days=100')
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should filter by category', async () => {
+      await testUtils.createMarketRate(product1, 100);
+
+      const res = await request(app)
+        .get('/api/market-rates/history-summary?category=Grains')
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(200);
+      res.body.data.forEach(item => {
+        expect(item.category).toBe('Grains');
+      });
+    });
+
+    it('should return all products when category is all', async () => {
+      const product3 = await testUtils.createTestProduct({ name: 'Sugar', category: 'Other' });
+      await testUtils.createMarketRate(product1, 100);
+      await testUtils.createMarketRate(product3, 50);
+
+      const res = await request(app)
+        .get('/api/market-rates/history-summary?category=all')
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('should include rate history for each day', async () => {
+      await testUtils.createMarketRate(product1, 100);
+
+      const res = await request(app)
+        .get('/api/market-rates/history-summary?days=3')
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(200);
+      if (res.body.data.length > 0) {
+        expect(res.body.data[0].rates).toBeInstanceOf(Array);
+        expect(res.body.data[0].rates.length).toBe(3);
+      }
+    });
+  });
+
+  describe('POST /api/market-rates/reset-all', () => {
+    let adminToken, staffToken, product;
+
+    beforeEach(async () => {
+      const admin = await testUtils.createAdminUser();
+      const staff = await testUtils.createStaffUser();
+      adminToken = admin.token;
+      staffToken = staff.token;
+      product = await testUtils.createTestProduct({ name: 'Test Product' });
+    });
+
+    it('should allow admin to reset all rates', async () => {
+      await testUtils.createMarketRate(product, 100);
+
+      const res = await request(app)
+        .post('/api/market-rates/reset-all')
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.count).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should deny staff from resetting all rates', async () => {
+      const res = await request(app)
+        .post('/api/market-rates/reset-all')
+        .set('Cookie', `token=${staffToken}`);
+
+      expect(res.status).toBe(403);
+    });
+
+    it('should return reset count in response', async () => {
+      await testUtils.createMarketRate(product, 100);
+
+      const res = await request(app)
+        .post('/api/market-rates/reset-all')
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data).toHaveProperty('count');
+      expect(res.body.data).toHaveProperty('total');
+    });
+  });
+
+  describe('GET /api/market-rates/:id', () => {
+    let adminToken, product, marketRate;
+
+    beforeEach(async () => {
+      const admin = await testUtils.createAdminUser();
+      adminToken = admin.token;
+      product = await testUtils.createTestProduct();
+      marketRate = await testUtils.createMarketRate(product, 100);
+    });
+
+    it('should return single market rate by id', async () => {
+      const res = await request(app)
+        .get(`/api/market-rates/${marketRate._id}`)
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.rate).toBe(100);
+    });
+
+    it('should return 404 for non-existent rate', async () => {
+      const fakeId = '507f1f77bcf86cd799439011';
+      const res = await request(app)
+        .get(`/api/market-rates/${fakeId}`)
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(404);
+    });
+
+    it('should populate product details', async () => {
+      const res = await request(app)
+        .get(`/api/market-rates/${marketRate._id}`)
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.product).toBeDefined();
+    });
+  });
+
+  describe('PUT /api/market-rates/:id', () => {
+    let adminToken, staffToken, customerToken, product, marketRate;
+
+    beforeEach(async () => {
+      const admin = await testUtils.createAdminUser();
+      const staff = await testUtils.createStaffUser();
+      const customer = await testUtils.createCustomerUser();
+      adminToken = admin.token;
+      staffToken = staff.token;
+      customerToken = customer.token;
+      product = await testUtils.createTestProduct();
+      marketRate = await testUtils.createMarketRate(product, 100);
+    });
+
+    it('should allow admin to update market rate', async () => {
+      const res = await request(app)
+        .put(`/api/market-rates/${marketRate._id}`)
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          product: product._id,
+          rate: 150
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.rate).toBe(150);
+    });
+
+    it('should allow staff to update market rate', async () => {
+      const res = await request(app)
+        .put(`/api/market-rates/${marketRate._id}`)
+        .set('Cookie', `token=${staffToken}`)
+        .send({
+          product: product._id,
+          rate: 120
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.rate).toBe(120);
+    });
+
+    it('should deny customer from updating market rate', async () => {
+      const res = await request(app)
+        .put(`/api/market-rates/${marketRate._id}`)
+        .set('Cookie', `token=${customerToken}`)
+        .send({
+          product: product._id,
+          rate: 200
+        });
+
+      expect(res.status).toBe(403);
+    });
+
+    it('should return 404 for non-existent rate', async () => {
+      const fakeId = '507f1f77bcf86cd799439011';
+      const res = await request(app)
+        .put(`/api/market-rates/${fakeId}`)
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          product: product._id,
+          rate: 100
+        });
+
+      expect(res.status).toBe(404);
+    });
+
+    it('should reject invalid rate value', async () => {
+      const res = await request(app)
+        .put(`/api/market-rates/${marketRate._id}`)
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          product: product._id,
+          rate: -50
+        });
+
+      expect(res.status).toBe(400);
+    });
+  });
+
+  describe('DELETE /api/market-rates/:id', () => {
+    let adminToken, staffToken, product, marketRate;
+
+    beforeEach(async () => {
+      const admin = await testUtils.createAdminUser();
+      const staff = await testUtils.createStaffUser();
+      adminToken = admin.token;
+      staffToken = staff.token;
+      product = await testUtils.createTestProduct();
+      marketRate = await testUtils.createMarketRate(product, 100);
+    });
+
+    it('should allow admin to delete market rate', async () => {
+      const res = await request(app)
+        .delete(`/api/market-rates/${marketRate._id}`)
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.message).toContain('deleted');
+
+      // Verify deletion
+      const deleted = await MarketRate.findById(marketRate._id);
+      expect(deleted).toBeNull();
+    });
+
+    it('should deny staff from deleting market rate', async () => {
+      const res = await request(app)
+        .delete(`/api/market-rates/${marketRate._id}`)
+        .set('Cookie', `token=${staffToken}`);
+
+      expect(res.status).toBe(403);
+    });
+
+    it('should return 404 for non-existent rate', async () => {
+      const fakeId = '507f1f77bcf86cd799439011';
+      const res = await request(app)
+        .delete(`/api/market-rates/${fakeId}`)
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(404);
+    });
+  });
+
   describe('Market Rate Change Percentage Calculation', () => {
     let adminToken, product;
 
