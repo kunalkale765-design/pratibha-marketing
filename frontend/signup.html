@@ -326,6 +326,7 @@
             opacity: 0.8;
         }
 
+        /* Tablet */
         @media (max-width: 900px) {
             body::before {
                 display: none;
@@ -350,6 +351,103 @@
 
             .form-row {
                 grid-template-columns: 1fr;
+            }
+        }
+
+        /* Mobile */
+        @media (max-width: 480px) {
+            body {
+                min-height: 100vh;
+                min-height: -webkit-fill-available;
+            }
+
+            .signup-container {
+                min-height: 100vh;
+                min-height: -webkit-fill-available;
+            }
+
+            .form-side {
+                width: 100%;
+                padding: 0.75rem;
+                padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+            }
+
+            .signup-card {
+                padding: 1.25rem;
+                border-radius: 16px;
+                max-width: 100%;
+            }
+
+            .signup-header {
+                margin-bottom: 1.5rem;
+            }
+
+            .signup-header h1 {
+                font-size: 1.5rem;
+            }
+
+            .back-link {
+                font-size: 0.875rem;
+                margin-bottom: 1rem;
+                padding: 0.5rem 0;
+                min-height: 44px;
+                display: inline-flex;
+                align-items: center;
+            }
+
+            .form-group {
+                margin-bottom: 1rem;
+            }
+
+            .form-input {
+                padding: 1rem;
+                font-size: 16px; /* Prevents iOS zoom */
+                min-height: 52px;
+                border-radius: 12px;
+            }
+
+            .form-label {
+                font-size: 0.75rem;
+            }
+
+            .form-hint {
+                font-size: 0.6875rem;
+            }
+
+            .password-requirements {
+                font-size: 0.6875rem;
+            }
+
+            .requirement {
+                margin-top: 0.25rem;
+            }
+
+            .btn-signup {
+                padding: 1rem;
+                font-size: 1rem;
+                min-height: 52px;
+                border-radius: 12px;
+                margin-top: 0.75rem;
+            }
+
+            .login-link {
+                margin-top: 1.25rem;
+                font-size: 0.9375rem;
+            }
+        }
+
+        /* Extra small screens */
+        @media (max-width: 360px) {
+            .form-side {
+                padding: 0.5rem;
+            }
+
+            .signup-card {
+                padding: 1rem;
+            }
+
+            .form-input {
+                padding: 0.875rem;
             }
         }
 

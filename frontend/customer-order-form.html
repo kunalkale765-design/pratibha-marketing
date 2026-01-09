@@ -336,6 +336,137 @@
             padding: 3rem 1rem;
             color: var(--text-muted);
         }
+
+        /* Extra small screens */
+        @media (max-width: 360px) {
+            .header {
+                padding: 0.75rem;
+            }
+
+            .logo {
+                font-size: 1.125rem;
+            }
+
+            .btn-logout {
+                padding: 0.375rem 0.625rem;
+                font-size: 0.75rem;
+                min-height: 40px;
+            }
+
+            .search-bar, .category-pills, .customer-bar {
+                padding: 0.5rem 0.75rem;
+            }
+
+            .search-input, .customer-select {
+                padding: 0.625rem 0.875rem;
+                font-size: 16px;
+                min-height: 44px;
+            }
+
+            .cat-pill {
+                padding: 0.375rem 0.75rem;
+                font-size: 0.8125rem;
+                min-height: 36px;
+            }
+
+            .product-list {
+                padding: 0.375rem;
+            }
+
+            .product-item {
+                padding: 0.75rem;
+                border-radius: 10px;
+            }
+
+            .product-name {
+                font-size: 0.9375rem;
+            }
+
+            .product-meta {
+                font-size: 0.75rem;
+            }
+
+            .qty-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 1.25rem;
+            }
+
+            .qty-input {
+                width: 48px;
+                height: 40px;
+                font-size: 1rem;
+            }
+
+            .summary-stat .value {
+                font-size: 1.25rem;
+            }
+
+            .btn-order {
+                padding: 0.75rem 1rem;
+                font-size: 0.9375rem;
+                min-height: 48px;
+            }
+        }
+
+        /* Tablet and Desktop */
+        @media (min-width: 768px) {
+            .header {
+                padding: 1rem 2rem;
+            }
+
+            .header-content {
+                max-width: 1200px;
+                margin: 0 auto;
+            }
+
+            .logo {
+                font-size: 1.5rem;
+            }
+
+            .search-bar, .category-pills, .customer-bar {
+                padding: 1rem 2rem;
+                max-width: 1200px;
+                margin: 0 auto;
+            }
+
+            .product-list {
+                padding: 1rem 2rem;
+                padding-bottom: calc(120px + env(safe-area-inset-bottom));
+                max-width: 1200px;
+                margin: 0 auto;
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.75rem;
+            }
+
+            .category-header {
+                grid-column: 1 / -1;
+            }
+
+            .product-item {
+                margin-bottom: 0;
+            }
+
+            .order-summary {
+                padding: 1.25rem 2rem;
+            }
+
+            .summary-info {
+                gap: 2rem;
+            }
+
+            .btn-order {
+                padding: 1rem 2rem;
+            }
+        }
+
+        /* Large Desktop */
+        @media (min-width: 1024px) {
+            .product-list {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
     </style>
 </head>
 <body>

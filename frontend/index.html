@@ -446,14 +446,129 @@
         /* Mobile First - Base styles are for mobile */
         .main {
             padding: 1rem;
+            padding-bottom: calc(1rem + env(safe-area-inset-bottom));
         }
 
         .header {
             padding: 1rem;
+            padding-top: calc(1rem + env(safe-area-inset-top));
         }
 
         .actions-grid {
             grid-template-columns: repeat(2, 1fr);
+        }
+
+        /* Extra small screens */
+        @media (max-width: 360px) {
+            .main {
+                padding: 0.75rem;
+            }
+
+            .header {
+                padding: 0.75rem;
+            }
+
+            .logo-text {
+                font-size: 1.25rem;
+            }
+
+            .header-subtitle {
+                font-size: 0.75rem;
+            }
+
+            .user-badge {
+                padding: 0.375rem 0.625rem;
+                font-size: 0.75rem;
+            }
+
+            .btn-logout {
+                padding: 0.375rem 0.625rem;
+                font-size: 0.75rem;
+            }
+
+            .stat-card {
+                padding: 0.5rem 0.625rem;
+            }
+
+            .stat-label {
+                font-size: 0.625rem;
+            }
+
+            .stat-value {
+                font-size: 0.9375rem;
+            }
+
+            .action-card {
+                padding: 0.625rem;
+            }
+
+            .action-icon {
+                font-size: 1rem;
+            }
+
+            .action-title {
+                font-size: 0.75rem;
+            }
+
+            .procurement-header {
+                padding: 0.75rem;
+            }
+
+            .procurement-header h2 {
+                font-size: 1rem;
+            }
+
+            .item-main {
+                padding: 0.625rem 0.75rem;
+            }
+
+            .item-name {
+                font-size: 0.8125rem;
+            }
+
+            .item-qty {
+                font-size: 0.875rem;
+                min-width: 50px;
+            }
+
+            .item-rate-input {
+                width: 70px;
+                padding: 0.25rem 0.375rem;
+                font-size: 0.8125rem;
+            }
+        }
+
+        /* Mobile */
+        @media (max-width: 480px) {
+            .header-content {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.75rem;
+            }
+
+            .header-actions {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .action-card {
+                min-height: 56px;
+            }
+
+            .btn-icon {
+                width: 44px;
+                height: 44px;
+                font-size: 1.125rem;
+            }
+
+            .item-rate-input {
+                min-height: 44px;
+                font-size: 16px; /* Prevents iOS zoom */
+            }
+
+            .procurement-list {
+                max-height: none;
+            }
         }
 
         /* Tablet and up */
@@ -468,6 +583,17 @@
 
             .actions-grid {
                 grid-template-columns: repeat(5, 1fr);
+            }
+
+            .action-card {
+                flex-direction: column;
+                text-align: center;
+                padding: 1rem;
+            }
+
+            .action-icon {
+                font-size: 1.5rem;
+                margin-bottom: 0.25rem;
             }
         }
 
