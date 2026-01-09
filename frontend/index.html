@@ -1151,11 +1151,17 @@
             const failures = [];
             const successfulProducts = [];
 
+            const headers = { 'Content-Type': 'application/json' };
+            const csrfToken = Auth.getCsrfToken();
+            if (csrfToken) {
+                headers['X-CSRF-Token'] = csrfToken;
+            }
+
             for (const [productId, rateData] of Object.entries(changedRates)) {
                 try {
                     const response = await fetch('/api/market-rates', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers,
                         credentials: 'include',
                         body: JSON.stringify({ product: rateData.product, rate: rateData.rate, effectiveDate: new Date().toISOString() })
                     });
@@ -1426,7 +1432,12 @@
 
         function logout() {
             localStorage.removeItem('user');
-            fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+            const headers = {};
+            const csrfToken = Auth.getCsrfToken();
+            if (csrfToken) {
+                headers['X-CSRF-Token'] = csrfToken;
+            }
+            fetch('/api/auth/logout', { method: 'POST', headers, credentials: 'include' })
                 .finally(() => {
                     window.location.href = '/login.html';
                 });

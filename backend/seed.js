@@ -72,11 +72,21 @@ const sampleCustomers = [
   { name: 'Vijay Singh', phone: '9876543214', whatsapp: '9876543214', address: 'Stall 15, Main Bazaar, Jaipur' },
 ];
 
-// Admin user
+// Admin user - uses ADMIN_TEMP_PASSWORD from env if available, otherwise generates secure random
+const getAdminPassword = () => {
+  if (process.env.ADMIN_TEMP_PASSWORD) {
+    return process.env.ADMIN_TEMP_PASSWORD;
+  }
+  // Generate secure random password: 16 chars with uppercase, lowercase, numbers
+  const crypto = require('crypto');
+  return crypto.randomBytes(12).toString('base64').slice(0, 16);
+};
+
+const adminPassword = getAdminPassword();
 const adminUser = {
   name: 'Admin',
   email: 'admin@pratibhamarketing.in',
-  password: 'Admin123',
+  password: adminPassword,
   phone: '9876543200',
   role: 'admin'
 };
@@ -109,7 +119,7 @@ const seedDatabase = async () => {
     // Create Admin User
     console.log('Creating admin user...');
     const admin = await User.create(adminUser);
-    console.log(`✓ Admin user created (Email: ${admin.email}, Password: admin123)\n`);
+    console.log(`✓ Admin user created (Email: ${admin.email})\n`);
 
     // Create sample user accounts for some customers
     console.log('Creating customer user accounts...');
@@ -243,7 +253,8 @@ const seedDatabase = async () => {
     console.log(`   Users: 3 (1 admin + 2 customers)\n`);
     console.log('🔐 Admin Credentials:');
     console.log(`   Email: admin@pratibhamarketing.in`);
-    console.log(`   Password: admin123\n`);
+    console.log(`   Password: ${process.env.ADMIN_TEMP_PASSWORD ? '(from ADMIN_TEMP_PASSWORD env var)' : adminPassword}`);
+    console.log(`   ⚠️  CHANGE THIS PASSWORD IMMEDIATELY!\n`);
     console.log('🔐 Sample Customer Credentials:');
     console.log(`   Email: rajesh.kumar@example.com`);
     console.log(`   Password: Pass1234\n`);

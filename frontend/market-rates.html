@@ -761,11 +761,17 @@
             let firstError = null;
             const failedProducts = [];
 
+            const headers = { 'Content-Type': 'application/json' };
+            const csrfToken = Auth.getCsrfToken();
+            if (csrfToken) {
+                headers['X-CSRF-Token'] = csrfToken;
+            }
+
             for (const [productId, rate] of Object.entries(changedRates)) {
                 try {
                     const res = await fetch('/api/market-rates', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers,
                         credentials: 'include',
                         body: JSON.stringify({
                             product: productId,

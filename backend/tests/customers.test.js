@@ -281,7 +281,10 @@ describe('Customer Endpoints', () => {
       expect(res.statusCode).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.data.link).toBeDefined(); // API returns 'link' not 'magicLink'
-      expect(res.body.data.token).toHaveLength(64);
+      // Token is no longer returned directly for security - only the full link URL
+      expect(res.body.data.link).toContain('token=');
+      expect(res.body.data.createdAt).toBeDefined();
+      expect(res.body.data.expiresIn).toBe('48 hours');
     });
 
     it('should revoke a magic link', async () => {

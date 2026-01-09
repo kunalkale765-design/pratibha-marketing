@@ -816,9 +816,15 @@
             btn.textContent = 'Placing...';
 
             try {
+                const headers = { 'Content-Type': 'application/json' };
+                const csrfToken = Auth.getCsrfToken();
+                if (csrfToken) {
+                    headers['X-CSRF-Token'] = csrfToken;
+                }
+
                 const res = await fetch('/api/orders', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers,
                     credentials: 'include',
                     body: JSON.stringify({
                         customer: selectedCustomer._id,

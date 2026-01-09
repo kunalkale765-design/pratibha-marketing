@@ -979,9 +979,15 @@
                     priceAtTime: priceChanges[idx] !== undefined ? priceChanges[idx] : p.rate
                 }));
 
+                const headers = { 'Content-Type': 'application/json' };
+                const csrfToken = Auth.getCsrfToken();
+                if (csrfToken) {
+                    headers['X-CSRF-Token'] = csrfToken;
+                }
+
                 const res = await fetch(`/api/orders/${currentOrderId}`, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers,
                     credentials: 'include',
                     body: JSON.stringify({ products: updatedProducts })
                 });

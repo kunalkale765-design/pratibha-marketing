@@ -5,6 +5,15 @@
 
 const API = {
     /**
+     * Get CSRF token from cookie
+     * @returns {string|null}
+     */
+    getCsrfToken() {
+        const match = document.cookie.match(/csrf_token=([^;]+)/);
+        return match ? match[1] : null;
+    },
+
+    /**
      * Make an API request
      * @param {string} endpoint - API endpoint (e.g., '/api/products')
      * @param {Object} options - Fetch options
@@ -21,6 +30,15 @@ const API = {
         };
 
         const fetchOptions = { ...defaultOptions, ...options };
+
+        // Add CSRF token for state-changing requests
+        const stateChangingMethods = ['POST', 'PUT', 'DELETE', 'PATCH'];
+        if (stateChangingMethods.includes(options.method?.toUpperCase())) {
+            const csrfToken = this.getCsrfToken();
+            if (csrfToken) {
+                fetchOptions.headers['X-CSRF-Token'] = csrfToken;
+            }
+        }
 
         // Don't set Content-Type for FormData
         if (options.body instanceof FormData) {

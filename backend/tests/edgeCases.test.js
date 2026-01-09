@@ -1,0 +1,532 @@
+/**
+ * Edge Cases and Error Handling Tests
+ * Tests for boundary conditions, error scenarios, and unusual inputs
+ */
+
+const request = require('supertest');
+const app = require('../server');
+const { testUtils } = require('./setup');
+const mongoose = require('mongoose');
+
+describe('Edge Cases and Error Handling', () => {
+  describe('Pagination Edge Cases', () => {
+    let adminToken;
+
+    beforeEach(async () => {
+      const admin = await testUtils.createAdminUser();
+      adminToken = admin.token;
+    });
+
+    it('should handle zero limit gracefully', async () => {
+      const res = await request(app)
+        .get('/api/orders?limit=0')
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(200);
+      // Should use default limit or minimum
+    });
+
+    it('should handle negative limit gracefully', async () => {
+      const res = await request(app)
+        .get('/api/orders?limit=-10')
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(200);
+    });
+
+    it('should handle very large limit', async () => {
+      const res = await request(app)
+        .get('/api/orders?limit=999999')
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(200);
+      // Should cap at maximum allowed limit
+    });
+
+    it('should handle non-numeric limit', async () => {
+      const res = await request(app)
+        .get('/api/orders?limit=abc')
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(200);
+      // Should use default limit
+    });
+
+    it('should handle page 0', async () => {
+      const res = await request(app)
+        .get('/api/customers?page=0')
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(200);
+    });
+
+    it('should handle negative page', async () => {
+      const res = await request(app)
+        .get('/api/customers?page=-1')
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(200);
+    });
+  });
+
+  describe('Date Filtering Edge Cases', () => {
+    let adminToken;
+
+    beforeEach(async () => {
+      const admin = await testUtils.createAdminUser();
+      adminToken = admin.token;
+    });
+
+    it('should handle invalid date format', async () => {
+      const res = await request(app)
+        .get('/api/orders?startDate=invalid-date')
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(400);
+      expect(res.body.message).toContain('Invalid');
+    });
+
+    it('should handle endDate before startDate', async () => {
+      const res = await request(app)
+        .get('/api/orders?startDate=2026-01-10&endDate=2026-01-01')
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should handle future dates', async () => {
+      const res = await request(app)
+        .get('/api/orders?startDate=2030-01-01')
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data).toHaveLength(0);
+    });
+
+    it('should handle very old dates', async () => {
+      const res = await request(app)
+        .get('/api/orders?startDate=1900-01-01&endDate=1900-12-31')
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data).toHaveLength(0);
+    });
+  });
+
+  describe('Empty Data Handling', () => {
+    let adminToken;
+
+    beforeEach(async () => {
+      const admin = await testUtils.createAdminUser();
+      adminToken = admin.token;
+    });
+
+    it('should return empty array when no customers exist', async () => {
+      const res = await request(app)
+        .get('/api/customers')
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual([]);
+    });
+
+    it('should return empty array when no products exist', async () => {
+      const res = await request(app)
+        .get('/api/products')
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual([]);
+    });
+
+    it('should return empty array when no orders exist', async () => {
+      const res = await request(app)
+        .get('/api/orders')
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual([]);
+    });
+
+    it('should return empty array when no market rates exist', async () => {
+      const res = await request(app)
+        .get('/api/market-rates')
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual([]);
+    });
+  });
+
+  describe('Invalid ObjectId Handling', () => {
+    let adminToken;
+
+    beforeEach(async () => {
+      const admin = await testUtils.createAdminUser();
+      adminToken = admin.token;
+    });
+
+    it('should return 400 for invalid customer ID', async () => {
+      const res = await request(app)
+        .get('/api/customers/not-an-object-id')
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should return 400 for invalid product ID', async () => {
+      const res = await request(app)
+        .get('/api/products/not-an-object-id')
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should return 400 for invalid order ID', async () => {
+      const res = await request(app)
+        .get('/api/orders/not-an-object-id')
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should return 404 for non-existent valid ObjectId', async () => {
+      const fakeId = new mongoose.Types.ObjectId();
+
+      const res = await request(app)
+        .get(`/api/customers/${fakeId}`)
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(404);
+    });
+  });
+
+  describe('Order Creation Edge Cases', () => {
+    let adminToken, customer, product;
+
+    beforeEach(async () => {
+      const admin = await testUtils.createAdminUser();
+      adminToken = admin.token;
+      customer = await testUtils.createTestCustomer();
+      product = await testUtils.createTestProduct();
+      await testUtils.createMarketRate(product, 100);
+    });
+
+    it('should handle order with zero quantity', async () => {
+      const res = await request(app)
+        .post('/api/orders')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          customer: customer._id,
+          products: [{
+            product: product._id,
+            quantity: 0
+          }]
+        });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should handle order with negative quantity', async () => {
+      const res = await request(app)
+        .post('/api/orders')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          customer: customer._id,
+          products: [{
+            product: product._id,
+            quantity: -5
+          }]
+        });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should handle order with very large quantity', async () => {
+      const res = await request(app)
+        .post('/api/orders')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          customer: customer._id,
+          products: [{
+            product: product._id,
+            quantity: 999999999
+          }]
+        });
+
+      // Should either accept or reject with validation error
+      expect([201, 400]).toContain(res.status);
+    });
+
+    it('should handle order with decimal quantity', async () => {
+      const res = await request(app)
+        .post('/api/orders')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          customer: customer._id,
+          products: [{
+            product: product._id,
+            quantity: 2.5
+          }]
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.data.products[0].quantity).toBe(2.5);
+    });
+
+    it('should handle order with empty products array', async () => {
+      const res = await request(app)
+        .post('/api/orders')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          customer: customer._id,
+          products: []
+        });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should handle order with duplicate products', async () => {
+      const res = await request(app)
+        .post('/api/orders')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          customer: customer._id,
+          products: [
+            { product: product._id, quantity: 5 },
+            { product: product._id, quantity: 3 } // Same product again
+          ]
+        });
+
+      // Should either combine or create separate line items
+      expect(res.status).toBe(201);
+    });
+
+    it('should handle order with non-existent product', async () => {
+      const fakeProductId = new mongoose.Types.ObjectId();
+
+      const res = await request(app)
+        .post('/api/orders')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          customer: customer._id,
+          products: [{
+            product: fakeProductId,
+            quantity: 5
+          }]
+        });
+
+      // Should reject - 400 (validation), 404 (not found), or 500 (server error during price lookup)
+      expect([400, 404, 500]).toContain(res.status);
+    });
+
+    it('should handle order with inactive product', async () => {
+      const inactiveProduct = await testUtils.createTestProduct({
+        name: 'Inactive Product',
+        isActive: false
+      });
+
+      const res = await request(app)
+        .post('/api/orders')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          customer: customer._id,
+          products: [{
+            product: inactiveProduct._id,
+            quantity: 5
+          }]
+        });
+
+      // Server may accept (product exists) or reject (inactive) - both are valid behaviors
+      expect([201, 400, 404]).toContain(res.status);
+    });
+  });
+
+  describe('Payment Edge Cases', () => {
+    let adminToken, order;
+
+    beforeEach(async () => {
+      const admin = await testUtils.createAdminUser();
+      adminToken = admin.token;
+      const customer = await testUtils.createTestCustomer();
+      const product = await testUtils.createTestProduct();
+      await testUtils.createMarketRate(product, 100);
+      order = await testUtils.createTestOrder(customer, product, { totalAmount: 1000 });
+    });
+
+    it('should handle negative payment amount', async () => {
+      const res = await request(app)
+        .put(`/api/orders/${order._id}/payment`)
+        .set('Cookie', `token=${adminToken}`)
+        .send({ paidAmount: -100 });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should handle zero payment amount', async () => {
+      const res = await request(app)
+        .put(`/api/orders/${order._id}/payment`)
+        .set('Cookie', `token=${adminToken}`)
+        .send({ paidAmount: 0 });
+
+      // Zero is technically valid (resets to unpaid) or rejected
+      expect([200, 400]).toContain(res.status);
+    });
+
+    it('should handle overpayment', async () => {
+      const res = await request(app)
+        .put(`/api/orders/${order._id}/payment`)
+        .set('Cookie', `token=${adminToken}`)
+        .send({ paidAmount: 2000 }); // More than order total
+
+      // Should either cap at total or accept overpayment
+      expect([200, 400]).toContain(res.status);
+    });
+
+    it('should handle very small payment', async () => {
+      const res = await request(app)
+        .put(`/api/orders/${order._id}/payment`)
+        .set('Cookie', `token=${adminToken}`)
+        .send({ paidAmount: 0.01 });
+
+      // Small payments should work
+      expect(res.status).toBe(200);
+      expect(res.body.data.paidAmount).toBeGreaterThan(0);
+    });
+  });
+
+  describe('Search Edge Cases', () => {
+    let adminToken;
+
+    beforeEach(async () => {
+      const admin = await testUtils.createAdminUser();
+      adminToken = admin.token;
+      await testUtils.createTestCustomer({ name: 'John Doe' });
+    });
+
+    it('should handle empty search string', async () => {
+      const res = await request(app)
+        .get('/api/customers?search=')
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(200);
+    });
+
+    it('should handle search with special characters', async () => {
+      const res = await request(app)
+        .get('/api/customers?search=.*+?^${}()|[]\\')
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(200);
+      // Should escape regex characters
+    });
+
+    it('should handle search with unicode characters', async () => {
+      const res = await request(app)
+        .get('/api/customers')
+        .query({ search: '日本語' })
+        .set('Cookie', `token=${adminToken}`);
+
+      // Should not crash - either return empty array or handle gracefully
+      expect([200, 400]).toContain(res.status);
+    });
+
+    it('should handle case-insensitive search', async () => {
+      const res = await request(app)
+        .get('/api/customers?search=JOHN')
+        .set('Cookie', `token=${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  describe('Concurrent Operations', () => {
+    it('should handle concurrent order creation', async () => {
+      const admin = await testUtils.createAdminUser();
+      const customer = await testUtils.createTestCustomer();
+      const product = await testUtils.createTestProduct();
+      await testUtils.createMarketRate(product, 100);
+
+      // Create 5 orders concurrently
+      const orderPromises = Array(5).fill().map(() =>
+        request(app)
+          .post('/api/orders')
+          .set('Cookie', `token=${admin.token}`)
+          .send({
+            customer: customer._id,
+            products: [{ product: product._id, quantity: 1 }]
+          })
+      );
+
+      const results = await Promise.all(orderPromises);
+
+      // All should succeed
+      results.forEach(res => {
+        expect(res.status).toBe(201);
+      });
+
+      // All order numbers should be unique
+      const orderNumbers = results.map(r => r.body.data.orderNumber);
+      const uniqueNumbers = new Set(orderNumbers);
+      expect(uniqueNumbers.size).toBe(5);
+    });
+  });
+
+  describe('Status Transition Edge Cases', () => {
+    let adminToken, order;
+
+    beforeEach(async () => {
+      const admin = await testUtils.createAdminUser();
+      adminToken = admin.token;
+      const customer = await testUtils.createTestCustomer();
+      const product = await testUtils.createTestProduct();
+      order = await testUtils.createTestOrder(customer, product);
+    });
+
+    it('should reject invalid status', async () => {
+      const res = await request(app)
+        .put(`/api/orders/${order._id}/status`)
+        .set('Cookie', `token=${adminToken}`)
+        .send({ status: 'invalid-status' });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should handle status update to same status', async () => {
+      const res = await request(app)
+        .put(`/api/orders/${order._id}/status`)
+        .set('Cookie', `token=${adminToken}`)
+        .send({ status: 'pending' }); // Already pending
+
+      expect(res.status).toBe(200);
+    });
+
+    it('should handle updating cancelled order status', async () => {
+      // First cancel the order
+      await request(app)
+        .delete(`/api/orders/${order._id}`)
+        .set('Cookie', `token=${adminToken}`);
+
+      // Try to update status of cancelled order
+      const res = await request(app)
+        .put(`/api/orders/${order._id}/status`)
+        .set('Cookie', `token=${adminToken}`)
+        .send({ status: 'confirmed' });
+
+      // Should either allow or reject
+      expect([200, 400]).toContain(res.status);
+    });
+  });
+
+  describe('Health Check', () => {
+    it('should return health status', async () => {
+      const res = await request(app)
+        .get('/api/health');
+
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBeDefined();
+      expect(res.body.mongodb).toBeDefined();
+    });
+  });
+});

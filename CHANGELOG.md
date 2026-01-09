@@ -8,6 +8,140 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+#### 2026-01-09 - Comprehensive Test Suite Expansion
+
+**Files Created:**
+| File | Purpose |
+|------|---------|
+| `backend/tests/integration.test.js` | End-to-end workflow tests covering complete order lifecycle, payment workflows, customer registration flows, pricing type calculations, and order cancellation |
+| `backend/tests/marketRates.test.js` | Market rate CRUD operations, trend calculation, authorization, and rate history |
+| `backend/tests/security.test.js` | Security-focused tests for role-based access control, privilege escalation prevention, token security, input validation, and resource ownership |
+| `backend/tests/magicLink.test.js` | Magic link authentication flow tests including token generation, authentication, revocation, and session management |
+| `backend/tests/edgeCases.test.js` | Boundary condition tests for pagination, date filtering, empty data handling, concurrent operations, and error scenarios |
+
+**Test Coverage Improvements:**
+- Total tests increased from 83 to 197 (137% increase)
+- New test categories added:
+  - **Integration Tests**: Complete order lifecycle (pending → delivered), payment workflows (unpaid → partial → paid), customer registration and ordering, multi-product orders
+  - **Security Tests**: RBAC for customers/orders/products, privilege escalation prevention (registering as admin/staff), token security (expired/malformed/tampered), deactivated user handling, NoSQL injection protection
+  - **Magic Link Tests**: Token generation, authentication, revocation, session persistence, order placement via magic link
+  - **Edge Cases**: Zero/negative/large pagination values, invalid dates, concurrent order creation, duplicate products in orders, overpayment handling
+
+**Why These Tests Matter:**
+- Integration tests ensure business workflows work end-to-end
+- Security tests protect against common attack vectors
+- Edge case tests ensure graceful degradation under unusual inputs
+- All tests run in-memory with MongoDB Memory Server (no external dependencies)
+
+---
+
+#### 2026-01-09 - Production Readiness Improvements
+
+**Files Created:**
+| File | Purpose |
+|------|---------|
+| `.env.example` | Template for environment variables with documentation |
+| `ecosystem.config.js` | PM2 configuration with log rotation, memory limits, and deployment settings |
+
+**Files Modified:**
+| File | Change | Reason |
+|------|--------|--------|
+| `deploy.sh` | Removed hardcoded MongoDB credentials | Security - prevent credential exposure in repo |
+| `deploy.sh` | Added secure random password generation | Security - no more hardcoded admin passwords |
+| `deploy.sh` | Added PM2 log rotation setup | Ops - prevent disk exhaustion from unbounded logs |
+| `deploy.sh` | Uses ecosystem.config.js for PM2 | Better process management configuration |
+| `backend/server.js` | Added environment variable validation | Fail-fast on missing required config |
+| `backend/server.js` | Added HTTPS redirect middleware | Security - enforce HTTPS in production |
+| `backend/server.js` | Added HSTS headers via Helmet | Security - prevent protocol downgrade attacks |
+| `backend/seed.js` | Use ADMIN_TEMP_PASSWORD from env | Security - no hardcoded passwords |
+
+**Security Improvements:**
+
+1. **Credential Exposure Fixed**
+   - Removed hardcoded MongoDB URI from deploy.sh
+   - Deploy script now prompts for MongoDB URI or reads from environment
+   - Admin password generated securely at deploy time (random 16 chars)
+   - Password stored in .env file, not displayed in terminal
+
+2. **Environment Validation**
+   - Server validates MONGODB_URI is set before starting
+   - In production, also validates JWT_SECRET is set
+   - Warns if SENTRY_DSN not configured in production
+   - Clear error messages with reference to .env.example
+
+3. **HTTPS Enforcement**
+   - HSTS headers (1 year, includeSubDomains, preload)
+   - Automatic redirect from HTTP to HTTPS in production
+   - Works with reverse proxy (Nginx) via X-Forwarded-Proto header
+
+**DevOps Improvements:**
+
+1. **PM2 Ecosystem Config** (`ecosystem.config.js`)
+   - Memory limit (500MB) with auto-restart
+   - Log files in dedicated `logs/` directory
+   - Graceful shutdown handling (5s timeout)
+   - Exponential backoff restart delay
+   - Production/development environment presets
+
+2. **Log Rotation**
+   - Automatic via pm2-logrotate module
+   - Max 10MB per file, 7 days retention
+   - Daily rotation with compression
+   - Prevents disk space exhaustion
+
+**Deployment:**
+```bash
+# Deploy with MongoDB URI as environment variable
+MONGODB_URI="your-connection-string" ./deploy.sh
+
+# Or deploy interactively (will prompt for URI)
+./deploy.sh
+
+# View generated admin password after deploy
+grep ADMIN_TEMP_PASSWORD /var/www/pratibha-marketing/.env
+```
+
+---
+
+#### 2026-01-09 - CSRF Protection
+
+**Files Created:**
+| File | Purpose |
+|------|---------|
+| `backend/middleware/csrf.js` | Double-submit cookie CSRF protection middleware |
+| `BACKUP_GUIDE.md` | Database backup and recovery procedures documentation |
+
+**Files Modified:**
+| File | Change | Reason |
+|------|--------|--------|
+| `backend/server.js` | Added CSRF middleware (token setter + validator) | Prevent cross-site request forgery attacks |
+| `frontend/js/api.js` | Added getCsrfToken() and auto-include in state-changing requests | CSRF token handling for API wrapper |
+| `frontend/js/auth.js` | Added getCsrfToken() and include in login/logout | CSRF protection for auth operations |
+| `frontend/login.html` | Added CSRF token to login fetch | CSRF protection |
+| `frontend/signup.html` | Added CSRF token to register fetch | CSRF protection |
+| `frontend/orders.html` | Added CSRF token to update fetch | CSRF protection |
+| `frontend/products.html` | Added CSRF token to delete fetch | CSRF protection |
+| `frontend/market-rates.html` | Added CSRF token to save rates fetch | CSRF protection |
+| `frontend/index.html` | Added CSRF token to save rates and logout | CSRF protection |
+| `frontend/customer-order-form.html` | Added CSRF token to create order fetch | CSRF protection |
+| `frontend/customer-management.html` | Added CSRF token to delete, magic-link, update fetches | CSRF protection |
+
+**How CSRF Protection Works:**
+
+1. **Token Generation**: Server sets a `csrf_token` cookie (non-httpOnly, readable by JS) on every request
+2. **Token Validation**: For POST/PUT/DELETE requests, server validates that `X-CSRF-Token` header matches cookie
+3. **Frontend Integration**: All fetch calls for state-changing operations include the token header
+
+**Exempt Endpoints:**
+- Magic link authentication (`/api/auth/magic/:token`) - accessed via email links
+- All GET/HEAD/OPTIONS requests (safe methods)
+
+**Security Impact:** Prevents attackers from tricking authenticated users into making unwanted requests via malicious websites.
+
+---
+
 ### Fixed
 
 #### 2026-01-09 - Code Review Fixes
@@ -353,11 +487,16 @@ node backend/scripts/init-counters.js
 - Enables CI/CD integration and regression testing
 - Jest + Supertest is industry standard for Node.js API testing
 
-**Test Coverage: 83 tests, 100% passing**
+**Test Coverage: 197 tests, 100% passing**
 - Auth (14 tests): Register, login, logout, token verification, role-based redirects
 - Customers (18 tests): CRUD, pricing types, payment recording, magic links
 - Orders (29 tests): Create, status updates, payment updates, customer isolation
 - Products (22 tests): CRUD, soft delete, unit validation
+- Integration (10 tests): End-to-end order workflows, payment lifecycle, multi-product orders
+- Market Rates (20 tests): CRUD, trend calculation, rate history, authorization
+- Security (27 tests): Role-based access control, privilege escalation, token security, input validation
+- Magic Link (18 tests): Token generation, authentication, revocation, session management
+- Edge Cases (39 tests): Pagination, date filtering, concurrent operations, error handling
 
 **Run tests:** `npm test`
 

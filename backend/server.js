@@ -4,6 +4,40 @@ require('dotenv').config();
 if (preservedNodeEnv) {
   process.env.NODE_ENV = preservedNodeEnv;
 }
+
+// Validate required environment variables (skip in test mode)
+const validateEnv = () => {
+  const required = ['MONGODB_URI'];
+  const requiredInProd = ['JWT_SECRET'];
+  const missing = [];
+
+  required.forEach(key => {
+    if (!process.env[key]) missing.push(key);
+  });
+
+  if (process.env.NODE_ENV === 'production') {
+    requiredInProd.forEach(key => {
+      if (!process.env[key]) missing.push(key);
+    });
+  }
+
+  if (missing.length > 0 && process.env.NODE_ENV !== 'test') {
+    console.error('╔═══════════════════════════════════════════════════════════╗');
+    console.error('║  FATAL: Missing required environment variables            ║');
+    console.error('╚═══════════════════════════════════════════════════════════╝');
+    console.error(`Missing: ${missing.join(', ')}`);
+    console.error('\nCreate a .env file with these variables or set them in your environment.');
+    console.error('See .env.example for reference.\n');
+    process.exit(1);
+  }
+
+  // Warn about optional but recommended variables
+  if (process.env.NODE_ENV === 'production' && !process.env.SENTRY_DSN) {
+    console.warn('⚠️  SENTRY_DSN not configured - error monitoring disabled');
+  }
+};
+
+validateEnv();
 const Sentry = require('@sentry/node');
 const express = require('express');
 const cors = require('cors');
@@ -16,6 +50,7 @@ const path = require('path');
 const mongoose = require('mongoose');
 const connectDB = require('./config/database');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
+const { csrfTokenSetter, csrfProtection } = require('./middleware/csrf');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 const { startScheduler, stopScheduler } = require('./services/marketRateScheduler');
@@ -43,11 +78,27 @@ const app = express();
 // Security Middleware
 // ====================
 
-// Helmet - Set security headers
+// Helmet - Set security headers with HSTS for HTTPS enforcement
 app.use(helmet({
   contentSecurityPolicy: false, // Disable for now to allow inline scripts in HTML
-  crossOriginEmbedderPolicy: false
+  crossOriginEmbedderPolicy: false,
+  hsts: process.env.NODE_ENV === 'production' ? {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true
+  } : false
 }));
+
+// HTTPS redirect in production (when behind reverse proxy like Nginx)
+if (process.env.NODE_ENV === 'production') {
+  app.use((req, res, next) => {
+    // Trust X-Forwarded-Proto header from reverse proxy
+    if (req.headers['x-forwarded-proto'] !== 'https') {
+      return res.redirect(301, `https://${req.headers.host}${req.url}`);
+    }
+    next();
+  });
+}
 
 // CORS - Enable Cross-Origin Resource Sharing
 const allowedOrigins = process.env.ALLOWED_ORIGINS
@@ -112,6 +163,11 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Cookie Parser
 app.use(cookieParser());
+
+// CSRF Protection (Double-Submit Cookie Pattern)
+// Sets csrf_token cookie on all requests, validates on state-changing requests
+app.use(csrfTokenSetter);
+app.use('/api', csrfProtection);
 
 // Data Sanitization - Prevent NoSQL injection
 app.use(mongoSanitize());

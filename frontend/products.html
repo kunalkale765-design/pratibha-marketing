@@ -837,8 +837,15 @@
             if (!confirm('Delete this product?')) return;
 
             try {
+                const headers = {};
+                const csrfToken = Auth.getCsrfToken();
+                if (csrfToken) {
+                    headers['X-CSRF-Token'] = csrfToken;
+                }
+
                 const res = await fetch(`/api/products/${id}`, {
                     method: 'DELETE',
+                    headers,
                     credentials: 'include'
                 });
                 if (res.ok) {

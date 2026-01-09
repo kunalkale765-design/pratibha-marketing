@@ -82,15 +82,36 @@ npm install --production
 echo ""
 echo "Step 10: Creating environment file..."
 if [ ! -f ".env" ]; then
+    # Check if MONGODB_URI is provided as environment variable
+    if [ -z "$MONGODB_URI" ]; then
+        echo ""
+        echo "╔═══════════════════════════════════════════════════════════════╗"
+        echo "║  MONGODB_URI not set! Please provide your MongoDB connection  ║"
+        echo "╚═══════════════════════════════════════════════════════════════╝"
+        echo ""
+        read -p "Enter your MongoDB URI: " MONGODB_URI
+        if [ -z "$MONGODB_URI" ]; then
+            echo "ERROR: MongoDB URI is required. Exiting."
+            exit 1
+        fi
+    fi
+
     JWT_SECRET=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
+    ADMIN_PASSWORD=$(node -e "console.log(require('crypto').randomBytes(12).toString('base64').slice(0,16))")
+
     cat > .env << ENVEOF
 PORT=3000
 NODE_ENV=production
-MONGODB_URI=mongodb+srv://kunalkale765_db_user:kunal786@vegetable-supply.0p91ste.mongodb.net/pratibha_db?retryWrites=true&w=majority
+MONGODB_URI=$MONGODB_URI
 JWT_SECRET=$JWT_SECRET
-ALLOWED_ORIGINS=https://pratibhamarketing.in,https://www.pratibhamarketing.in,http://pratibhamarketing.in,http://www.pratibhamarketing.in
+ALLOWED_ORIGINS=https://pratibhamarketing.in,https://www.pratibhamarketing.in
+ADMIN_TEMP_PASSWORD=$ADMIN_PASSWORD
 ENVEOF
-    echo ".env file created with random JWT secret"
+    echo ".env file created with secure random secrets"
+    echo ""
+    echo "IMPORTANT: Your temporary admin password has been saved to .env"
+    echo "           Run 'grep ADMIN_TEMP_PASSWORD .env' to view it"
+    echo "           Change this password immediately after first login!"
 else
     echo ".env file already exists, skipping..."
 fi
@@ -104,9 +125,21 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 fi
 
 echo ""
-echo "Step 12: Starting application with PM2..."
+echo "Step 12: Setting up logs directory..."
+mkdir -p logs
+
+echo ""
+echo "Step 13: Installing PM2 log rotation..."
+pm2 install pm2-logrotate 2>/dev/null || true
+pm2 set pm2-logrotate:max_size 10M
+pm2 set pm2-logrotate:retain 7
+pm2 set pm2-logrotate:compress true
+pm2 set pm2-logrotate:rotateInterval '0 0 * * *'
+
+echo ""
+echo "Step 14: Starting application with PM2..."
 pm2 delete pratibha-marketing 2>/dev/null || true
-pm2 start backend/server.js --name pratibha-marketing
+pm2 start ecosystem.config.js --env production
 pm2 save
 
 # Setup PM2 to start on boot (without piping to bash which can fail)
@@ -114,7 +147,7 @@ pm2 startup systemd -u root --hp /root
 pm2 save
 
 echo ""
-echo "Step 13: Configuring Nginx..."
+echo "Step 15: Configuring Nginx..."
 
 # Remove any existing configs
 rm -f /etc/nginx/sites-enabled/default
@@ -168,7 +201,7 @@ systemctl restart nginx
 systemctl enable nginx
 
 echo ""
-echo "Step 14: Verifying deployment..."
+echo "Step 16: Verifying deployment..."
 echo "-----------------------------------"
 
 # Check if app is running
@@ -245,8 +278,8 @@ echo "   certbot certonly --manual --preferred-challenges dns -d pratibhamarketi
 echo ""
 echo "Admin Login:"
 echo "   Email: admin@pratibhamarketing.in"
-echo "   Password: admin123"
-echo "   CHANGE THIS PASSWORD IMMEDIATELY!"
+echo "   Password: View with 'grep ADMIN_TEMP_PASSWORD /var/www/pratibha-marketing/.env'"
+echo "   CHANGE THIS PASSWORD IMMEDIATELY AFTER FIRST LOGIN!"
 echo ""
 echo "Useful Commands:"
 echo "   pm2 logs pratibha-marketing    # View app logs"
