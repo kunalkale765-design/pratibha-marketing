@@ -408,6 +408,9 @@
         let currentContractPrices = {};
 
         async function init() {
+            // Pre-fetch CSRF token to ensure it's ready before form submissions
+            Auth.ensureCsrfToken().catch(err => console.warn('CSRF pre-fetch failed:', err));
+
             const user = await Auth.requireAuth(['admin', 'staff']);
             if (!user) return;
             await Promise.all([loadCustomers(), loadProducts()]);
@@ -538,12 +541,39 @@
                 const url = id ? `/api/customers/${id}` : '/api/customers';
                 const method = id ? 'PUT' : 'POST';
 
-                const res = await fetch(url, {
+                const headers = { 'Content-Type': 'application/json' };
+                const csrfToken = await Auth.ensureCsrfToken();
+                if (csrfToken) {
+                    headers['X-CSRF-Token'] = csrfToken;
+                }
+
+                let res = await fetch(url, {
                     method,
-                    headers: { 'Content-Type': 'application/json' },
+                    headers,
                     credentials: 'include',
                     body: JSON.stringify(data)
                 });
+
+                // Handle CSRF error with retry
+                if (res.status === 403) {
+                    const err = await res.json();
+                    if (err.message?.toLowerCase().includes('csrf')) {
+                        const newToken = await Auth.refreshCsrfToken();
+                        if (newToken) {
+                            headers['X-CSRF-Token'] = newToken;
+                            res = await fetch(url, {
+                                method,
+                                headers,
+                                credentials: 'include',
+                                body: JSON.stringify(data)
+                            });
+                        }
+                    } else {
+                        const msg = err.errors?.[0]?.msg || err.message || 'Failed to save';
+                        showToast(msg, 'error');
+                        return;
+                    }
+                }
 
                 if (res.ok) {
                     showToast(id ? 'Customer updated' : 'Customer added', 'success');

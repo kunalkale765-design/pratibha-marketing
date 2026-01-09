@@ -285,6 +285,44 @@ unpaid → partial → paid
 - [ ] Markup pricing → applies percentage to market rate
 - [ ] Contract pricing → uses fixed price from customer record
 
+## Troubleshooting
+
+### CSRF Token Errors ("CSRF token missing")
+
+**Symptoms**: 403 error with "CSRF token missing" when submitting forms (POST/PUT/DELETE requests).
+
+**Root Causes & Fixes**:
+
+1. **Missing CSRF token in fetch request**
+   - Every state-changing request (POST, PUT, DELETE, PATCH) must include `X-CSRF-Token` header
+   - Pattern to use in frontend:
+   ```javascript
+   const headers = { 'Content-Type': 'application/json' };
+   const csrfToken = await Auth.ensureCsrfToken();
+   if (csrfToken) {
+       headers['X-CSRF-Token'] = csrfToken;
+   }
+   ```
+   - Add retry logic for CSRF errors (see `deleteCustomer` in customer-management.html for example)
+
+2. **Double token generation bug** (backend/middleware/csrf.js)
+   - If `/api/csrf-token` returns two `Set-Cookie` headers with different values, the `getOrCreateToken` function is being called twice
+   - Fix: Store token on `req._csrfToken` to prevent duplicate generation in same request cycle
+   - Test: `curl -I http://localhost:3000/api/csrf-token | grep Set-Cookie` should show only ONE csrf_token cookie
+
+3. **Service worker caching old HTML/JS**
+   - The service worker caches HTML files with cache-first strategy
+   - Hard refresh (Cmd+Shift+R) does NOT bypass service worker cache
+   - Fix: Increment `CACHE_NAME` version in `frontend/service-worker.js` (e.g., 'pratibha-v5' → 'pratibha-v6')
+   - Alternative: User can manually unregister service worker in DevTools > Application > Service Workers
+
+**CSRF Implementation Overview**:
+- Uses Double-Submit Cookie Pattern
+- Cookie: `csrf_token` (non-httpOnly, readable by JS)
+- Header: `X-CSRF-Token`
+- Server validates cookie === header for POST/PUT/DELETE/PATCH requests
+- Key files: `backend/middleware/csrf.js`, `frontend/js/api.js`, `frontend/js/auth.js`
+
 ## Preferences
 
 <default_to_action>

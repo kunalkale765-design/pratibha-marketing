@@ -25,6 +25,12 @@ const generateToken = () => {
 
 // Get or create CSRF token from cookies
 const getOrCreateToken = (req, res) => {
+  // First check if we already generated a token in this request cycle
+  // This prevents double-setting the cookie with different values
+  if (req._csrfToken) {
+    return req._csrfToken;
+  }
+
   let token = req.cookies[CSRF_COOKIE_NAME];
 
   if (!token) {
@@ -38,6 +44,8 @@ const getOrCreateToken = (req, res) => {
     });
   }
 
+  // Store on request object for reuse in same request cycle
+  req._csrfToken = token;
   return token;
 };
 
