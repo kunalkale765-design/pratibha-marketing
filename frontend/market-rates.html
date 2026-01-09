@@ -6,62 +6,22 @@
     <title>Market Rates - Pratibha Marketing</title>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#2e3532">
-    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@500;600&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+
+    <!-- Shared CSS -->
+    <link rel="stylesheet" href="/css/variables.css">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/utilities.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+
     <!-- jsPDF for PDF export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+    <!-- Page-specific styles -->
     <style>
-        :root {
-            --gunmetal: #2e3532;
-            --dusty-olive: #7e9181;
-            --dusty-olive-dark: #5d6b5f;
-            --cream: #f9f7f3;
-            --cream-dark: #efe9df;
-            --warm-white: #fefdfb;
-            --terracotta: #c4a77d;
-            --text-primary: #1f2421;
-            --text-muted: #8a918c;
-            --success: #6b8f71;
-            --pale-slate-light: #e8ebf0;
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
         body {
-            font-family: 'DM Sans', sans-serif;
-            background: var(--cream);
-            min-height: 100vh;
-            color: var(--text-primary);
             -webkit-tap-highlight-color: transparent;
-        }
-
-        /* Header */
-        .header {
-            background: var(--gunmetal);
-            color: white;
-            padding: 0.875rem 1rem;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            font-family: 'Crimson Pro', serif;
-            font-size: 1.25rem;
-            font-weight: 600;
-            text-decoration: none;
-            color: white;
-        }
-
-        .logo span {
-            font-weight: 400;
-            opacity: 0.8;
         }
 
         .btn-back {
@@ -205,32 +165,6 @@
             transform: scale(0.97);
         }
 
-        /* Toast */
-        .toast {
-            position: fixed;
-            top: 60px;
-            left: 1rem;
-            right: 1rem;
-            padding: 0.875rem 1rem;
-            border-radius: 8px;
-            font-weight: 500;
-            z-index: 200;
-            transform: translateY(-100px);
-            opacity: 0;
-            transition: all 0.3s ease;
-            background: var(--success);
-            color: white;
-        }
-
-        .toast.show {
-            transform: translateY(0);
-            opacity: 1;
-        }
-
-        .toast.error {
-            background: #9a6565;
-        }
-
         .loading {
             text-align: center;
             padding: 3rem 1rem;
@@ -239,14 +173,6 @@
 
         /* Extra small screens */
         @media (max-width: 360px) {
-            .header {
-                padding: 0.75rem;
-            }
-
-            .logo {
-                font-size: 1.125rem;
-            }
-
             .btn-back {
                 padding: 0.375rem 0.625rem;
                 font-size: 0.75rem;
@@ -310,19 +236,6 @@
 
         /* Tablet and Desktop */
         @media (min-width: 768px) {
-            .header {
-                padding: 1rem 2rem;
-            }
-
-            .header-content {
-                max-width: 1200px;
-                margin: 0 auto;
-            }
-
-            .logo {
-                font-size: 1.5rem;
-            }
-
             .date-bar {
                 padding: 1rem 2rem;
                 max-width: 1200px;
@@ -614,7 +527,10 @@
 
     <script src="/js/auth.js"></script>
     <script src="/js/api.js"></script>
-    <script>
+    <script type="module">
+        import { escapeHtml } from '/js/utils.js';
+        import { showToast } from '/js/ui.js';
+
         let products = [];
         let rates = {};
         let changedRates = {};
@@ -653,7 +569,7 @@
                 renderProducts();
             } catch (e) {
                 console.error(e);
-                showToast('Failed to load data', true);
+                showToast('Failed to load data', 'error');
             }
         }
 
@@ -702,13 +618,6 @@
             }
 
             container.innerHTML = html;
-        }
-
-        function escapeHtml(str) {
-            if (!str) return '';
-            return String(str).replace(/[&<>"']/g, m => ({
-                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-            }[m]));
         }
 
         function clearZero(input) {
@@ -818,18 +727,11 @@
             btn.textContent = 'Save Rates';
 
             if (success > 0) {
-                showToast(`${success} rate(s) saved`);
+                showToast(`${success} rate(s) saved`, 'success');
             }
             if (failed > 0) {
-                showToast(`${failed} rate(s) failed: ${firstError}`, true);
+                showToast(`${failed} rate(s) failed: ${firstError}`, 'error');
             }
-        }
-
-        function showToast(message, isError = false) {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.className = 'toast show' + (isError ? ' error' : '');
-            setTimeout(() => toast.classList.remove('show'), 3000);
         }
 
         // History functions
@@ -921,7 +823,7 @@
 
         function exportToPDF() {
             if (!historyData || !historyData.data || historyData.data.length === 0) {
-                showToast('No data to export', true);
+                showToast('No data to export', 'error');
                 return;
             }
 
@@ -996,12 +898,21 @@
                 const filename = `market-rates-${historyData.startDate}-to-${historyData.endDate}.pdf`;
                 doc.save(filename);
 
-                showToast('PDF exported successfully');
+                showToast('PDF exported successfully', 'success');
             } catch (e) {
                 console.error('PDF export failed:', e);
-                showToast('Failed to export PDF', true);
+                showToast('Failed to export PDF', 'error');
             }
         }
+
+        // Expose functions to window for inline handlers
+        window.clearZero = clearZero;
+        window.restoreValue = restoreValue;
+        window.handleChange = handleChange;
+        window.handleInput = handleInput;
+        window.saveRates = saveRates;
+        window.loadHistory = loadHistory;
+        window.exportToPDF = exportToPDF;
 
         init();
     </script>

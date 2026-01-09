@@ -1,0 +1,207 @@
+/**
+ * Responsive Styles
+ *
+ * Media queries for different screen sizes.
+ * Mobile-first approach: base styles are for mobile,
+ * then we add styles for larger screens.
+ *
+ * Breakpoints:
+ * - xs: < 360px (extra small phones)
+ * - sm: < 480px (phones)
+ * - md: >= 768px (tablets)
+ * - lg: >= 1024px (laptops)
+ * - xl: >= 1200px (desktops)
+ */
+
+/* ===================
+   EXTRA SMALL (< 360px)
+   =================== */
+
+@media (max-width: 359px) {
+  .header {
+    padding: 0.75rem var(--space-sm);
+  }
+
+  .logo {
+    font-size: var(--text-lg);
+  }
+
+  .btn-header span {
+    display: none;
+  }
+
+  .card {
+    padding: var(--space-sm);
+  }
+
+  .modal {
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+}
+
+/* ===================
+   SMALL (< 480px)
+   =================== */
+
+@media (max-width: 479px) {
+  /* Stack header actions */
+  .header-actions {
+    gap: var(--space-xs);
+  }
+
+  /* Full-width buttons on mobile */
+  .btn-mobile-full {
+    width: 100%;
+  }
+
+  /* Smaller padding on mobile */
+  .container {
+    padding: 0 var(--space-sm);
+  }
+
+  /* Nav pills scroll */
+  .nav-pills {
+    margin: 0 calc(-1 * var(--space-sm));
+    padding: var(--space-sm);
+    border-radius: 0;
+  }
+}
+
+/* ===================
+   TABLET (>= 768px)
+   =================== */
+
+@media (min-width: 768px) {
+  /* Larger text */
+  body {
+    font-size: var(--text-lg);
+  }
+
+  .logo {
+    font-size: var(--text-2xl);
+  }
+
+  /* More padding */
+  .header {
+    padding: var(--space-md) var(--space-lg);
+  }
+
+  .card {
+    padding: var(--space-lg);
+  }
+
+  /* Modal centered instead of bottom sheet */
+  .modal-overlay {
+    align-items: center;
+    padding: var(--space-lg);
+  }
+
+  .modal {
+    border-radius: var(--radius-xl);
+    max-height: 80vh;
+  }
+
+  /* Grid utilities for tablet */
+  .grid-cols-2-md {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-md);
+  }
+
+  /* Form row on tablet */
+  .form-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-md);
+  }
+}
+
+/* ===================
+   LAPTOP (>= 1024px)
+   =================== */
+
+@media (min-width: 1024px) {
+  /* Even more padding */
+  .header {
+    padding: var(--space-md) var(--space-xl);
+  }
+
+  /* Grid utilities for desktop */
+  .grid-cols-3-lg {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-md);
+  }
+
+  .grid-cols-4-lg {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-md);
+  }
+
+  /* Wider modal on desktop */
+  .modal {
+    max-width: 600px;
+  }
+
+  /* Hide on mobile, show on desktop */
+  .hidden-mobile {
+    display: block;
+  }
+}
+
+/* ===================
+   DESKTOP (>= 1200px)
+   =================== */
+
+@media (min-width: 1200px) {
+  .container {
+    padding: 0 var(--space-xl);
+  }
+
+  /* Larger modal on big screens */
+  .modal-lg {
+    max-width: 800px;
+  }
+}
+
+/* ===================
+   VISIBILITY HELPERS
+   =================== */
+
+/* Hide on mobile (< 768px) */
+@media (max-width: 767px) {
+  .hidden-mobile {
+    display: none !important;
+  }
+}
+
+/* Hide on desktop (>= 768px) */
+@media (min-width: 768px) {
+  .hidden-desktop {
+    display: none !important;
+  }
+}
+
+/* ===================
+   PRINT STYLES
+   =================== */
+
+@media print {
+  .header,
+  .toast,
+  .modal-overlay,
+  .btn {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+    color: black;
+  }
+
+  .card {
+    border: 1px solid #ccc;
+    box-shadow: none;
+  }
+}

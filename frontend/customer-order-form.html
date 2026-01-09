@@ -6,69 +6,18 @@
     <title>Order - Pratibha Marketing</title>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#2e3532">
-    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@500;600&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+
+    <!-- Shared CSS -->
+    <link rel="stylesheet" href="/css/variables.css">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/utilities.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+
+    <!-- Page-specific styles -->
     <style>
-        :root {
-            --gunmetal: #2e3532;
-            --dusty-olive: #7e9181;
-            --dusty-olive-dark: #5d6b5f;
-            --cream: #f9f7f3;
-            --cream-dark: #efe9df;
-            --warm-white: #fefdfb;
-            --terracotta: #c4a77d;
-            --text-primary: #1f2421;
-            --text-muted: #8a918c;
-            --success: #5d7a5f;
-            --error: #9a6565;
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
         body {
-            font-family: 'DM Sans', sans-serif;
-            background: var(--cream);
-            min-height: 100vh;
-            color: var(--text-primary);
             -webkit-tap-highlight-color: transparent;
-        }
-
-        /* Header */
-        .header {
-            background: var(--gunmetal);
-            color: white;
-            padding: 0.875rem 1rem;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            font-family: 'Crimson Pro', serif;
-            font-size: 1.25rem;
-            font-weight: 600;
-            text-decoration: none;
-            color: white;
-        }
-
-        .logo span { font-weight: 400; opacity: 0.8; }
-
-        .btn-logout {
-            background: rgba(255,255,255,0.1);
-            border: none;
-            color: white;
-            padding: 0.5rem 0.875rem;
-            border-radius: 6px;
-            font-size: 0.8125rem;
-            cursor: pointer;
-            min-height: 44px;
-            display: flex;
-            align-items: center;
         }
 
         /* Customer Selector */
@@ -307,29 +256,6 @@
             cursor: not-allowed;
         }
 
-        /* Toast */
-        .toast {
-            position: fixed;
-            top: 60px;
-            left: 1rem;
-            right: 1rem;
-            padding: 0.875rem 1rem;
-            border-radius: 8px;
-            font-weight: 500;
-            z-index: 200;
-            transform: translateY(-100px);
-            opacity: 0;
-            transition: all 0.3s ease;
-        }
-
-        .toast.show {
-            transform: translateY(0);
-            opacity: 1;
-        }
-
-        .toast.success { background: var(--success); color: white; }
-        .toast.error { background: var(--error); color: white; }
-
         /* States */
         .loading, .empty-state {
             text-align: center;
@@ -473,12 +399,12 @@
     <header class="header">
         <div class="header-content">
             <a href="/" class="logo">Pratibha <span>Marketing</span></a>
-            <button class="btn-logout" onclick="logout()">Logout</button>
+            <button class="btn-header" id="logoutBtn">Logout</button>
         </div>
     </header>
 
     <div class="customer-bar" id="customerBar">
-        <select id="customerSelect" class="customer-select" onchange="onCustomerChange()">
+        <select id="customerSelect" class="customer-select">
             <option value="">Select Customer</option>
         </select>
     </div>
@@ -511,20 +437,23 @@
 
     <script src="/js/auth.js"></script>
     <script src="/js/api.js"></script>
-    <script>
+    <script type="module">
+        import { escapeHtml } from '/js/utils.js';
+        import { showToast } from '/js/ui.js';
+        import { logout } from '/js/init.js';
+
+        // Logout button
+        document.getElementById('logoutBtn').addEventListener('click', logout);
+
+        // Customer selector change
+        document.getElementById('customerSelect').addEventListener('change', onCustomerChange);
+
         let currentUser = null;
         let selectedCustomer = null;
         let products = [];
         let marketRates = {};
         let customers = [];
         let isStaff = false;
-
-        function escapeHtml(str) {
-            if (!str) return '';
-            return String(str).replace(/[&<>"']/g, m => ({
-                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-            }[m]));
-        }
 
         async function init() {
             // Check for magic link token in URL
@@ -545,12 +474,12 @@
                         // Remove token from URL for cleaner bookmarking
                         window.history.replaceState({}, '', window.location.pathname);
                     } else {
-                        showToast(data.message || 'Invalid magic link', true);
+                        showToast(data.message || 'Invalid magic link', 'error');
                         window.location.href = '/login.html';
                         return;
                     }
                 } catch (e) {
-                    showToast('Failed to authenticate', true);
+                    showToast('Failed to authenticate', 'error');
                     window.location.href = '/login.html';
                     return;
                 }
@@ -610,9 +539,9 @@
                 console.error('Failed to load data:', e);
                 // Provide more specific error message
                 if (!navigator.onLine) {
-                    showToast('No internet connection. Please check your network.', true);
+                    showToast('No internet connection. Please check your network.', 'error');
                 } else {
-                    showToast('Failed to load products. Please refresh the page.', true);
+                    showToast('Failed to load products. Please refresh the page.', 'error');
                 }
             }
         }
@@ -725,30 +654,31 @@
             container.innerHTML = html;
         }
 
-        function clearZero(input) {
+        // Expose qty functions to window for inline handlers
+        window.clearZero = function(input) {
             if (input.value === '0') input.value = '';
             input.select();
-        }
+        };
 
-        function restoreZero(input) {
+        window.restoreZero = function(input) {
             if (input.value === '') input.value = '0';
-            updateFromInput(input.id.replace('qty-', ''));
-        }
+            window.updateFromInput(input.id.replace('qty-', ''));
+        };
 
-        function changeQty(id, delta) {
+        window.changeQty = function(id, delta) {
             const input = document.getElementById('qty-' + id);
             let val = parseInt(input.value) || 0;
             val = Math.max(0, val + delta);
             input.value = val;
             updateItem(id, val);
-        }
+        };
 
-        function updateFromInput(id) {
+        window.updateFromInput = function(id) {
             const input = document.getElementById('qty-' + id);
             const val = Math.max(0, parseInt(input.value) || 0);
             input.value = val;
             updateItem(id, val);
-        }
+        };
 
         function updateItem(id, qty) {
             const item = document.querySelector(`.product-item[data-id="${id}"]`);
@@ -796,7 +726,8 @@
             });
         });
 
-        async function placeOrder() {
+        // Expose placeOrder to window for inline handler
+        window.placeOrder = async function() {
             if (!selectedCustomer) return;
 
             const orderProducts = [];
@@ -835,7 +766,7 @@
                 const data = await res.json();
 
                 if (res.ok) {
-                    showToast(`Order placed! #${data.data.orderNumber}`);
+                    showToast(`Order placed! #${data.data.orderNumber}`, 'success');
                     document.querySelectorAll('.qty-input').forEach(input => {
                         input.value = '0';
                         input.classList.remove('has-value');
@@ -845,31 +776,20 @@
                     });
                     updateSummary();
                 } else {
-                    showToast(data.message || 'Failed to place order', true);
+                    showToast(data.message || 'Failed to place order', 'error');
                 }
             } catch (e) {
                 console.error('Order placement error:', e);
                 if (!navigator.onLine) {
-                    showToast('No internet connection', true);
+                    showToast('No internet connection', 'error');
                 } else {
-                    showToast('Failed to place order. Please try again.', true);
+                    showToast('Failed to place order. Please try again.', 'error');
                 }
             } finally {
                 btn.disabled = false;
                 btn.textContent = 'Place Order';
                 updateSummary();
             }
-        }
-
-        function showToast(msg, isError = false) {
-            const toast = document.getElementById('toast');
-            toast.textContent = msg;
-            toast.className = 'toast show ' + (isError ? 'error' : 'success');
-            setTimeout(() => toast.classList.remove('show'), 4000);
-        }
-
-        function logout() {
-            Auth.logout();
         }
 
         init();

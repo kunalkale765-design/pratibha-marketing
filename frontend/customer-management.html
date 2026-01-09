@@ -6,75 +6,19 @@
     <title>Customers - Pratibha Marketing</title>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#2e3532">
-    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@500;600&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+
+    <!-- Shared CSS -->
+    <link rel="stylesheet" href="/css/variables.css">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/utilities.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+
+    <!-- Page-specific styles -->
     <style>
-        :root {
-            --gunmetal: #2e3532;
-            --dusty-olive: #7e9181;
-            --dusty-olive-dark: #5d6b5f;
-            --cream: #f9f7f3;
-            --cream-dark: #efe9df;
-            --warm-white: #fefdfb;
-            --terracotta: #c4a77d;
-            --text-primary: #1f2421;
-            --text-muted: #8a918c;
-            --success: #5d7a5f;
-            --warning: #b89a5a;
-            --error: #9a6565;
-            --info: #6a8a9a;
-            --purple: #8a6a9a;
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
         body {
-            font-family: 'DM Sans', sans-serif;
-            background: var(--cream);
-            min-height: 100vh;
-            color: var(--text-primary);
             -webkit-tap-highlight-color: transparent;
         }
-
-        /* Header */
-        .header {
-            background: var(--gunmetal);
-            color: white;
-            padding: 0.875rem 1rem;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            font-family: 'Crimson Pro', serif;
-            font-size: 1.25rem;
-            font-weight: 600;
-            text-decoration: none;
-            color: white;
-        }
-
-        .logo span { font-weight: 400; opacity: 0.8; }
-
-        .header-btns { display: flex; gap: 0.5rem; }
-
-        .btn-header {
-            background: rgba(255,255,255,0.1);
-            border: none;
-            color: white;
-            padding: 0.5rem 0.75rem;
-            border-radius: 6px;
-            font-size: 0.8125rem;
-            cursor: pointer;
-            text-decoration: none;
-        }
-
-        .btn-header.primary { background: var(--dusty-olive); }
 
         /* Search */
         .search-bar {
@@ -126,19 +70,6 @@
             font-weight: 600;
             color: var(--gunmetal);
         }
-
-        .badge {
-            padding: 0.25rem 0.5rem;
-            font-size: 0.625rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            border-radius: 4px;
-            letter-spacing: 0.5px;
-        }
-
-        .badge-contract { background: rgba(138, 106, 154, 0.15); color: #6a507a; }
-        .badge-markup { background: rgba(106, 138, 154, 0.15); color: #4a6a7a; }
-        .badge-market { background: var(--cream); color: var(--text-muted); }
 
         .customer-details {
             display: flex;
@@ -206,94 +137,7 @@
             color: var(--text-muted);
         }
 
-        /* Modal (Bottom Sheet) */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 200;
-            align-items: flex-end;
-        }
-
-        .modal-overlay.show { display: flex; }
-
-        .modal {
-            background: var(--warm-white);
-            width: 100%;
-            max-height: 90vh;
-            border-radius: 16px 16px 0 0;
-            overflow-y: auto;
-            animation: slideUp 0.3s ease;
-        }
-
-        @keyframes slideUp {
-            from { transform: translateY(100%); }
-            to { transform: translateY(0); }
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1rem;
-            border-bottom: 1px solid var(--cream-dark);
-            position: sticky;
-            top: 0;
-            background: var(--warm-white);
-        }
-
-        .modal-title {
-            font-family: 'Crimson Pro', serif;
-            font-size: 1.25rem;
-            font-weight: 600;
-        }
-
-        .btn-close {
-            width: 32px;
-            height: 32px;
-            border: none;
-            background: var(--cream);
-            border-radius: 50%;
-            font-size: 1.25rem;
-            cursor: pointer;
-            color: var(--text-muted);
-        }
-
-        .modal-body {
-            padding: 1rem;
-        }
-
-        .form-group {
-            margin-bottom: 1rem;
-        }
-
-        .form-label {
-            display: block;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: var(--text-muted);
-            margin-bottom: 0.375rem;
-        }
-
-        .form-input, .form-select, .form-textarea {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1.5px solid var(--cream-dark);
-            border-radius: 8px;
-            font-size: 1rem;
-            background: var(--cream);
-            min-height: 48px;
-        }
-
-        .form-input:focus, .form-select:focus, .form-textarea:focus {
-            outline: none;
-            border-color: var(--dusty-olive);
-            box-shadow: 0 0 0 3px rgba(126, 145, 129, 0.15);
-        }
-
+        /* Form extras */
         .form-hint {
             font-size: 0.75rem;
             color: var(--text-muted);
@@ -312,8 +156,6 @@
             margin-bottom: 0.75rem;
         }
 
-        .hidden { display: none !important; }
-
         .info-box {
             background: rgba(184, 154, 90, 0.1);
             border: 1px solid rgba(184, 154, 90, 0.3);
@@ -321,36 +163,6 @@
             padding: 0.75rem;
             font-size: 0.875rem;
             color: #8a7340;
-        }
-
-        .modal-footer {
-            padding: 1rem;
-            padding-bottom: calc(1rem + env(safe-area-inset-bottom));
-            border-top: 1px solid var(--cream-dark);
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .btn-modal {
-            flex: 1;
-            padding: 0.875rem;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            min-height: 52px;
-            border: none;
-        }
-
-        .btn-modal.primary {
-            background: var(--dusty-olive);
-            color: white;
-        }
-
-        .btn-modal.secondary {
-            background: var(--cream);
-            color: var(--text-primary);
-            border: 1.5px solid var(--cream-dark);
         }
 
         /* Contract Prices List */
@@ -410,44 +222,8 @@
             color: var(--text-muted);
         }
 
-        /* Toast */
-        .toast {
-            position: fixed;
-            top: 60px;
-            left: 1rem;
-            right: 1rem;
-            padding: 0.875rem 1rem;
-            border-radius: 8px;
-            font-weight: 500;
-            z-index: 300;
-            transform: translateY(-100px);
-            opacity: 0;
-            transition: all 0.3s ease;
-        }
-
-        .toast.show {
-            transform: translateY(0);
-            opacity: 1;
-        }
-
-        .toast.success { background: var(--success); color: white; }
-        .toast.error { background: var(--error); color: white; }
-
         /* Extra small screens */
         @media (max-width: 360px) {
-            .header {
-                padding: 0.75rem;
-            }
-
-            .logo {
-                font-size: 1.125rem;
-            }
-
-            .btn-header {
-                padding: 0.375rem 0.5rem;
-                font-size: 0.75rem;
-            }
-
             .search-bar {
                 padding: 0.5rem 0.75rem;
             }
@@ -474,50 +250,10 @@
             .customer-meta {
                 font-size: 0.75rem;
             }
-
-            .modal-header {
-                padding: 0.75rem;
-            }
-
-            .modal-title {
-                font-size: 1.125rem;
-            }
-
-            .modal-body {
-                padding: 0.75rem;
-            }
-
-            .form-input, .form-select {
-                padding: 0.75rem;
-                font-size: 16px;
-                min-height: 48px;
-            }
-
-            .form-label {
-                font-size: 0.6875rem;
-            }
-
-            .btn-primary, .btn-secondary {
-                padding: 0.75rem;
-                font-size: 0.875rem;
-                min-height: 48px;
-            }
         }
 
         /* Mobile */
         @media (max-width: 480px) {
-            .btn-header {
-                min-height: 44px;
-                display: flex;
-                align-items: center;
-            }
-
-            .btn-close {
-                width: 44px;
-                height: 44px;
-                font-size: 1.5rem;
-            }
-
             .form-row {
                 flex-direction: column;
                 gap: 0;
@@ -534,19 +270,6 @@
 
         /* Tablet and Desktop */
         @media (min-width: 768px) {
-            .header {
-                padding: 1rem 2rem;
-            }
-
-            .header-content {
-                max-width: 1200px;
-                margin: 0 auto;
-            }
-
-            .logo {
-                font-size: 1.5rem;
-            }
-
             .search-bar {
                 padding: 1rem 2rem;
                 max-width: 1200px;
@@ -564,18 +287,6 @@
 
             .customer-card {
                 margin-bottom: 0;
-            }
-
-            .modal {
-                max-width: 600px;
-                margin: 0 auto;
-                border-radius: 16px;
-                max-height: 85vh;
-            }
-
-            .modal-overlay {
-                align-items: center;
-                padding: 2rem;
             }
         }
 
@@ -688,17 +399,13 @@
 
     <script src="/js/auth.js"></script>
     <script src="/js/api.js"></script>
-    <script>
+    <script type="module">
+        import { escapeHtml } from '/js/utils.js';
+        import { showToast } from '/js/ui.js';
+
         let allCustomers = [];
         let allProducts = [];
         let currentContractPrices = {};
-
-        function escapeHtml(str) {
-            if (!str) return '';
-            return String(str).replace(/[&<>"']/g, m => ({
-                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-            }[m]));
-        }
 
         async function init() {
             const user = await Auth.requireAuth(['admin', 'staff']);
@@ -716,7 +423,7 @@
                 allProducts = data.data || [];
             } catch (e) {
                 console.error('Failed to load products:', e);
-                showToast('Failed to load products for contract pricing.', true);
+                showToast('Failed to load products for contract pricing.', 'error');
             }
         }
 
@@ -728,7 +435,7 @@
                 displayCustomers(allCustomers);
             } catch (e) {
                 console.error('Failed to load customers:', e);
-                showToast('Failed to load customers', true);
+                showToast('Failed to load customers', 'error');
             }
         }
 
@@ -839,20 +546,20 @@
                 });
 
                 if (res.ok) {
-                    showToast(id ? 'Customer updated' : 'Customer added');
+                    showToast(id ? 'Customer updated' : 'Customer added', 'success');
                     closeModal();
                     loadCustomers();
                 } else {
                     const err = await res.json();
                     const msg = err.errors?.[0]?.msg || err.message || 'Failed to save';
-                    showToast(msg, true);
+                    showToast(msg, 'error');
                 }
             } catch (e) {
                 console.error('Save customer error:', e);
                 if (!navigator.onLine) {
-                    showToast('No internet connection', true);
+                    showToast('No internet connection', 'error');
                 } else {
-                    showToast('Failed to save customer. Please try again.', true);
+                    showToast('Failed to save customer. Please try again.', 'error');
                 }
             }
         });
@@ -873,18 +580,18 @@
                     credentials: 'include'
                 });
                 if (res.ok) {
-                    showToast('Customer deleted');
+                    showToast('Customer deleted', 'success');
                     loadCustomers();
                 } else {
                     const err = await res.json();
-                    showToast(err.message || 'Failed to delete', true);
+                    showToast(err.message || 'Failed to delete', 'error');
                 }
             } catch (e) {
                 console.error('Delete customer error:', e);
                 if (!navigator.onLine) {
-                    showToast('No internet connection', true);
+                    showToast('No internet connection', 'error');
                 } else {
-                    showToast('Failed to delete customer. Please try again.', true);
+                    showToast('Failed to delete customer. Please try again.', 'error');
                 }
             }
         }
@@ -898,7 +605,7 @@
         async function shareMagicLink(customerId) {
             const customer = allCustomers.find(c => c._id === customerId);
             if (!customer) {
-                showToast('Customer not found', true);
+                showToast('Customer not found', 'error');
                 return;
             }
 
@@ -923,7 +630,7 @@
                     // Try to copy to clipboard
                     if (navigator.clipboard) {
                         await navigator.clipboard.writeText(link);
-                        showToast(`Link copied for ${customer.name}`);
+                        showToast(`Link copied for ${customer.name}`, 'success');
                     } else {
                         // Fallback - show the link in a prompt
                         prompt('Copy this order link:', link);
@@ -946,14 +653,14 @@
                         }
                     }
                 } else {
-                    showToast(data.message || 'Failed to generate link', true);
+                    showToast(data.message || 'Failed to generate link', 'error');
                 }
             } catch (e) {
                 console.error('Magic link error:', e);
                 if (!navigator.onLine) {
-                    showToast('No internet connection', true);
+                    showToast('No internet connection', 'error');
                 } else {
-                    showToast('Failed to generate link. Please try again.', true);
+                    showToast('Failed to generate link. Please try again.', 'error');
                 }
             }
         }
@@ -962,7 +669,7 @@
         async function openContractPrices(customerId) {
             const customer = allCustomers.find(c => c._id === customerId);
             if (!customer) {
-                showToast('Customer not found', true);
+                showToast('Customer not found', 'error');
                 return;
             }
 
@@ -1016,7 +723,7 @@
             const customerId = document.getElementById('contractCustomerId').value;
             const customer = allCustomers.find(c => c._id === customerId);
             if (!customer) {
-                showToast('Customer not found', true);
+                showToast('Customer not found', 'error');
                 return;
             }
 
@@ -1050,19 +757,19 @@
                 });
 
                 if (res.ok) {
-                    showToast('Prices saved');
+                    showToast('Prices saved', 'success');
                     closeContractModal();
                     loadCustomers();
                 } else {
                     const err = await res.json();
-                    showToast(err.errors?.[0]?.msg || err.message || 'Failed to save', true);
+                    showToast(err.errors?.[0]?.msg || err.message || 'Failed to save', 'error');
                 }
             } catch (e) {
                 console.error('Save contract prices error:', e);
                 if (!navigator.onLine) {
-                    showToast('No internet connection', true);
+                    showToast('No internet connection', 'error');
                 } else {
-                    showToast('Failed to save prices. Please try again.', true);
+                    showToast('Failed to save prices. Please try again.', 'error');
                 }
             }
         }
@@ -1072,12 +779,18 @@
             document.getElementById('productSearch').value = '';
         }
 
-        function showToast(msg, isError = false) {
-            const toast = document.getElementById('toast');
-            toast.textContent = msg;
-            toast.className = 'toast show ' + (isError ? 'error' : 'success');
-            setTimeout(() => toast.classList.remove('show'), 3000);
-        }
+        // Expose functions to window for inline handlers
+        window.showAddCustomerForm = showAddCustomerForm;
+        window.searchCustomers = searchCustomers;
+        window.toggleMarkupField = toggleMarkupField;
+        window.closeModal = closeModal;
+        window.editCustomerById = editCustomerById;
+        window.deleteCustomer = deleteCustomer;
+        window.shareMagicLink = shareMagicLink;
+        window.openContractPrices = openContractPrices;
+        window.filterContractProducts = filterContractProducts;
+        window.saveContractPrices = saveContractPrices;
+        window.closeContractModal = closeContractModal;
 
         // Close modals on overlay click
         document.getElementById('customerModal').onclick = (e) => {
