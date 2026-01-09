@@ -33,7 +33,7 @@ const validateEnv = () => {
 
   // Warn about optional but recommended variables
   if (process.env.NODE_ENV === 'production' && !process.env.SENTRY_DSN) {
-    console.warn('⚠️  SENTRY_DSN not configured - error monitoring disabled');
+    console.warn('[WARN] SENTRY_DSN not configured - error monitoring disabled');
   }
 };
 

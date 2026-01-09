@@ -8,7 +8,7 @@ Tracking all UI/UX and feature changes made during the review session.
 
 | Change | Before | After | Status |
 |--------|--------|-------|--------|
-| Logo emoji | 🌿 emoji before text | Text only "Pratibha Marketing" | Done |
+| Logo emoji | (leaf emoji) emoji before text | Text only "Pratibha Marketing" | Done |
 | Email field | "Email Address" with email input | "Username" with text input | Done |
 | Back to Home link | Had "← Back to Home" link | Removed | Done |
 | Post-login redirect | Redirect to market-rates.html | Redirect to dashboard (index.html) | Done |
@@ -23,7 +23,7 @@ Tracking all UI/UX and feature changes made during the review session.
 
 | Change | Before | After | Status |
 |--------|--------|-------|--------|
-| Logo emoji | 🌿 emoji before text | Text only "Pratibha Marketing" | Done |
+| Logo emoji | (leaf emoji) emoji before text | Text only "Pratibha Marketing" | Done |
 | Email field | "Email Address" | "Username" | Done |
 | Password length | Min 12 characters | Min 6 characters | Done |
 | Username validation | Required email format | Any text (min 3 chars) | Done |
@@ -34,7 +34,7 @@ Tracking all UI/UX and feature changes made during the review session.
 
 | Change | Before | After | Status |
 |--------|--------|-------|--------|
-| Logo emoji | 🌿 emoji before text | Text only "Pratibha Marketing" | Done |
+| Logo emoji | (leaf emoji) emoji before text | Text only "Pratibha Marketing" | Done |
 | Stats cards | 4 stats cards at top | Removed entirely | Done |
 | Quick actions | Below stats cards | At the top, 2x2 grid on mobile, 4 cols on tablet+ | Done |
 | Action descriptions | Long descriptions | Shortened descriptions | Done |
@@ -51,7 +51,7 @@ Tracking all UI/UX and feature changes made during the review session.
 | Change | Before | After | Status |
 |--------|--------|-------|--------|
 | Layout | Complex with stats, orders, expandable list | Simple product list with rate inputs | Done |
-| Logo emoji | 🌿 emoji | Text only "Pratibha Marketing" | Done |
+| Logo emoji | (leaf emoji) emoji | Text only "Pratibha Marketing" | Done |
 | Stats row | 3 stats cards | Removed | Done |
 | Orders window | 5 recent orders | Removed | Done |
 | Print/Export | On this page | Moved to dashboard | Done |
@@ -68,7 +68,7 @@ Tracking all UI/UX and feature changes made during the review session.
 | Change | Before | After | Status |
 |--------|--------|-------|--------|
 | Layout | Table with columns | Simple vertical list | Done |
-| Logo emoji | 🥬 emoji | Text only "Pratibha Marketing" | Done |
+| Logo emoji | (vegetable emoji) emoji | Text only "Pratibha Marketing" | Done |
 | Product display | Table row with columns | Name + unit, qty controls | Done |
 | Category tabs | None | Scrollable category pills | Done |
 | Quantity controls | Small +/- buttons | 44px touch targets, no spinners | Done |
@@ -102,7 +102,7 @@ Tracking all UI/UX and feature changes made during the review session.
 
 | Change | Before | After | Status |
 |--------|--------|-------|--------|
-| Logo | Emoji logo (🌿) with gradient | Text only "Pratibha Marketing" | Done |
+| Logo | Emoji logo ((leaf emoji)) with gradient | Text only "Pratibha Marketing" | Done |
 | Header | Gradient with decorative border | Simple dark header | Done |
 | Layout | Desktop-focused with max-width | Mobile-first full-width | Done |
 | Modals | Center positioned | Bottom sheet (slides up) | Done |
@@ -119,7 +119,7 @@ Tracking all UI/UX and feature changes made during the review session.
 
 | Change | Before | After | Status |
 |--------|--------|-------|--------|
-| Logo | Emoji logo (🌿) with gradient | Text only "Pratibha Marketing" | Done |
+| Logo | Emoji logo ((leaf emoji)) with gradient | Text only "Pratibha Marketing" | Done |
 | Header | Gradient with decorative border | Simple dark header | Done |
 | Layout | Desktop-focused with max-width | Mobile-first full-width | Done |
 | Modal | Center positioned | Bottom sheet (slides up) | Done |

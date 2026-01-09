@@ -95,7 +95,7 @@ const seedDatabase = async () => {
   try {
     await connectDB();
 
-    console.log('\n🌱 Starting database seeding...\n');
+    console.log('\n[*] Starting database seeding...\n');
 
     // Clear existing data (optional - comment out if you want to keep existing data)
     console.log('Clearing existing data...');
@@ -104,22 +104,22 @@ const seedDatabase = async () => {
     await Order.deleteMany({});
     await MarketRate.deleteMany({});
     await User.deleteMany({});
-    console.log('✓ Existing data cleared\n');
+    console.log('[OK] Existing data cleared\n');
 
     // Seed Products
     console.log('Seeding products (vegetables)...');
     const products = await Product.insertMany(vegetables);
-    console.log(`✓ ${products.length} products created\n`);
+    console.log(`[OK] ${products.length} products created\n`);
 
     // Seed Customers
     console.log('Seeding sample customers...');
     const customers = await Customer.insertMany(sampleCustomers);
-    console.log(`✓ ${customers.length} customers created\n`);
+    console.log(`[OK] ${customers.length} customers created\n`);
 
     // Create Admin User
     console.log('Creating admin user...');
     const admin = await User.create(adminUser);
-    console.log(`✓ Admin user created (Email: ${admin.email})\n`);
+    console.log(`[OK] Admin user created (Email: ${admin.email})\n`);
 
     // Create sample user accounts for some customers
     console.log('Creating customer user accounts...');
@@ -147,7 +147,7 @@ const seedDatabase = async () => {
       date: new Date()
     }));
     await MarketRate.insertMany(marketRates);
-    console.log(`✓ ${marketRates.length} market rates created\n`);
+    console.log(`[OK] ${marketRates.length} market rates created\n`);
 
     // Create rate lookup for orders
     const rateMap = {};
@@ -240,22 +240,22 @@ const seedDatabase = async () => {
     }
 
     const createdOrders = await Order.create(sampleOrders);
-    console.log(`✓ ${createdOrders.length} sample orders created\n`);
+    console.log(`[OK] ${createdOrders.length} sample orders created\n`);
 
     console.log('═══════════════════════════════════════');
-    console.log('✅ Database seeding completed successfully!');
+    console.log('[OK] Database seeding completed successfully!');
     console.log('═══════════════════════════════════════\n');
-    console.log('📊 Summary:');
+    console.log('[*] Summary:');
     console.log(`   Products: ${products.length}`);
     console.log(`   Customers: ${customers.length}`);
     console.log(`   Orders: ${sampleOrders.length}`);
     console.log(`   Market Rates: ${marketRates.length}`);
     console.log(`   Users: 3 (1 admin + 2 customers)\n`);
-    console.log('🔐 Admin Credentials:');
+    console.log('[*] Admin Credentials:');
     console.log(`   Email: admin@pratibhamarketing.in`);
     console.log(`   Password: ${process.env.ADMIN_TEMP_PASSWORD ? '(from ADMIN_TEMP_PASSWORD env var)' : adminPassword}`);
-    console.log(`   ⚠️  CHANGE THIS PASSWORD IMMEDIATELY!\n`);
-    console.log('🔐 Sample Customer Credentials:');
+    console.log(`   [!] CHANGE THIS PASSWORD IMMEDIATELY!\n`);
+    console.log('[*] Sample Customer Credentials:');
     console.log(`   Email: rajesh.kumar@example.com`);
     console.log(`   Password: Pass1234\n`);
     console.log(`   Email: priya.sharma@example.com`);
@@ -263,7 +263,7 @@ const seedDatabase = async () => {
     console.log('═══════════════════════════════════════\n');
 
   } catch (error) {
-    console.error('❌ Error seeding database:', error);
+    console.error('[ERROR] Error seeding database:', error);
     process.exitCode = 1;
   } finally {
     // Always close the database connection

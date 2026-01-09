@@ -474,4 +474,4 @@ tail -f /var/log/nginx/access.log
 
 ---
 
-**Your app is now live at: https://pratibhamarketing.in** 🚀
+**Your app is now live at: https://pratibhamarketing.in**

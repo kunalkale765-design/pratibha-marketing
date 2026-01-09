@@ -171,10 +171,10 @@ export function togglePassword(inputId, buttonEl) {
 
   if (input.type === 'password') {
     input.type = 'text';
-    if (buttonEl) buttonEl.textContent = '🙈';
+    if (buttonEl) buttonEl.textContent = '○';
   } else {
     input.type = 'password';
-    if (buttonEl) buttonEl.textContent = '👁️';
+    if (buttonEl) buttonEl.textContent = '◉';
   }
 }
 
