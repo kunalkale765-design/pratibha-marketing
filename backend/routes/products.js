@@ -20,7 +20,9 @@ router.get('/', protect, async (req, res, next) => {
     const filter = {};
 
     if (search) {
-      filter.name = { $regex: search, $options: 'i' };
+      // Escape regex special characters to prevent ReDoS attacks
+      const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.name = { $regex: escapedSearch, $options: 'i' };
     }
 
     if (category) {

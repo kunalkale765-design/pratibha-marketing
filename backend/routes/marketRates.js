@@ -22,7 +22,9 @@ router.get('/', protect, async (req, res, next) => {
     const filter = {};
 
     if (search) {
-      filter.productName = { $regex: search, $options: 'i' };
+      // Escape regex special characters to prevent ReDoS attacks
+      const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.productName = { $regex: escapedSearch, $options: 'i' };
     }
 
     if (startDate || endDate) {
@@ -125,12 +127,13 @@ router.get('/history-summary', protect, authorize('admin', 'staff'), [
       dates.push(date);
     }
 
-    // Get market rates for the period
+    // Get market rates for the period (limit to prevent memory spikes)
     const productIds = products.map(p => p._id);
+    const maxRates = productIds.length * days * 2; // Allow for multiple rates per day per product
     const rates = await MarketRate.find({
       product: { $in: productIds },
       effectiveDate: { $gte: startDate, $lte: endDate }
-    }).sort({ effectiveDate: -1 });
+    }).sort({ effectiveDate: -1 }).limit(maxRates);
 
     // Build a map of product rates by date
     const rateMap = {};

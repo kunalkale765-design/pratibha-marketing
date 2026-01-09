@@ -251,10 +251,14 @@ const seedDatabase = async () => {
     console.log(`   Password: Pass1234\n`);
     console.log('═══════════════════════════════════════\n');
 
-    process.exit(0);
   } catch (error) {
     console.error('❌ Error seeding database:', error);
-    process.exit(1);
+    process.exitCode = 1;
+  } finally {
+    // Always close the database connection
+    await mongoose.disconnect();
+    console.log('MongoDB connection closed.');
+    process.exit();
   }
 };
 

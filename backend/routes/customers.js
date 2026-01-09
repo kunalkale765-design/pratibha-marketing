@@ -27,9 +27,11 @@ router.get('/', protect, authorize('admin', 'staff'), async (req, res, next) => 
     const skip = (page - 1) * limit;
 
     if (search) {
+      // Escape regex special characters to prevent ReDoS attacks
+      const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       filter.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { phone: { $regex: search, $options: 'i' } }
+        { name: { $regex: escapedSearch, $options: 'i' } },
+        { phone: { $regex: escapedSearch, $options: 'i' } }
       ];
     }
 
@@ -252,12 +254,13 @@ router.post('/:id/magic-link', protect, authorize('admin', 'staff'), async (req,
     const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
     const magicLink = `${baseUrl}/customer-order-form.html?token=${token}`;
 
+    // Return only the magic link, not the raw token (security best practice)
     res.json({
       success: true,
       data: {
-        token,
         link: magicLink,
-        createdAt: customer.magicLinkCreatedAt
+        createdAt: customer.magicLinkCreatedAt,
+        expiresIn: '48 hours'
       }
     });
   } catch (error) {

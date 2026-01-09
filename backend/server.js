@@ -13,6 +13,7 @@ const mongoSanitize = require('express-mongo-sanitize');
 const hpp = require('hpp');
 const cookieParser = require('cookie-parser');
 const path = require('path');
+const mongoose = require('mongoose');
 const connectDB = require('./config/database');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 const swaggerUi = require('swagger-ui-express');
@@ -36,10 +37,8 @@ if (process.env.SENTRY_DSN && process.env.NODE_ENV !== 'test') {
 // Initialize Express app
 const app = express();
 
-// Connect to MongoDB (skip in test mode - tests use in-memory database)
-if (process.env.NODE_ENV !== 'test') {
-  connectDB();
-}
+// Note: MongoDB connection is now handled in startServer() function
+// to properly await the connection before accepting requests
 
 // Security Middleware
 // ====================
@@ -154,10 +153,21 @@ app.use('/api/supplier', require('./routes/supplier'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    message: 'Server is running',
+  // Check actual MongoDB connection state
+  const mongoState = mongoose.connection.readyState;
+  const mongoStates = {
+    0: 'disconnected',
+    1: 'connected',
+    2: 'connecting',
+    3: 'disconnecting'
+  };
+  const isDbConnected = mongoState === 1;
+
+  res.status(isDbConnected ? 200 : 503).json({
+    status: isDbConnected ? 'ok' : 'degraded',
+    message: isDbConnected ? 'Server is running' : 'Database connection issue',
     timestamp: new Date().toISOString(),
+    mongodb: mongoStates[mongoState] || 'unknown',
     sentry: process.env.SENTRY_DSN ? 'configured' : 'not configured'
   });
 });
@@ -210,19 +220,32 @@ app.use(errorHandler);
 // =============
 const PORT = process.env.PORT || 5000;
 
-// Only start server if not in test mode (Supertest handles server in tests)
-if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, () => {
-    console.log(`
+// Async startup function to properly await database connection
+const startServer = async () => {
+  try {
+    // Wait for database connection before starting server
+    await connectDB();
+
+    app.listen(PORT, () => {
+      console.log(`
 ╔═══════════════════════════════════════════════╗
 ║   Server running in ${process.env.NODE_ENV} mode   ║
 ║   Port: ${PORT}                                ║
 ║   MongoDB: Connected                          ║
 ╚═══════════════════════════════════════════════╝
-    `);
-    // Start the market rate scheduler after server is ready
-    startScheduler();
-  });
+      `);
+      // Start the market rate scheduler after server is ready
+      startScheduler();
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error.message);
+    process.exit(1);
+  }
+};
+
+// Only start server if not in test mode (Supertest handles server in tests)
+if (process.env.NODE_ENV !== 'test') {
+  startServer();
 }
 
 // Handle unhandled promise rejections
@@ -249,18 +272,24 @@ process.on('uncaughtException', (err) => {
   }
 });
 
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received. Shutting down gracefully...');
+// Graceful shutdown helper
+const gracefulShutdown = async (signal) => {
+  console.log(`${signal} received. Shutting down gracefully...`);
   stopScheduler();
-  process.exit(0);
-});
 
-process.on('SIGINT', () => {
-  console.log('SIGINT received. Shutting down gracefully...');
-  stopScheduler();
+  // Close MongoDB connection
+  try {
+    await mongoose.connection.close();
+    console.log('MongoDB connection closed');
+  } catch (err) {
+    console.error('Error closing MongoDB connection:', err.message);
+  }
+
   process.exit(0);
-});
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Export app for testing
 module.exports = app;

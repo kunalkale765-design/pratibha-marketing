@@ -272,8 +272,8 @@ router.post('/', protect, validateOrder, async (req, res, next) => {
         await customer.save();
       } catch (creditError) {
         // Log but don't fail the order - credit can be reconciled later
-        console.error('Failed to update customer credit for order:', order._id, creditError.message);
-        console.warn('Customer credit update failed - order created but credit not updated for customer:', customer._id);
+        // Note: Avoiding logging sensitive IDs to prevent data leakage
+        console.error('Failed to update customer credit after order creation:', creditError.message);
       }
     }
 
