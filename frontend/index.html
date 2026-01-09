@@ -863,19 +863,39 @@
             const successfulProducts = [];
 
             const headers = { 'Content-Type': 'application/json' };
-            const csrfToken = Auth.getCsrfToken();
+            let csrfToken = await Auth.ensureCsrfToken();
             if (csrfToken) {
                 headers['X-CSRF-Token'] = csrfToken;
             }
 
             for (const [productId, rateData] of Object.entries(changedRates)) {
                 try {
-                    const response = await fetch('/api/market-rates', {
+                    let response = await fetch('/api/market-rates', {
                         method: 'POST',
                         headers,
                         credentials: 'include',
                         body: JSON.stringify({ product: rateData.product, rate: rateData.rate, effectiveDate: new Date().toISOString() })
                     });
+
+                    // Handle CSRF error with retry
+                    if (response.status === 403) {
+                        const errorData = await response.json().catch(() => ({}));
+                        if (errorData.message?.toLowerCase().includes('csrf')) {
+                            csrfToken = await Auth.refreshCsrfToken();
+                            if (csrfToken) {
+                                headers['X-CSRF-Token'] = csrfToken;
+                                response = await fetch('/api/market-rates', {
+                                    method: 'POST',
+                                    headers,
+                                    credentials: 'include',
+                                    body: JSON.stringify({ product: rateData.product, rate: rateData.rate, effectiveDate: new Date().toISOString() })
+                                });
+                            }
+                        } else {
+                            failures.push({ productName: rateData.productName || productId, error: errorData.message || `HTTP ${response.status}` });
+                            continue;
+                        }
+                    }
 
                     if (!response.ok) {
                         const errorData = await response.json().catch(() => ({}));

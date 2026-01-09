@@ -54,7 +54,7 @@ describe('CSRF Middleware', () => {
         expect.any(String),
         expect.objectContaining({
           httpOnly: false,
-          sameSite: 'strict',
+          sameSite: 'lax', // Changed from 'strict' to allow navigation from external links
           path: '/'
         })
       );

@@ -7,6 +7,9 @@ const Auth = {
     // Storage keys
     USER_KEY: 'user',
 
+    // Track if we're currently refreshing the CSRF token
+    _csrfRefreshPromise: null,
+
     /**
      * Get CSRF token from cookie
      * @returns {string|null}
@@ -14,6 +17,49 @@ const Auth = {
     getCsrfToken() {
         const match = document.cookie.match(/csrf_token=([^;]+)/);
         return match ? match[1] : null;
+    },
+
+    /**
+     * Fetch a fresh CSRF token from the server
+     * @returns {Promise<string|null>}
+     */
+    async refreshCsrfToken() {
+        if (this._csrfRefreshPromise) {
+            return this._csrfRefreshPromise;
+        }
+
+        this._csrfRefreshPromise = (async () => {
+            try {
+                const response = await fetch('/api/csrf-token', {
+                    credentials: 'include'
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    return data.csrfToken || this.getCsrfToken();
+                }
+            } catch (error) {
+                console.error('Failed to refresh CSRF token:', error);
+            }
+            return null;
+        })();
+
+        try {
+            return await this._csrfRefreshPromise;
+        } finally {
+            this._csrfRefreshPromise = null;
+        }
+    },
+
+    /**
+     * Ensure CSRF token is available, fetching if necessary
+     * @returns {Promise<string|null>}
+     */
+    async ensureCsrfToken() {
+        let token = this.getCsrfToken();
+        if (!token) {
+            token = await this.refreshCsrfToken();
+        }
+        return token;
     },
 
     /**
@@ -129,12 +175,14 @@ const Auth = {
      * Login user
      * @param {string} email
      * @param {string} password
+     * @param {boolean} _isRetry - Internal flag for CSRF retry
      * @returns {Promise<{success: boolean, user?: Object, error?: string}>}
      */
-    async login(email, password) {
+    async login(email, password, _isRetry = false) {
         try {
             const headers = { 'Content-Type': 'application/json' };
-            const csrfToken = this.getCsrfToken();
+            // Ensure we have a CSRF token before login
+            const csrfToken = await this.ensureCsrfToken();
             if (csrfToken) {
                 headers['X-CSRF-Token'] = csrfToken;
             }
@@ -151,9 +199,16 @@ const Auth = {
             if (response.ok) {
                 this.setUser(data.user);
                 return { success: true, user: data.user };
-            } else {
-                return { success: false, error: data.message || 'Login failed' };
             }
+
+            // Check if CSRF error and retry once
+            if (response.status === 403 && data?.message?.toLowerCase().includes('csrf') && !_isRetry) {
+                console.log('CSRF token error during login, refreshing and retrying...');
+                await this.refreshCsrfToken();
+                return this.login(email, password, true);
+            }
+
+            return { success: false, error: data.message || 'Login failed' };
         } catch (error) {
             console.error('Login error:', error);
             return { success: false, error: 'Network error. Please try again.' };
@@ -167,7 +222,8 @@ const Auth = {
     async logout() {
         try {
             const headers = {};
-            const csrfToken = this.getCsrfToken();
+            // Ensure we have a CSRF token before logout
+            const csrfToken = await this.ensureCsrfToken();
             if (csrfToken) {
                 headers['X-CSRF-Token'] = csrfToken;
             }

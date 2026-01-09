@@ -671,14 +671,14 @@
             const failedProducts = [];
 
             const headers = { 'Content-Type': 'application/json' };
-            const csrfToken = Auth.getCsrfToken();
+            let csrfToken = await Auth.ensureCsrfToken();
             if (csrfToken) {
                 headers['X-CSRF-Token'] = csrfToken;
             }
 
             for (const [productId, rate] of Object.entries(changedRates)) {
                 try {
-                    const res = await fetch('/api/market-rates', {
+                    let res = await fetch('/api/market-rates', {
                         method: 'POST',
                         headers,
                         credentials: 'include',
@@ -688,6 +688,27 @@
                             effectiveDate: new Date().toISOString()
                         })
                     });
+
+                    // Handle CSRF error with retry
+                    if (res.status === 403) {
+                        const err = await res.json().catch(() => ({}));
+                        if (err.message?.toLowerCase().includes('csrf')) {
+                            csrfToken = await Auth.refreshCsrfToken();
+                            if (csrfToken) {
+                                headers['X-CSRF-Token'] = csrfToken;
+                                res = await fetch('/api/market-rates', {
+                                    method: 'POST',
+                                    headers,
+                                    credentials: 'include',
+                                    body: JSON.stringify({
+                                        product: productId,
+                                        rate: rate,
+                                        effectiveDate: new Date().toISOString()
+                                    })
+                                });
+                            }
+                        }
+                    }
 
                     if (res.ok) {
                         success++;

@@ -50,7 +50,7 @@ const path = require('path');
 const mongoose = require('mongoose');
 const connectDB = require('./config/database');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
-const { csrfTokenSetter, csrfProtection } = require('./middleware/csrf');
+const { csrfTokenSetter, csrfProtection, csrfTokenHandler } = require('./middleware/csrf');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 const { startScheduler, stopScheduler } = require('./services/marketRateScheduler');
@@ -227,6 +227,9 @@ app.get('/api/health', (req, res) => {
     sentry: process.env.SENTRY_DSN ? 'configured' : 'not configured'
   });
 });
+
+// CSRF token endpoint - allows frontend to fetch/refresh the CSRF token
+app.get('/api/csrf-token', csrfTokenHandler);
 
 // Debug endpoint to test Sentry (only in development)
 if (process.env.NODE_ENV === 'development') {

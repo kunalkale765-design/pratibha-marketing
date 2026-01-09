@@ -361,7 +361,8 @@
 
             try {
                 const headers = { 'Content-Type': 'application/json' };
-                const csrfToken = Auth.getCsrfToken();
+                // Ensure CSRF token is available (fetches from server if missing)
+                const csrfToken = await Auth.ensureCsrfToken();
                 if (csrfToken) {
                     headers['X-CSRF-Token'] = csrfToken;
                 }
@@ -374,6 +375,33 @@
                 });
 
                 const data = await response.json();
+
+                // Handle CSRF error with automatic retry
+                if (response.status === 403 && data?.message?.toLowerCase().includes('csrf')) {
+                    console.log('CSRF error, refreshing token and retrying...');
+                    const newToken = await Auth.refreshCsrfToken();
+                    if (newToken) {
+                        headers['X-CSRF-Token'] = newToken;
+                        const retryResponse = await fetch('/api/auth/login', {
+                            method: 'POST',
+                            headers,
+                            credentials: 'include',
+                            body: JSON.stringify({ email, password })
+                        });
+                        const retryData = await retryResponse.json();
+                        if (retryResponse.ok) {
+                            localStorage.setItem('user', JSON.stringify(retryData.user));
+                            if (retryData.user.role === 'customer') {
+                                window.location.href = '/customer-order-form.html';
+                            } else {
+                                window.location.href = '/index.html';
+                            }
+                            return;
+                        }
+                        showError(retryData.message || 'Login failed. Please try again.');
+                        return;
+                    }
+                }
 
                 if (response.ok) {
                     localStorage.setItem('user', JSON.stringify(data.user));

@@ -4,6 +4,9 @@
  */
 
 const API = {
+    // Track if we're currently refreshing the CSRF token to avoid multiple concurrent refreshes
+    _csrfRefreshPromise: null,
+
     /**
      * Get CSRF token from cookie
      * @returns {string|null}
@@ -14,12 +17,58 @@ const API = {
     },
 
     /**
+     * Fetch a fresh CSRF token from the server
+     * @returns {Promise<string|null>}
+     */
+    async refreshCsrfToken() {
+        // If already refreshing, wait for that promise
+        if (this._csrfRefreshPromise) {
+            return this._csrfRefreshPromise;
+        }
+
+        this._csrfRefreshPromise = (async () => {
+            try {
+                const response = await fetch('/api/csrf-token', {
+                    credentials: 'include'
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    // The cookie is set by the server, but we return the token too
+                    return data.csrfToken || this.getCsrfToken();
+                }
+            } catch (error) {
+                console.error('Failed to refresh CSRF token:', error);
+            }
+            return null;
+        })();
+
+        try {
+            return await this._csrfRefreshPromise;
+        } finally {
+            this._csrfRefreshPromise = null;
+        }
+    },
+
+    /**
+     * Ensure CSRF token is available, fetching if necessary
+     * @returns {Promise<string|null>}
+     */
+    async ensureCsrfToken() {
+        let token = this.getCsrfToken();
+        if (!token) {
+            token = await this.refreshCsrfToken();
+        }
+        return token;
+    },
+
+    /**
      * Make an API request
      * @param {string} endpoint - API endpoint (e.g., '/api/products')
      * @param {Object} options - Fetch options
+     * @param {boolean} _isRetry - Internal flag to prevent infinite retry loops
      * @returns {Promise<{success: boolean, data?: any, error?: string, status?: number}>}
      */
-    async request(endpoint, options = {}) {
+    async request(endpoint, options = {}, _isRetry = false) {
         // Default options
         const defaultOptions = {
             credentials: 'include',
@@ -33,8 +82,11 @@ const API = {
 
         // Add CSRF token for state-changing requests
         const stateChangingMethods = ['POST', 'PUT', 'DELETE', 'PATCH'];
-        if (stateChangingMethods.includes(options.method?.toUpperCase())) {
-            const csrfToken = this.getCsrfToken();
+        const isStateChanging = stateChangingMethods.includes(options.method?.toUpperCase());
+
+        if (isStateChanging) {
+            // Ensure we have a CSRF token before making state-changing requests
+            const csrfToken = await this.ensureCsrfToken();
             if (csrfToken) {
                 fetchOptions.headers['X-CSRF-Token'] = csrfToken;
             }
@@ -87,7 +139,14 @@ const API = {
             }
 
             if (response.status === 403) {
-                return { success: false, error: 'Access denied. You do not have permission.', status: 403 };
+                // Check if this is a CSRF error and retry once
+                const isCsrfError = data?.message?.toLowerCase().includes('csrf');
+                if (isCsrfError && !_isRetry && isStateChanging) {
+                    console.log('CSRF token error, refreshing and retrying...');
+                    await this.refreshCsrfToken();
+                    return this.request(endpoint, options, true);
+                }
+                return { success: false, error: data?.message || 'Access denied. You do not have permission.', status: 403 };
             }
 
             if (response.status === 404) {

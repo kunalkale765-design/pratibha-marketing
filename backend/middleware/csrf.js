@@ -16,6 +16,7 @@ const crypto = require('crypto');
 const CSRF_COOKIE_NAME = 'csrf_token';
 const CSRF_HEADER_NAME = 'x-csrf-token';
 const TOKEN_LENGTH = 32;
+const COOKIE_MAX_AGE = 30 * 24 * 60 * 60 * 1000; // 30 days (match JWT expiration)
 
 // Generate a cryptographically secure random token
 const generateToken = () => {
@@ -31,8 +32,8 @@ const getOrCreateToken = (req, res) => {
     res.cookie(CSRF_COOKIE_NAME, token, {
       httpOnly: false, // Must be readable by JavaScript
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      sameSite: 'lax', // Changed from 'strict' to allow navigation from external links
+      maxAge: COOKIE_MAX_AGE,
       path: '/'
     });
   }
@@ -89,9 +90,16 @@ const csrfProtection = (req, res, next) => {
   next();
 };
 
+// Route handler to get/refresh CSRF token
+const csrfTokenHandler = (req, res) => {
+  const token = getOrCreateToken(req, res);
+  res.json({ success: true, csrfToken: token });
+};
+
 module.exports = {
   csrfTokenSetter,
   csrfProtection,
+  csrfTokenHandler,
   CSRF_COOKIE_NAME,
   CSRF_HEADER_NAME
 };

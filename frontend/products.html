@@ -591,12 +591,12 @@
             }
         });
 
-        async function deleteProduct(id) {
-            if (!confirm('Delete this product?')) return;
+        async function deleteProduct(id, _isRetry = false) {
+            if (!_isRetry && !confirm('Delete this product?')) return;
 
             try {
                 const headers = {};
-                const csrfToken = Auth.getCsrfToken();
+                const csrfToken = await Auth.ensureCsrfToken();
                 if (csrfToken) {
                     headers['X-CSRF-Token'] = csrfToken;
                 }
@@ -606,6 +606,16 @@
                     headers,
                     credentials: 'include'
                 });
+
+                // Handle CSRF error with retry
+                if (res.status === 403 && !_isRetry) {
+                    const err = await res.json();
+                    if (err.message?.toLowerCase().includes('csrf')) {
+                        await Auth.refreshCsrfToken();
+                        return deleteProduct(id, true);
+                    }
+                }
+
                 if (res.ok) {
                     showToast('Product deleted', 'success');
                     loadProducts();

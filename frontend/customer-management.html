@@ -564,12 +564,12 @@
             }
         });
 
-        async function deleteCustomer(id) {
-            if (!confirm('Delete this customer?')) return;
+        async function deleteCustomer(id, _isRetry = false) {
+            if (!_isRetry && !confirm('Delete this customer?')) return;
 
             try {
                 const headers = {};
-                const csrfToken = Auth.getCsrfToken();
+                const csrfToken = await Auth.ensureCsrfToken();
                 if (csrfToken) {
                     headers['X-CSRF-Token'] = csrfToken;
                 }
@@ -579,6 +579,16 @@
                     headers,
                     credentials: 'include'
                 });
+
+                // Handle CSRF error with retry
+                if (res.status === 403 && !_isRetry) {
+                    const err = await res.json();
+                    if (err.message?.toLowerCase().includes('csrf')) {
+                        await Auth.refreshCsrfToken();
+                        return deleteCustomer(id, true);
+                    }
+                }
+
                 if (res.ok) {
                     showToast('Customer deleted', 'success');
                     loadCustomers();
@@ -602,7 +612,7 @@
         }
 
         // Magic Link sharing
-        async function shareMagicLink(customerId) {
+        async function shareMagicLink(customerId, _isRetry = false) {
             const customer = allCustomers.find(c => c._id === customerId);
             if (!customer) {
                 showToast('Customer not found', 'error');
@@ -611,18 +621,24 @@
 
             try {
                 const headers = {};
-                const csrfToken = Auth.getCsrfToken();
+                const csrfToken = await Auth.ensureCsrfToken();
                 if (csrfToken) {
                     headers['X-CSRF-Token'] = csrfToken;
                 }
 
-                const res = await fetch(`/api/customers/${customerId}/magic-link`, {
+                let res = await fetch(`/api/customers/${customerId}/magic-link`, {
                     method: 'POST',
                     headers,
                     credentials: 'include'
                 });
 
-                const data = await res.json();
+                let data = await res.json();
+
+                // Handle CSRF error with retry
+                if (res.status === 403 && data?.message?.toLowerCase().includes('csrf') && !_isRetry) {
+                    await Auth.refreshCsrfToken();
+                    return shareMagicLink(customerId, true);
+                }
 
                 if (res.ok && data.data) {
                     const link = data.data.link;
@@ -740,21 +756,40 @@
 
             try {
                 const headers = { 'Content-Type': 'application/json' };
-                const csrfToken = Auth.getCsrfToken();
+                const csrfToken = await Auth.ensureCsrfToken();
                 if (csrfToken) {
                     headers['X-CSRF-Token'] = csrfToken;
                 }
 
-                const res = await fetch(`/api/customers/${customerId}`, {
+                const payload = {
+                    name: customer.name,
+                    phone: customer.phone,
+                    contractPrices
+                };
+
+                let res = await fetch(`/api/customers/${customerId}`, {
                     method: 'PUT',
                     headers,
                     credentials: 'include',
-                    body: JSON.stringify({
-                        name: customer.name,
-                        phone: customer.phone,
-                        contractPrices
-                    })
+                    body: JSON.stringify(payload)
                 });
+
+                // Handle CSRF error with retry
+                if (res.status === 403) {
+                    const err = await res.json();
+                    if (err.message?.toLowerCase().includes('csrf')) {
+                        const newToken = await Auth.refreshCsrfToken();
+                        if (newToken) {
+                            headers['X-CSRF-Token'] = newToken;
+                            res = await fetch(`/api/customers/${customerId}`, {
+                                method: 'PUT',
+                                headers,
+                                credentials: 'include',
+                                body: JSON.stringify(payload)
+                            });
+                        }
+                    }
+                }
 
                 if (res.ok) {
                     showToast('Prices saved', 'success');
