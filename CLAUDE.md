@@ -240,6 +240,16 @@ unpaid → partial → paid
 - Soft deletes via `isActive: false`
 - Rate limiting: 100 req/15min general, 10 req/15min for login/register
 
+## Documentation Updates
+
+**Update docs as part of feature work, not as an afterthought.**
+
+| File | When to Update |
+|------|----------------|
+| `FEATURES.md` | New features, UI changes, workflow changes |
+| `CLAUDE.md` | API changes, new endpoints, business logic, architecture |
+| `CHANGELOG.md` | All notable changes (version history) |
+
 ## Design System
 
 ### Colors (CSS Variables)
