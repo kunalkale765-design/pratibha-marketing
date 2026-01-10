@@ -101,13 +101,28 @@ Complete feature documentation with UI/UX design details for testing and modific
 | View Orders | `/orders.html` | Default |
 
 **Purchase List:**
-- Expandable section showing aggregated quantities from pending orders
-- Each item shows: name, qty needed, unit, inline rate input
-- Clicking row expands to show: current rate, order count, estimated cost, trend
+- Shows only **Indian Vegetables** (first) and **Fruits** (second)
+- Aggregated quantities from pending/confirmed/processing orders
+- Column headers: Product, Purchase Qty, Purchase Price
+
+*Auto-Rotation Feature:*
+- Unsaved rates (rate=0) stay at **top** of each category
+- Saved rates (rate>0) move to **bottom** after saving
+- Re-sorts automatically after clicking Save
+- Designed for morning workflow: enter prices top-to-bottom without scrolling
+
+*Visual Indicators:*
+- Category dividers ("INDIAN VEGETABLES", "FRUITS")
+- Sticky column header (stays visible when scrolling)
+- Yellow border + dot for unsaved items (rate=0)
+- Bold, visible price input field
+
+*Features:*
+- Expandable rows: current rate, order count, est. cost, trend
 - Print button for procurement list
-- Export CSV button for spreadsheet
+- Export CSV (same sort order, includes Category column)
 - Inline rate editing with Save button
-- Uses market rates (falls back to 0 if no rate set)
+- Handles deleted products gracefully (skips in aggregation)
 
 **Design Elements:**
 - Header: Gunmetal with text-only logo
