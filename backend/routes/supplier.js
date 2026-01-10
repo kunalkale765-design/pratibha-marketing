@@ -20,6 +20,8 @@ router.get('/quantity-summary', protect, authorize('admin', 'staff'), async (req
 
     orders.forEach(order => {
       order.products.forEach(item => {
+        // Skip if product was deleted
+        if (!item.product) return;
         const productId = item.product._id.toString();
         const productName = item.productName || item.product.name;
         const unit = item.unit || item.product.unit;

@@ -89,6 +89,56 @@
             overflow-y: auto;
         }
 
+        .procurement-column-header {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            gap: 0.75rem;
+            background: var(--cream);
+            border-radius: var(--radius-md);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            border-bottom: 2px solid var(--pale-slate-light);
+        }
+
+        .col-expand { width: 0.625rem; }
+        .col-name { flex: 1; font-size: 0.6875rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .col-qty { min-width: 60px; text-align: right; font-size: 0.6875rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .col-unit { min-width: 40px; font-size: 0.6875rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .col-input { width: 80px; font-size: 0.6875rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; text-align: right; }
+
+        .category-divider {
+            padding: 0.5rem 1rem;
+            margin: 0.75rem 0 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--dusty-olive-dark);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--pale-slate-light);
+            background: linear-gradient(90deg, var(--dusty-olive-light, rgba(126,145,129,0.1)) 0%, transparent 100%);
+            border-radius: var(--radius-sm);
+        }
+
+        .category-divider:first-of-type { margin-top: 0.5rem; }
+
+        .procurement-item.unsaved {
+            border-left: 3px solid var(--warning);
+            background: rgba(184, 154, 90, 0.05);
+        }
+
+        .procurement-item.unsaved .item-name::after {
+            content: '';
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            background: var(--warning);
+            border-radius: 50%;
+            margin-left: 0.5rem;
+            vertical-align: middle;
+        }
+
         .procurement-item {
             background: var(--cream);
             border-radius: var(--radius-md);
@@ -146,17 +196,24 @@
             padding: 0.375rem 0.5rem;
             font-family: var(--font-mono);
             font-size: 0.875rem;
-            border: 1.5px solid var(--pale-slate);
+            font-weight: 600;
+            border: 2px solid var(--dusty-olive);
             border-radius: var(--radius-sm);
             background: var(--warm-white);
-            color: var(--text-primary);
+            color: var(--gunmetal);
             text-align: right;
+        }
+
+        .item-rate-input::placeholder {
+            color: var(--gunmetal);
+            opacity: 0.7;
+            font-weight: 600;
         }
 
         .item-rate-input:focus {
             outline: none;
-            border-color: var(--dusty-olive);
-            box-shadow: 0 0 0 2px rgba(126, 145, 129, 0.12);
+            border-color: var(--dusty-olive-dark);
+            box-shadow: 0 0 0 3px rgba(126, 145, 129, 0.2);
         }
 
         .item-rate-input.changed {
@@ -698,14 +755,42 @@
             const procurementMap = {};
             procurement.forEach(item => { procurementMap[item.productName] = item; });
 
-            // Show products with qty needed first, then others
-            const sortedProducts = [...products].sort((a, b) => {
+            // Filter to only Indian Vegetables and Fruits
+            const filteredProducts = products.filter(p =>
+                p.category === 'Indian Vegetables' || p.category === 'Fruits'
+            );
+
+            // Sort: Indian Vegetables first, then Fruits; within each, unsaved rates at top
+            const sortedProducts = [...filteredProducts].sort((a, b) => {
+                // Indian Vegetables before Fruits
+                if (a.category === 'Indian Vegetables' && b.category === 'Fruits') return -1;
+                if (a.category === 'Fruits' && b.category === 'Indian Vegetables') return 1;
+
+                // Within same category: unsaved (rate=0) products first
+                const rateA = rateMap[a._id]?.rate || 0;
+                const rateB = rateMap[b._id]?.rate || 0;
+                if (rateA === 0 && rateB !== 0) return -1;
+                if (rateA !== 0 && rateB === 0) return 1;
+
+                // Then sort by quantity needed (descending)
                 const qtyA = procurementMap[a.name]?.totalQuantity || 0;
                 const qtyB = procurementMap[b.name]?.totalQuantity || 0;
                 return qtyB - qtyA;
             });
 
-            container.innerHTML = sortedProducts.map(product => {
+            // Build column header
+            const columnHeader = `
+                <div class="procurement-column-header">
+                    <span class="col-expand"></span>
+                    <span class="col-name">Product</span>
+                    <span class="col-qty">Purchase Qty</span>
+                    <span class="col-input">Purchase Price</span>
+                </div>
+            `;
+
+            // Build items with category dividers
+            let currentCategory = '';
+            const itemsHtml = sortedProducts.map(product => {
                 const rate = rateMap[product._id];
                 const currentRate = rate ? rate.rate : 0;
                 const trend = rate ? rate.trend : 'stable';
@@ -717,9 +802,17 @@
 
                 const qtyClass = qtyNeeded > 0 ? 'item-qty' : 'item-qty zero';
                 const trendText = trend === 'up' ? '↑ Up' : trend === 'down' ? '↓ Down' : '— Stable';
+                const unsavedClass = currentRate === 0 ? ' unsaved' : '';
 
-                return `
-                    <div class="procurement-item" data-product-id="${product._id}">
+                // Add category divider when category changes
+                let divider = '';
+                if (product.category !== currentCategory) {
+                    currentCategory = product.category;
+                    divider = `<div class="category-divider">${escapeHtml(currentCategory)}</div>`;
+                }
+
+                return divider + `
+                    <div class="procurement-item${unsavedClass}" data-product-id="${product._id}">
                         <div class="item-main" onclick="window.toggleExpand(this)">
                             <span class="item-expand">▶</span>
                             <span class="item-name">${escapeHtml(product.name)}</span>
@@ -760,6 +853,8 @@
                     </div>
                 `;
             }).join('');
+
+            container.innerHTML = columnHeader + itemsHtml;
         }
 
         // Global functions for inline event handlers
@@ -828,8 +923,26 @@
             const procurementMap = {};
             procurement.forEach(item => { procurementMap[item.productName] = item; });
 
-            const headers = ['Product', 'Unit', 'Qty Needed', 'Current Rate', 'Est. Cost'];
-            const rows = products.map(product => {
+            // Filter and sort same as display
+            const filteredProducts = products
+                .filter(p => p.category === 'Indian Vegetables' || p.category === 'Fruits')
+                .sort((a, b) => {
+                    // Indian Vegetables before Fruits
+                    if (a.category === 'Indian Vegetables' && b.category === 'Fruits') return -1;
+                    if (a.category === 'Fruits' && b.category === 'Indian Vegetables') return 1;
+                    // Within same category: unsaved (rate=0) first
+                    const rateA = rateMap[a._id]?.rate || 0;
+                    const rateB = rateMap[b._id]?.rate || 0;
+                    if (rateA === 0 && rateB !== 0) return -1;
+                    if (rateA !== 0 && rateB === 0) return 1;
+                    // Then by quantity needed
+                    const qtyA = procurementMap[a.name]?.totalQuantity || 0;
+                    const qtyB = procurementMap[b.name]?.totalQuantity || 0;
+                    return qtyB - qtyA;
+                });
+
+            const headers = ['Category', 'Product', 'Unit', 'Qty Needed', 'Current Rate', 'Est. Cost'];
+            const rows = filteredProducts.map(product => {
                 const procItem = procurementMap[product.name];
                 const qtyNeeded = procItem?.totalQuantity || 0;
                 const rate = rateMap[product._id];
@@ -837,6 +950,7 @@
                 const estCost = qtyNeeded * currentRate;
 
                 return [
+                    `"${product.category}"`,
                     `"${product.name}"`,
                     product.unit,
                     qtyNeeded,
