@@ -1,0 +1,1603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Mobile Animations - Pratibha Marketing</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@500;600&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --gunmetal: #2e3532;
+            --gunmetal-light: #3d4542;
+            --dusty-olive: #7e9181;
+            --dusty-olive-light: #97a99a;
+            --dusty-olive-dark: #5d6b5f;
+            --cream: #f9f7f3;
+            --cream-dark: #efe9df;
+            --warm-white: #fefdfb;
+            --terracotta: #c4a77d;
+            --text-primary: #1f2421;
+            --text-secondary: #5a6560;
+            --text-muted: #8a918c;
+            --success: #5d7a5f;
+            --success-bg: rgba(93, 122, 95, 0.12);
+            --warning: #b89a5a;
+            --warning-bg: rgba(184, 154, 90, 0.12);
+            --error: #9a6565;
+            --error-bg: rgba(154, 101, 101, 0.12);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--cream);
+            color: var(--text-primary);
+            line-height: 1.5;
+            overflow-x: hidden;
+            padding-bottom: calc(80px + var(--safe-bottom));
+        }
+
+        /* ==========================================
+           HEADER - iOS Style
+           ========================================== */
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(249, 247, 243, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+            padding: 12px 16px;
+            padding-top: calc(12px + env(safe-area-inset-top, 0px));
+        }
+
+        .header-title {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--gunmetal);
+            text-align: center;
+        }
+
+        .header-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        /* ==========================================
+           SECTION CARDS
+           ========================================== */
+        .section {
+            padding: 20px 16px;
+        }
+
+        .section-label {
+            font-size: 0.6875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            padding-left: 4px;
+        }
+
+        .demo-container {
+            background: var(--warm-white);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+
+        /* ==========================================
+           1. PULL TO REFRESH
+           ========================================== */
+        .pull-demo {
+            height: 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            touch-action: pan-y;
+        }
+
+        .pull-indicator {
+            position: absolute;
+            top: -50px;
+            transition: transform 0.2s ease;
+        }
+
+        .pull-indicator.pulling {
+            transform: translateY(70px);
+        }
+
+        .pull-indicator.refreshing .pull-spinner {
+            animation: spin 0.8s linear infinite;
+        }
+
+        .pull-spinner {
+            width: 28px;
+            height: 28px;
+            border: 3px solid var(--cream-dark);
+            border-top-color: var(--dusty-olive);
+            border-radius: 50%;
+        }
+
+        .pull-hint {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        .pull-arrow {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+            transition: transform 0.2s ease;
+        }
+
+        .pull-demo.pulling .pull-arrow {
+            transform: rotate(180deg);
+        }
+
+        /* ==========================================
+           2. SWIPE ACTIONS (iOS Style)
+           ========================================== */
+        .swipe-list {
+            overflow: hidden;
+        }
+
+        .swipe-item {
+            position: relative;
+            overflow: hidden;
+            touch-action: pan-x;
+        }
+
+        .swipe-actions {
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            display: flex;
+            transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .swipe-item.swiped .swipe-actions {
+            transform: translateX(0);
+        }
+
+        .swipe-action {
+            width: 72px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .swipe-action.edit {
+            background: var(--dusty-olive);
+        }
+
+        .swipe-action.delete {
+            background: var(--error);
+        }
+
+        .swipe-content {
+            background: var(--warm-white);
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            position: relative;
+            z-index: 1;
+            transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .swipe-item.swiped .swipe-content {
+            transform: translateX(-144px);
+        }
+
+        .swipe-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--dusty-olive-light), var(--dusty-olive));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .swipe-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .swipe-name {
+            font-weight: 600;
+            color: var(--gunmetal);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .swipe-detail {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+        }
+
+        .swipe-badge {
+            padding: 4px 10px;
+            border-radius: 100px;
+            font-size: 0.6875rem;
+            font-weight: 600;
+            background: var(--warning-bg);
+            color: var(--warning);
+        }
+
+        .swipe-hint {
+            text-align: center;
+            padding: 12px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            background: var(--cream);
+        }
+
+        /* ==========================================
+           3. TAP FEEDBACK / RIPPLE
+           ========================================== */
+        .tap-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            padding: 20px;
+        }
+
+        .tap-item {
+            aspect-ratio: 1;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            border: 1px solid transparent;
+        }
+
+        .tap-item:active {
+            transform: scale(0.95);
+        }
+
+        .tap-item.style-1 {
+            background: linear-gradient(135deg, var(--dusty-olive) 0%, var(--dusty-olive-dark) 100%);
+            color: white;
+        }
+
+        .tap-item.style-2 {
+            background: var(--cream);
+            color: var(--gunmetal);
+        }
+
+        .tap-item.style-3 {
+            background: var(--warm-white);
+            border-color: var(--cream-dark);
+            color: var(--gunmetal);
+        }
+
+        .tap-icon {
+            font-size: 1.75rem;
+        }
+
+        .tap-label {
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        /* Ripple */
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.4);
+            transform: scale(0);
+            animation: ripple-expand 0.5s ease-out forwards;
+            pointer-events: none;
+        }
+
+        .tap-item.style-2 .ripple,
+        .tap-item.style-3 .ripple {
+            background: rgba(126, 145, 129, 0.2);
+        }
+
+        @keyframes ripple-expand {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+
+        /* ==========================================
+           4. BOTTOM SHEET
+           ========================================== */
+        .sheet-trigger {
+            padding: 20px;
+        }
+
+        .sheet-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, var(--gunmetal) 0%, var(--gunmetal-light) 100%);
+            color: white;
+            border: none;
+            border-radius: 14px;
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.15s ease, opacity 0.15s ease;
+        }
+
+        .sheet-btn:active {
+            transform: scale(0.98);
+            opacity: 0.9;
+        }
+
+        .sheet-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0);
+            z-index: 1000;
+            pointer-events: none;
+            transition: background 0.3s ease;
+        }
+
+        .sheet-overlay.show {
+            background: rgba(0,0,0,0.4);
+            pointer-events: auto;
+        }
+
+        .sheet {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--warm-white);
+            border-radius: 20px 20px 0 0;
+            padding: 12px 20px calc(20px + var(--safe-bottom));
+            transform: translateY(100%);
+            transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+            z-index: 1001;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        .sheet-overlay.show .sheet {
+            transform: translateY(0);
+        }
+
+        .sheet-handle {
+            width: 36px;
+            height: 5px;
+            background: var(--cream-dark);
+            border-radius: 3px;
+            margin: 0 auto 16px;
+        }
+
+        .sheet-title {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--gunmetal);
+            margin-bottom: 4px;
+        }
+
+        .sheet-subtitle {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+
+        .sheet-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .sheet-option {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 16px;
+            background: var(--cream);
+            border-radius: 12px;
+            border: none;
+            font-family: inherit;
+            font-size: 1rem;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: background 0.15s ease, transform 0.15s ease;
+            text-align: left;
+            width: 100%;
+        }
+
+        .sheet-option:active {
+            background: var(--cream-dark);
+            transform: scale(0.98);
+        }
+
+        .sheet-option-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: var(--warm-white);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .sheet-option-text {
+            flex: 1;
+        }
+
+        .sheet-option-title {
+            font-weight: 600;
+        }
+
+        .sheet-option-desc {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+        }
+
+        /* ==========================================
+           5. CARD STACK / TINDER STYLE
+           ========================================== */
+        .stack-container {
+            height: 280px;
+            position: relative;
+            padding: 20px;
+        }
+
+        .stack-card {
+            position: absolute;
+            left: 20px;
+            right: 20px;
+            height: 220px;
+            background: var(--warm-white);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            touch-action: pan-x;
+            cursor: grab;
+        }
+
+        .stack-card:nth-child(1) {
+            z-index: 3;
+            transform: translateY(0) scale(1);
+        }
+
+        .stack-card:nth-child(2) {
+            z-index: 2;
+            transform: translateY(12px) scale(0.95);
+            opacity: 0.7;
+        }
+
+        .stack-card:nth-child(3) {
+            z-index: 1;
+            transform: translateY(24px) scale(0.9);
+            opacity: 0.4;
+        }
+
+        .stack-card.swiping {
+            transition: none;
+            cursor: grabbing;
+        }
+
+        .stack-card.dismissed {
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+
+        .stack-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 12px;
+        }
+
+        .stack-card-badge {
+            padding: 6px 12px;
+            border-radius: 100px;
+            font-size: 0.6875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-new {
+            background: var(--success-bg);
+            color: var(--success);
+        }
+
+        .stack-card-title {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.375rem;
+            font-weight: 600;
+            color: var(--gunmetal);
+            margin-bottom: 4px;
+        }
+
+        .stack-card-subtitle {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+
+        .stack-card-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-top: 1px dashed var(--cream-dark);
+        }
+
+        .stack-card-label {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+        }
+
+        .stack-card-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            color: var(--gunmetal);
+        }
+
+        .stack-hint {
+            text-align: center;
+            margin-top: 16px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* ==========================================
+           6. FLOATING ACTION BUTTON
+           ========================================== */
+        .fab-container {
+            position: relative;
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .fab {
+            width: 60px;
+            height: 60px;
+            border-radius: 18px;
+            background: linear-gradient(135deg, var(--dusty-olive) 0%, var(--dusty-olive-dark) 100%);
+            color: white;
+            border: none;
+            font-size: 1.75rem;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(126, 145, 129, 0.4);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 10;
+        }
+
+        .fab:active {
+            transform: scale(0.92);
+        }
+
+        .fab.open {
+            transform: rotate(45deg);
+            border-radius: 50%;
+        }
+
+        .fab-menu {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            pointer-events: none;
+        }
+
+        .fab-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            opacity: 0;
+            transform: translateY(20px) scale(0.8);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .fab.open ~ .fab-menu .fab-menu-item {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            pointer-events: auto;
+        }
+
+        .fab.open ~ .fab-menu .fab-menu-item:nth-child(1) { transition-delay: 0.05s; }
+        .fab.open ~ .fab-menu .fab-menu-item:nth-child(2) { transition-delay: 0.1s; }
+        .fab.open ~ .fab-menu .fab-menu-item:nth-child(3) { transition-delay: 0.15s; }
+
+        .fab-mini {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            background: var(--gunmetal);
+            color: white;
+            border: none;
+            font-size: 1.25rem;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.15s ease;
+        }
+
+        .fab-mini:active {
+            transform: scale(0.9);
+        }
+
+        .fab-label {
+            background: var(--gunmetal);
+            color: white;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            white-space: nowrap;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        /* ==========================================
+           7. TOAST NOTIFICATIONS
+           ========================================== */
+        .toast-demo {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .toast-trigger {
+            padding: 14px 20px;
+            background: var(--cream);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: background 0.15s ease;
+            border: none;
+            width: 100%;
+            font-family: inherit;
+            font-size: 0.9375rem;
+            color: var(--text-primary);
+        }
+
+        .toast-trigger:active {
+            background: var(--cream-dark);
+        }
+
+        .toast-trigger-icon {
+            font-size: 1.25rem;
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            top: calc(20px + env(safe-area-inset-top, 0px));
+            left: 16px;
+            right: 16px;
+            padding: 14px 18px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 500;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+            transform: translateY(-120%);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+            z-index: 2000;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast.success {
+            background: var(--success);
+            color: white;
+        }
+
+        .toast.error {
+            background: var(--error);
+            color: white;
+        }
+
+        .toast.warning {
+            background: var(--warning);
+            color: white;
+        }
+
+        .toast-icon {
+            font-size: 1.25rem;
+        }
+
+        .toast-message {
+            flex: 1;
+        }
+
+        .toast-close {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ==========================================
+           8. SEGMENTED CONTROL
+           ========================================== */
+        .segment-demo {
+            padding: 20px;
+        }
+
+        .segment-control {
+            display: flex;
+            background: var(--cream);
+            padding: 4px;
+            border-radius: 12px;
+            position: relative;
+        }
+
+        .segment-btn {
+            flex: 1;
+            padding: 12px 16px;
+            background: transparent;
+            border: none;
+            font-family: inherit;
+            font-size: 0.9375rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            cursor: pointer;
+            position: relative;
+            z-index: 1;
+            transition: color 0.2s ease;
+        }
+
+        .segment-btn.active {
+            color: var(--gunmetal);
+        }
+
+        .segment-indicator {
+            position: absolute;
+            top: 4px;
+            bottom: 4px;
+            left: 4px;
+            width: calc(33.333% - 2.67px);
+            background: var(--warm-white);
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .segment-indicator.pos-1 { transform: translateX(0); }
+        .segment-indicator.pos-2 { transform: translateX(100%); }
+        .segment-indicator.pos-3 { transform: translateX(200%); }
+
+        .segment-content {
+            margin-top: 20px;
+            padding: 20px;
+            background: var(--cream);
+            border-radius: 12px;
+            text-align: center;
+            color: var(--text-secondary);
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ==========================================
+           9. LOADING BUTTON
+           ========================================== */
+        .loading-demo {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .load-btn {
+            width: 100%;
+            padding: 16px;
+            border-radius: 14px;
+            border: none;
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .load-btn-primary {
+            background: linear-gradient(135deg, var(--dusty-olive) 0%, var(--dusty-olive-dark) 100%);
+            color: white;
+        }
+
+        .load-btn-outline {
+            background: transparent;
+            color: var(--dusty-olive-dark);
+            border: 2px solid var(--dusty-olive);
+        }
+
+        .load-btn:active:not(.loading) {
+            transform: scale(0.98);
+        }
+
+        .load-btn.loading {
+            pointer-events: none;
+        }
+
+        .load-btn.loading .btn-text {
+            opacity: 0;
+        }
+
+        .load-btn.loading::after {
+            content: '';
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            top: 50%;
+            left: 50%;
+            margin: -11px 0 0 -11px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+
+        .load-btn-outline.loading::after {
+            border-color: rgba(126, 145, 129, 0.3);
+            border-top-color: var(--dusty-olive);
+        }
+
+        .load-btn.success {
+            background: var(--success);
+        }
+
+        .load-btn.success .btn-text {
+            opacity: 1;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Success checkmark in button */
+        .btn-check {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0;
+        }
+
+        .load-btn.success .btn-check {
+            opacity: 1;
+            animation: scaleIn 0.3s ease;
+        }
+
+        @keyframes scaleIn {
+            from { transform: translate(-50%, -50%) scale(0); }
+            to { transform: translate(-50%, -50%) scale(1); }
+        }
+
+        /* ==========================================
+           10. SKELETON LOADING
+           ========================================== */
+        .skeleton-demo {
+            padding: 16px;
+        }
+
+        .skeleton-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--cream);
+        }
+
+        .skeleton-card:last-child {
+            border-bottom: none;
+        }
+
+        .skeleton {
+            background: linear-gradient(90deg, var(--cream) 25%, var(--cream-dark) 50%, var(--cream) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 8px;
+        }
+
+        .skeleton-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            flex-shrink: 0;
+        }
+
+        .skeleton-lines {
+            flex: 1;
+        }
+
+        .skeleton-line {
+            height: 12px;
+            margin-bottom: 8px;
+        }
+
+        .skeleton-line:last-child {
+            width: 60%;
+            margin-bottom: 0;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* ==========================================
+           BOTTOM NAV
+           ========================================== */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(254, 253, 251, 0.9);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(0,0,0,0.06);
+            padding: 8px 0;
+            padding-bottom: calc(8px + var(--safe-bottom));
+            z-index: 100;
+            display: flex;
+            justify-content: space-around;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 8px 16px;
+            background: none;
+            border: none;
+            font-family: inherit;
+            font-size: 0.625rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: color 0.2s ease;
+            position: relative;
+        }
+
+        .nav-item.active {
+            color: var(--dusty-olive);
+        }
+
+        .nav-item-icon {
+            font-size: 1.5rem;
+            transition: transform 0.2s ease;
+        }
+
+        .nav-item:active .nav-item-icon {
+            transform: scale(0.85);
+        }
+
+        .nav-item.active .nav-item-icon {
+            transform: scale(1.1);
+        }
+
+        /* Nav item animation */
+        .nav-item::after {
+            content: '';
+            position: absolute;
+            top: 4px;
+            width: 4px;
+            height: 4px;
+            background: var(--dusty-olive);
+            border-radius: 50%;
+            opacity: 0;
+            transform: scale(0);
+            transition: all 0.2s ease;
+        }
+
+        .nav-item.active::after {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* ==========================================
+           REDUCED MOTION
+           ========================================== */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-title">Mobile Animations</div>
+        <div class="header-subtitle">Touch & swipe to interact</div>
+    </header>
+
+    <!-- 1. Pull to Refresh -->
+    <section class="section">
+        <div class="section-label">Pull to Refresh</div>
+        <div class="demo-container">
+            <div class="pull-demo" id="pullDemo">
+                <div class="pull-indicator" id="pullIndicator">
+                    <div class="pull-spinner"></div>
+                </div>
+                <div class="pull-arrow" id="pullArrow">↓</div>
+                <div class="pull-hint">Pull down to refresh</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 2. Swipe Actions -->
+    <section class="section">
+        <div class="section-label">Swipe Actions</div>
+        <div class="demo-container">
+            <div class="swipe-list">
+                <div class="swipe-item" id="swipeItem1">
+                    <div class="swipe-content">
+                        <div class="swipe-avatar">🏨</div>
+                        <div class="swipe-info">
+                            <div class="swipe-name">Hotel Sunrise Inn</div>
+                            <div class="swipe-detail">Order #ORD2601001</div>
+                        </div>
+                        <div class="swipe-badge">₹5,400</div>
+                    </div>
+                    <div class="swipe-actions">
+                        <button class="swipe-action edit">Edit</button>
+                        <button class="swipe-action delete">Delete</button>
+                    </div>
+                </div>
+                <div class="swipe-item" id="swipeItem2">
+                    <div class="swipe-content">
+                        <div class="swipe-avatar">🍽️</div>
+                        <div class="swipe-info">
+                            <div class="swipe-name">Blue Kitchen</div>
+                            <div class="swipe-detail">Order #ORD2601002</div>
+                        </div>
+                        <div class="swipe-badge">₹3,200</div>
+                    </div>
+                    <div class="swipe-actions">
+                        <button class="swipe-action edit">Edit</button>
+                        <button class="swipe-action delete">Delete</button>
+                    </div>
+                </div>
+            </div>
+            <div class="swipe-hint">← Swipe left on items to reveal actions</div>
+        </div>
+    </section>
+
+    <!-- 3. Tap Feedback -->
+    <section class="section">
+        <div class="section-label">Tap Feedback</div>
+        <div class="demo-container">
+            <div class="tap-grid">
+                <button class="tap-item style-1" onclick="createRipple(event)">
+                    <span class="tap-icon">📦</span>
+                    <span class="tap-label">Orders</span>
+                </button>
+                <button class="tap-item style-2" onclick="createRipple(event)">
+                    <span class="tap-icon">👥</span>
+                    <span class="tap-label">Customers</span>
+                </button>
+                <button class="tap-item style-3" onclick="createRipple(event)">
+                    <span class="tap-icon">📊</span>
+                    <span class="tap-label">Reports</span>
+                </button>
+                <button class="tap-item style-3" onclick="createRipple(event)">
+                    <span class="tap-icon">🥬</span>
+                    <span class="tap-label">Products</span>
+                </button>
+                <button class="tap-item style-2" onclick="createRipple(event)">
+                    <span class="tap-icon">💰</span>
+                    <span class="tap-label">Payments</span>
+                </button>
+                <button class="tap-item style-1" onclick="createRipple(event)">
+                    <span class="tap-icon">⚙️</span>
+                    <span class="tap-label">Settings</span>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4. Bottom Sheet -->
+    <section class="section">
+        <div class="section-label">Bottom Sheet</div>
+        <div class="demo-container">
+            <div class="sheet-trigger">
+                <button class="sheet-btn" onclick="showSheet()">Open Bottom Sheet</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- 5. Card Stack -->
+    <section class="section">
+        <div class="section-label">Swipeable Cards</div>
+        <div class="demo-container">
+            <div class="stack-container" id="stackContainer">
+                <div class="stack-card" id="card1">
+                    <div class="stack-card-header">
+                        <span class="stack-card-badge badge-new">New Order</span>
+                    </div>
+                    <div class="stack-card-title">Hotel Sunrise Inn</div>
+                    <div class="stack-card-subtitle">Weekly vegetable supply order</div>
+                    <div class="stack-card-row">
+                        <span class="stack-card-label">Items</span>
+                        <span class="stack-card-value">12 products</span>
+                    </div>
+                    <div class="stack-card-row">
+                        <span class="stack-card-label">Total</span>
+                        <span class="stack-card-value">₹5,400</span>
+                    </div>
+                </div>
+                <div class="stack-card" id="card2">
+                    <div class="stack-card-header">
+                        <span class="stack-card-badge badge-new">New Order</span>
+                    </div>
+                    <div class="stack-card-title">Blue Kitchen</div>
+                    <div class="stack-card-subtitle">Fresh fruits delivery</div>
+                    <div class="stack-card-row">
+                        <span class="stack-card-label">Items</span>
+                        <span class="stack-card-value">8 products</span>
+                    </div>
+                    <div class="stack-card-row">
+                        <span class="stack-card-label">Total</span>
+                        <span class="stack-card-value">₹3,200</span>
+                    </div>
+                </div>
+                <div class="stack-card" id="card3">
+                    <div class="stack-card-header">
+                        <span class="stack-card-badge badge-new">New Order</span>
+                    </div>
+                    <div class="stack-card-title">Cafe Morning</div>
+                    <div class="stack-card-subtitle">Daily essentials</div>
+                    <div class="stack-card-row">
+                        <span class="stack-card-label">Items</span>
+                        <span class="stack-card-value">5 products</span>
+                    </div>
+                    <div class="stack-card-row">
+                        <span class="stack-card-label">Total</span>
+                        <span class="stack-card-value">₹1,800</span>
+                    </div>
+                </div>
+            </div>
+            <div class="stack-hint">← Swipe cards left or right →</div>
+        </div>
+    </section>
+
+    <!-- 6. FAB -->
+    <section class="section">
+        <div class="section-label">Floating Action Button</div>
+        <div class="demo-container">
+            <div class="fab-container">
+                <button class="fab" id="fab" onclick="toggleFab()">+</button>
+                <div class="fab-menu" style="bottom: 80px;">
+                    <div class="fab-menu-item">
+                        <span class="fab-label">New Order</span>
+                        <button class="fab-mini">📦</button>
+                    </div>
+                    <div class="fab-menu-item">
+                        <span class="fab-label">Add Customer</span>
+                        <button class="fab-mini">👤</button>
+                    </div>
+                    <div class="fab-menu-item">
+                        <span class="fab-label">Quick Payment</span>
+                        <button class="fab-mini">💳</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 7. Toast -->
+    <section class="section">
+        <div class="section-label">Toast Notifications</div>
+        <div class="demo-container">
+            <div class="toast-demo">
+                <button class="toast-trigger" onclick="showToast('success', 'Order saved successfully')">
+                    <span>Show Success Toast</span>
+                    <span class="toast-trigger-icon">✓</span>
+                </button>
+                <button class="toast-trigger" onclick="showToast('error', 'Failed to save order')">
+                    <span>Show Error Toast</span>
+                    <span class="toast-trigger-icon">✕</span>
+                </button>
+                <button class="toast-trigger" onclick="showToast('warning', 'Unsaved changes')">
+                    <span>Show Warning Toast</span>
+                    <span class="toast-trigger-icon">!</span>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- 8. Segmented Control -->
+    <section class="section">
+        <div class="section-label">Segmented Control</div>
+        <div class="demo-container">
+            <div class="segment-demo">
+                <div class="segment-control">
+                    <div class="segment-indicator pos-1" id="segmentIndicator"></div>
+                    <button class="segment-btn active" onclick="switchSegment(this, 1)">All</button>
+                    <button class="segment-btn" onclick="switchSegment(this, 2)">Pending</button>
+                    <button class="segment-btn" onclick="switchSegment(this, 3)">Done</button>
+                </div>
+                <div class="segment-content" id="segmentContent">
+                    Showing all 47 orders
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 9. Loading Button -->
+    <section class="section">
+        <div class="section-label">Loading States</div>
+        <div class="demo-container">
+            <div class="loading-demo">
+                <button class="load-btn load-btn-primary" onclick="simulateLoad(this)">
+                    <span class="btn-text">Save Order</span>
+                    <span class="btn-check">✓</span>
+                </button>
+                <button class="load-btn load-btn-outline" onclick="simulateLoad(this)">
+                    <span class="btn-text">Submit</span>
+                    <span class="btn-check">✓</span>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- 10. Skeleton -->
+    <section class="section">
+        <div class="section-label">Skeleton Loading</div>
+        <div class="demo-container">
+            <div class="skeleton-demo">
+                <div class="skeleton-card">
+                    <div class="skeleton skeleton-avatar"></div>
+                    <div class="skeleton-lines">
+                        <div class="skeleton skeleton-line"></div>
+                        <div class="skeleton skeleton-line"></div>
+                    </div>
+                </div>
+                <div class="skeleton-card">
+                    <div class="skeleton skeleton-avatar"></div>
+                    <div class="skeleton-lines">
+                        <div class="skeleton skeleton-line"></div>
+                        <div class="skeleton skeleton-line"></div>
+                    </div>
+                </div>
+                <div class="skeleton-card">
+                    <div class="skeleton skeleton-avatar"></div>
+                    <div class="skeleton-lines">
+                        <div class="skeleton skeleton-line"></div>
+                        <div class="skeleton skeleton-line"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Bottom Sheet -->
+    <div class="sheet-overlay" id="sheetOverlay" onclick="hideSheet()">
+        <div class="sheet" onclick="event.stopPropagation()">
+            <div class="sheet-handle"></div>
+            <div class="sheet-title">Quick Actions</div>
+            <div class="sheet-subtitle">Select an action to continue</div>
+            <div class="sheet-options">
+                <button class="sheet-option" onclick="hideSheet()">
+                    <div class="sheet-option-icon">📦</div>
+                    <div class="sheet-option-text">
+                        <div class="sheet-option-title">Create Order</div>
+                        <div class="sheet-option-desc">Start a new order for a customer</div>
+                    </div>
+                </button>
+                <button class="sheet-option" onclick="hideSheet()">
+                    <div class="sheet-option-icon">👤</div>
+                    <div class="sheet-option-text">
+                        <div class="sheet-option-title">Add Customer</div>
+                        <div class="sheet-option-desc">Register a new customer</div>
+                    </div>
+                </button>
+                <button class="sheet-option" onclick="hideSheet()">
+                    <div class="sheet-option-icon">💰</div>
+                    <div class="sheet-option-text">
+                        <div class="sheet-option-title">Record Payment</div>
+                        <div class="sheet-option-desc">Log a payment received</div>
+                    </div>
+                </button>
+                <button class="sheet-option" onclick="hideSheet()">
+                    <div class="sheet-option-icon">📊</div>
+                    <div class="sheet-option-text">
+                        <div class="sheet-option-title">View Reports</div>
+                        <div class="sheet-option-desc">Check sales and analytics</div>
+                    </div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast" id="toast">
+        <span class="toast-icon" id="toastIcon">✓</span>
+        <span class="toast-message" id="toastMessage">Success message</span>
+        <button class="toast-close" onclick="hideToast()">×</button>
+    </div>
+
+    <!-- Bottom Nav -->
+    <nav class="bottom-nav">
+        <button class="nav-item active" onclick="setActiveNav(this)">
+            <span class="nav-item-icon">🏠</span>
+            <span>Home</span>
+        </button>
+        <button class="nav-item" onclick="setActiveNav(this)">
+            <span class="nav-item-icon">📦</span>
+            <span>Orders</span>
+        </button>
+        <button class="nav-item" onclick="setActiveNav(this)">
+            <span class="nav-item-icon">👥</span>
+            <span>Customers</span>
+        </button>
+        <button class="nav-item" onclick="setActiveNav(this)">
+            <span class="nav-item-icon">⚙️</span>
+            <span>Settings</span>
+        </button>
+    </nav>
+
+    <script>
+        // Ripple effect
+        function createRipple(event) {
+            const btn = event.currentTarget;
+            const ripple = document.createElement('span');
+            const rect = btn.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+
+            ripple.style.width = ripple.style.height = size + 'px';
+            ripple.style.left = event.clientX - rect.left - size/2 + 'px';
+            ripple.style.top = event.clientY - rect.top - size/2 + 'px';
+            ripple.classList.add('ripple');
+
+            btn.appendChild(ripple);
+            setTimeout(() => ripple.remove(), 500);
+        }
+
+        // Swipe actions
+        document.querySelectorAll('.swipe-item').forEach(item => {
+            let startX, currentX, isDragging = false;
+
+            item.addEventListener('touchstart', (e) => {
+                startX = e.touches[0].clientX;
+                isDragging = true;
+            });
+
+            item.addEventListener('touchmove', (e) => {
+                if (!isDragging) return;
+                currentX = e.touches[0].clientX;
+                const diff = startX - currentX;
+
+                if (diff > 50) {
+                    item.classList.add('swiped');
+                } else if (diff < -20) {
+                    item.classList.remove('swiped');
+                }
+            });
+
+            item.addEventListener('touchend', () => {
+                isDragging = false;
+            });
+        });
+
+        // Pull to refresh
+        const pullDemo = document.getElementById('pullDemo');
+        const pullIndicator = document.getElementById('pullIndicator');
+        let pullStartY, isPulling = false;
+
+        pullDemo.addEventListener('touchstart', (e) => {
+            pullStartY = e.touches[0].clientY;
+            isPulling = true;
+        });
+
+        pullDemo.addEventListener('touchmove', (e) => {
+            if (!isPulling) return;
+            const currentY = e.touches[0].clientY;
+            const diff = currentY - pullStartY;
+
+            if (diff > 50) {
+                pullDemo.classList.add('pulling');
+                pullIndicator.classList.add('pulling');
+            }
+        });
+
+        pullDemo.addEventListener('touchend', () => {
+            if (pullDemo.classList.contains('pulling')) {
+                pullIndicator.classList.add('refreshing');
+
+                setTimeout(() => {
+                    pullDemo.classList.remove('pulling');
+                    pullIndicator.classList.remove('pulling', 'refreshing');
+                }, 1500);
+            }
+            isPulling = false;
+        });
+
+        // Card stack swipe
+        const cards = document.querySelectorAll('.stack-card');
+        cards.forEach(card => {
+            let startX, currentX, isDragging = false;
+
+            card.addEventListener('touchstart', (e) => {
+                startX = e.touches[0].clientX;
+                isDragging = true;
+                card.classList.add('swiping');
+            });
+
+            card.addEventListener('touchmove', (e) => {
+                if (!isDragging) return;
+                currentX = e.touches[0].clientX;
+                const diff = currentX - startX;
+                const rotate = diff * 0.05;
+                card.style.transform = `translateX(${diff}px) rotate(${rotate}deg)`;
+            });
+
+            card.addEventListener('touchend', () => {
+                card.classList.remove('swiping');
+                const diff = currentX - startX;
+
+                if (Math.abs(diff) > 100) {
+                    card.classList.add('dismissed');
+                    card.style.transform = `translateX(${diff > 0 ? 500 : -500}px) rotate(${diff > 0 ? 30 : -30}deg)`;
+                    card.style.opacity = '0';
+
+                    setTimeout(() => {
+                        card.style.display = 'none';
+                    }, 300);
+                } else {
+                    card.style.transform = '';
+                }
+                isDragging = false;
+            });
+        });
+
+        // Bottom sheet
+        function showSheet() {
+            document.getElementById('sheetOverlay').classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function hideSheet() {
+            document.getElementById('sheetOverlay').classList.remove('show');
+            document.body.style.overflow = '';
+        }
+
+        // FAB
+        function toggleFab() {
+            document.getElementById('fab').classList.toggle('open');
+        }
+
+        // Toast
+        let toastTimeout;
+        function showToast(type, message) {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toastIcon');
+            const msg = document.getElementById('toastMessage');
+
+            toast.className = 'toast ' + type;
+            icon.textContent = type === 'success' ? '✓' : type === 'error' ? '✕' : '!';
+            msg.textContent = message;
+
+            clearTimeout(toastTimeout);
+            toast.classList.add('show');
+
+            toastTimeout = setTimeout(hideToast, 3000);
+        }
+
+        function hideToast() {
+            document.getElementById('toast').classList.remove('show');
+        }
+
+        // Segmented control
+        function switchSegment(btn, pos) {
+            document.querySelectorAll('.segment-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            const indicator = document.getElementById('segmentIndicator');
+            indicator.className = 'segment-indicator pos-' + pos;
+
+            const content = document.getElementById('segmentContent');
+            const texts = ['Showing all 47 orders', 'Showing 12 pending orders', 'Showing 35 completed orders'];
+            content.textContent = texts[pos - 1];
+            content.style.animation = 'none';
+            content.offsetHeight;
+            content.style.animation = 'fadeIn 0.3s ease';
+        }
+
+        // Loading button
+        function simulateLoad(btn) {
+            if (btn.classList.contains('loading')) return;
+
+            btn.classList.add('loading');
+
+            setTimeout(() => {
+                btn.classList.remove('loading');
+                btn.classList.add('success');
+                btn.querySelector('.btn-text').textContent = 'Done!';
+
+                setTimeout(() => {
+                    btn.classList.remove('success');
+                    btn.querySelector('.btn-text').textContent = btn.classList.contains('load-btn-primary') ? 'Save Order' : 'Submit';
+                }, 1500);
+            }, 1500);
+        }
+
+        // Nav
+        function setActiveNav(btn) {
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            btn.classList.add('active');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+/**
+ * Animation System - Pratibha Marketing
+ *
+ * Import this file to get all animations:
+ * <link rel="stylesheet" href="/css/animations/index.css">
+ *
+ * Or import individual files for smaller bundle:
+ * <link rel="stylesheet" href="/css/animations/skeleton.css">
+ */
+
+@import url('skeleton.css');
+@import url('buttons.css');
+@import url('cards.css');
+@import url('inputs.css');
+@import url('toasts.css');
+@import url('modals.css');
+@import url('segments.css');
+@import url('swipe.css');
+@import url('page.css');
+@import url('badges.css');
+@import url('nav.css');
+
+/* ==========================================
+   REDUCED MOTION
+   Respects user's system preference
+   ========================================== */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

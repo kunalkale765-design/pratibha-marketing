@@ -1,0 +1,51 @@
+/**
+ * Badge Animations
+ * Use: Status badges (Pending, New, etc.)
+ *
+ * Usage:
+ * <span class="badge badge-pulse">Pending</span>
+ * <span class="badge badge-glow">New</span>
+ */
+
+/* Subtle pulse for attention */
+@keyframes badgePulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.badge-pulse {
+    animation: badgePulse 2s ease infinite;
+}
+
+/* Glow effect for new items */
+@keyframes badgeGlow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(93, 122, 95, 0.4); }
+    50% { box-shadow: 0 0 0 6px rgba(93, 122, 95, 0); }
+}
+
+.badge-glow {
+    animation: badgeGlow 2s ease infinite;
+}
+
+/* Warning glow */
+@keyframes badgeWarningGlow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(184, 154, 90, 0.4); }
+    50% { box-shadow: 0 0 0 6px rgba(184, 154, 90, 0); }
+}
+
+.badge-warning-glow {
+    animation: badgeWarningGlow 2s ease infinite;
+}
+
+/* Count change animation */
+@keyframes badgeBounce {
+    0% { transform: scale(1); }
+    30% { transform: scale(1.3); }
+    50% { transform: scale(0.9); }
+    70% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.badge-bounce {
+    animation: badgeBounce 0.4s ease;
+}

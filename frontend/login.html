@@ -20,6 +20,10 @@
     <link rel="stylesheet" href="/css/utilities.css">
     <link rel="stylesheet" href="/css/responsive.css">
 
+    <!-- Animations -->
+    <link rel="stylesheet" href="/css/animations/inputs.css">
+    <link rel="stylesheet" href="/css/animations/buttons.css">
+
     <!-- Page-specific styles (only what's unique to this page) -->
     <style>
         /* Login page layout - diagonal background */
@@ -278,18 +282,20 @@
                 <form id="loginForm">
                     <div class="form-group">
                         <label class="form-label" for="email">Username</label>
-                        <input type="text" id="email" class="form-input" placeholder="Enter your username" required autocomplete="username">
+                        <input type="text" id="email" class="form-input input-animated" placeholder="Enter your username" required autocomplete="username">
                     </div>
 
                     <div class="form-group">
                         <label class="form-label" for="password">Password</label>
                         <div class="input-group">
-                            <input type="password" id="password" class="form-input" placeholder="Enter your password" required autocomplete="current-password">
+                            <input type="password" id="password" class="form-input input-animated" placeholder="Enter your password" required autocomplete="current-password">
                             <button type="button" class="password-toggle" id="passwordToggle">◉</button>
                         </div>
                     </div>
 
-                    <button type="submit" id="loginBtn" class="btn btn-primary btn-block">Sign In</button>
+                    <button type="submit" id="loginBtn" class="btn btn-primary btn-block btn-animated">
+                        <span class="btn-text">Sign In</span>
+                    </button>
 
                     <div class="divider-text"><span>or</span></div>
 
@@ -359,7 +365,7 @@
             }
 
             loginBtn.disabled = true;
-            loginBtn.textContent = 'Signing in...';
+            loginBtn.classList.add('btn-loading');
             hideError();
 
             try {
@@ -427,7 +433,7 @@
                 }
             } finally {
                 loginBtn.disabled = false;
-                loginBtn.textContent = 'Sign In';
+                loginBtn.classList.remove('btn-loading');
             }
         });
 

@@ -14,6 +14,13 @@
     <link rel="stylesheet" href="/css/utilities.css">
     <link rel="stylesheet" href="/css/responsive.css">
 
+    <!-- Animations -->
+    <link rel="stylesheet" href="/css/animations/skeleton.css">
+    <link rel="stylesheet" href="/css/animations/cards.css">
+    <link rel="stylesheet" href="/css/animations/inputs.css">
+    <link rel="stylesheet" href="/css/animations/buttons.css">
+    <link rel="stylesheet" href="/css/animations/page.css">
+
     <!-- jsPDF for PDF export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
@@ -485,10 +492,10 @@
     </style>
 </head>
 <body>
-    <header class="header">
+    <header class="header header-animated">
         <div class="header-content">
             <a href="/" class="logo">Pratibha <span>Marketing</span></a>
-            <a href="/" class="btn-back">Dashboard</a>
+            <a href="/" class="btn-back btn-animated">Dashboard</a>
         </div>
     </header>
 
@@ -497,7 +504,28 @@
     <div id="toast" class="toast"></div>
 
     <div class="product-list" id="productList">
-        <div class="loading">Loading products...</div>
+        <!-- Skeleton loading placeholders -->
+        <div class="skeleton-card" style="display: flex; align-items: center; gap: 1rem;">
+            <div style="flex: 1;">
+                <div class="skeleton skeleton-title" style="width: 50%; margin-bottom: 0.25rem;"></div>
+                <div class="skeleton skeleton-text" style="width: 30%;"></div>
+            </div>
+            <div class="skeleton" style="width: 100px; height: 44px; border-radius: 8px;"></div>
+        </div>
+        <div class="skeleton-card" style="display: flex; align-items: center; gap: 1rem;">
+            <div style="flex: 1;">
+                <div class="skeleton skeleton-title" style="width: 50%; margin-bottom: 0.25rem;"></div>
+                <div class="skeleton skeleton-text" style="width: 30%;"></div>
+            </div>
+            <div class="skeleton" style="width: 100px; height: 44px; border-radius: 8px;"></div>
+        </div>
+        <div class="skeleton-card" style="display: flex; align-items: center; gap: 1rem;">
+            <div style="flex: 1;">
+                <div class="skeleton skeleton-title" style="width: 50%; margin-bottom: 0.25rem;"></div>
+                <div class="skeleton skeleton-text" style="width: 30%;"></div>
+            </div>
+            <div class="skeleton" style="width: 100px; height: 44px; border-radius: 8px;"></div>
+        </div>
     </div>
 
     <!-- 7-Day History Section -->
@@ -506,7 +534,7 @@
             <div class="history-header">
                 <h2 class="history-title">7-Day Rate History</h2>
                 <div class="history-controls">
-                    <select id="historyCategory" class="history-select" onchange="loadHistory()">
+                    <select id="historyCategory" class="history-select input-animated" onchange="loadHistory()">
                         <option value="all">All Categories</option>
                     </select>
                     <button class="btn-export" onclick="exportToPDF()">
@@ -522,7 +550,9 @@
 
     <div class="bottom-bar">
         <div class="changes-count"><span id="changesCount">0</span> changed</div>
-        <button class="btn-save" id="saveBtn" disabled onclick="saveRates()">Save Rates</button>
+        <button class="btn-save btn-animated" id="saveBtn" disabled onclick="saveRates()">
+            <span class="btn-text">Save Rates</span>
+        </button>
     </div>
 
     <script src="/js/auth.js"></script>
@@ -590,6 +620,7 @@
             });
 
             let html = '';
+            let itemIdx = 0;
             for (const [cat, prods] of Object.entries(grouped)) {
                 const catName = cat.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                 html += `<div class="category-header">${escapeHtml(catName)}</div>`;
@@ -597,12 +628,12 @@
                 prods.forEach(p => {
                     const currentRate = rates[p._id] || 0;
                     html += `
-                        <div class="product-item">
+                        <div class="product-item card-animated card-fade-in" style="animation-delay: ${itemIdx * 0.03}s">
                             <div class="product-info">
                                 <div class="product-name">${escapeHtml(p.name)}</div>
                                 <div class="product-unit">per ${escapeHtml(p.unit)}</div>
                             </div>
-                            <input type="number" class="rate-input"
+                            <input type="number" class="rate-input input-animated"
                                 id="rate-${escapeHtml(p._id)}"
                                 data-id="${escapeHtml(p._id)}"
                                 data-original="${escapeHtml(String(currentRate))}"
@@ -614,6 +645,7 @@
                                 oninput="handleInput(this)">
                         </div>
                     `;
+                    itemIdx++;
                 });
             }
 
@@ -664,7 +696,7 @@
         async function saveRates() {
             const btn = document.getElementById('saveBtn');
             btn.disabled = true;
-            btn.textContent = 'Saving...';
+            btn.classList.add('btn-loading');
 
             let success = 0, failed = 0;
             let firstError = null;
@@ -745,9 +777,11 @@
             changedRates = successfulRates;
             updateSaveButton();
 
-            btn.textContent = 'Save Rates';
+            btn.classList.remove('btn-loading');
 
             if (success > 0) {
+                btn.classList.add('btn-success');
+                setTimeout(() => btn.classList.remove('btn-success'), 1500);
                 showToast(`${success} rate(s) saved`, 'success');
             }
             if (failed > 0) {

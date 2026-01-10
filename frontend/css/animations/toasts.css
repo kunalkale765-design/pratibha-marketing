@@ -1,0 +1,66 @@
+/**
+ * Toast Notification Animations
+ * Use: Success/error/warning messages
+ *
+ * Note: Your app already has toast.css - this enhances it
+ */
+
+/* Slide in from top */
+@keyframes toastSlideIn {
+    from {
+        transform: translateY(-120%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes toastSlideOut {
+    from {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateY(-120%);
+        opacity: 0;
+    }
+}
+
+.toast-animated {
+    animation: toastSlideIn 0.4s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+
+.toast-animated.hiding {
+    animation: toastSlideOut 0.3s ease forwards;
+}
+
+/* Alternative: Slide from bottom (mobile-friendly) */
+@keyframes toastSlideUp {
+    from {
+        transform: translateY(120%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.toast-bottom {
+    top: auto;
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    animation: toastSlideUp 0.4s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+
+/* Success checkmark animation */
+@keyframes checkPop {
+    0% { transform: scale(0); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+.toast-icon-animated {
+    animation: checkPop 0.3s ease;
+}

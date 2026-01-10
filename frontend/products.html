@@ -14,6 +14,13 @@
     <link rel="stylesheet" href="/css/utilities.css">
     <link rel="stylesheet" href="/css/responsive.css">
 
+    <!-- Animations -->
+    <link rel="stylesheet" href="/css/animations/skeleton.css">
+    <link rel="stylesheet" href="/css/animations/cards.css">
+    <link rel="stylesheet" href="/css/animations/inputs.css">
+    <link rel="stylesheet" href="/css/animations/buttons.css">
+    <link rel="stylesheet" href="/css/animations/page.css">
+
     <!-- Page-specific styles -->
     <style>
         body {
@@ -338,19 +345,19 @@
     </style>
 </head>
 <body>
-    <header class="header">
+    <header class="header header-animated">
         <div class="header-content">
             <a href="/" class="logo">Pratibha <span>Marketing</span></a>
             <div class="header-btns">
-                <button onclick="showAddProductForm()" class="btn-header primary">+ Add</button>
-                <a href="/" class="btn-header">Home</a>
+                <button onclick="showAddProductForm()" class="btn-header primary btn-animated">+ Add</button>
+                <a href="/" class="btn-header btn-animated">Home</a>
             </div>
         </div>
     </header>
 
     <div class="search-filter">
         <div class="search-row">
-            <input id="searchInput" type="text" placeholder="Search products..." class="search-input" oninput="searchProducts()">
+            <input id="searchInput" type="text" placeholder="Search products..." class="search-input input-animated" oninput="searchProducts()">
             <button onclick="showCategoryModal()" class="btn-manage-cat">Categories</button>
         </div>
         <div id="categoryPills" class="category-pills">
@@ -361,7 +368,28 @@
     <div id="toast" class="toast"></div>
 
     <div id="productsList" class="products-list">
-        <div class="empty-state">Loading products...</div>
+        <!-- Skeleton loading placeholders -->
+        <div class="skeleton-card">
+            <div class="skeleton-row">
+                <div class="skeleton skeleton-title" style="width: 45%;"></div>
+                <div class="skeleton skeleton-text" style="width: 20%;"></div>
+            </div>
+            <div class="skeleton skeleton-text short" style="margin-top: 0.5rem;"></div>
+        </div>
+        <div class="skeleton-card">
+            <div class="skeleton-row">
+                <div class="skeleton skeleton-title" style="width: 45%;"></div>
+                <div class="skeleton skeleton-text" style="width: 20%;"></div>
+            </div>
+            <div class="skeleton skeleton-text short" style="margin-top: 0.5rem;"></div>
+        </div>
+        <div class="skeleton-card">
+            <div class="skeleton-row">
+                <div class="skeleton skeleton-title" style="width: 45%;"></div>
+                <div class="skeleton skeleton-text" style="width: 20%;"></div>
+            </div>
+            <div class="skeleton skeleton-text short" style="margin-top: 0.5rem;"></div>
+        </div>
     </div>
 
     <!-- Product Modal -->
@@ -376,20 +404,20 @@
                     <input type="hidden" id="productId">
                     <div class="form-group">
                         <label class="form-label">Name *</label>
-                        <input id="productName" type="text" class="form-input" required>
+                        <input id="productName" type="text" class="form-input input-animated" required>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label">Category</label>
                             <div class="input-with-btn">
-                                <select id="productCategory" class="form-select">
+                                <select id="productCategory" class="form-select input-animated">
                                     <option value="">Select...</option>
                                 </select>
                             </div>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Unit *</label>
-                            <select id="productUnit" class="form-select" required>
+                            <select id="productUnit" class="form-select input-animated" required>
                                 <option value="kg">kg</option>
                                 <option value="quintal">Quintal</option>
                                 <option value="bag">Bag</option>
@@ -400,8 +428,10 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" onclick="closeModal()" class="btn-modal secondary">Cancel</button>
-                    <button type="submit" class="btn-modal primary">Save</button>
+                    <button type="button" onclick="closeModal()" class="btn-modal secondary btn-animated">Cancel</button>
+                    <button type="submit" class="btn-modal primary btn-animated" id="saveProductBtn">
+                        <span class="btn-text">Save</span>
+                    </button>
                 </div>
             </form>
         </div>
@@ -499,8 +529,8 @@
                 return;
             }
 
-            container.innerHTML = products.map(p => `
-                <div class="product-card">
+            container.innerHTML = products.map((p, idx) => `
+                <div class="product-card card-animated card-fade-in" style="animation-delay: ${idx * 0.05}s">
                     <div class="product-info">
                         <div class="product-name">${escapeHtml(p.name)}</div>
                         <div class="product-meta">

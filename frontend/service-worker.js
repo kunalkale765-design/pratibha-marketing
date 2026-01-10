@@ -1,7 +1,7 @@
 // Pratibha Marketing - Service Worker
 // Smart caching for PWA functionality
 
-const CACHE_NAME = 'pratibha-v6';
+const CACHE_NAME = 'pratibha-v13';
 const API_CACHE_NAME = 'pratibha-api-v1';
 
 // Static assets to cache immediately
@@ -20,7 +20,14 @@ const STATIC_ASSETS = [
   '/js/auth.js',
   '/icons/icon.svg',
   '/icons/icon-192.png',
-  '/icons/icon-512.png'
+  '/icons/icon-512.png',
+  '/css/animations/skeleton.css',
+  '/css/animations/buttons.css',
+  '/css/animations/cards.css',
+  '/css/animations/inputs.css',
+  '/css/animations/badges.css',
+  '/css/animations/segments.css',
+  '/css/animations/page.css'
 ];
 
 // API endpoints to cache (read-only data)

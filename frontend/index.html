@@ -25,6 +25,12 @@
     <link rel="stylesheet" href="/css/utilities.css">
     <link rel="stylesheet" href="/css/responsive.css">
 
+    <!-- Animations -->
+    <link rel="stylesheet" href="/css/animations/skeleton.css">
+    <link rel="stylesheet" href="/css/animations/cards.css">
+    <link rel="stylesheet" href="/css/animations/page.css">
+    <link rel="stylesheet" href="/css/animations/buttons.css">
+
     <!-- Page-specific styles -->
     <style>
         /* Dashboard Layout */
@@ -503,7 +509,7 @@
     </style>
 </head>
 <body>
-    <header class="header">
+    <header class="header header-animated">
         <div class="header-content">
             <div>
                 <div class="logo">
@@ -513,7 +519,7 @@
             </div>
             <div class="header-actions">
                 <div class="user-badge" id="userBadge">Loading...</div>
-                <button class="btn-header" id="logoutBtn">Logout</button>
+                <button class="btn-header btn-animated" id="logoutBtn">Logout</button>
             </div>
         </div>
     </header>
@@ -533,7 +539,7 @@
 
         <!-- Quick Actions -->
         <div class="actions-grid">
-            <a href="/customer-order-form.html" class="action-card primary">
+            <a href="/customer-order-form.html" class="action-card card-animated primary">
                 <div class="action-icon">+</div>
                 <div class="action-content">
                     <h3 class="action-title">Create Order</h3>
@@ -541,7 +547,7 @@
                 </div>
             </a>
 
-            <a href="/customer-management.html" class="action-card">
+            <a href="/customer-management.html" class="action-card card-animated">
                 <div class="action-icon">≡</div>
                 <div class="action-content">
                     <h3 class="action-title">Customers</h3>
@@ -549,7 +555,7 @@
                 </div>
             </a>
 
-            <a href="/products.html" class="action-card">
+            <a href="/products.html" class="action-card card-animated">
                 <div class="action-icon">●</div>
                 <div class="action-content">
                     <h3 class="action-title">Products</h3>
@@ -557,13 +563,13 @@
                 </div>
             </a>
 
-            <a href="/market-rates.html" class="action-card">
+            <a href="/market-rates.html" class="action-card card-animated">
                 <div class="action-icon">◇</div>
                 <div class="action-content">
                     <h3 class="action-title">Market Rates</h3>
                 </div>
             </a>
-            <a href="/orders.html" class="action-card">
+            <a href="/orders.html" class="action-card card-animated">
                 <div class="action-icon">≣</div>
                 <div class="action-content">
                     <h3 class="action-title">View Orders</h3>
@@ -583,7 +589,22 @@
                 </div>
             </div>
             <div class="procurement-list" id="procurementList">
-                <div class="empty-state">Loading...</div>
+                <!-- Skeleton loading -->
+                <div class="skeleton-card" style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem;">
+                    <div class="skeleton skeleton-title" style="width: 35%;"></div>
+                    <div class="skeleton skeleton-text" style="width: 20%;"></div>
+                    <div class="skeleton" style="width: 80px; height: 32px; border-radius: 6px; margin-left: auto;"></div>
+                </div>
+                <div class="skeleton-card" style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem;">
+                    <div class="skeleton skeleton-title" style="width: 35%;"></div>
+                    <div class="skeleton skeleton-text" style="width: 20%;"></div>
+                    <div class="skeleton" style="width: 80px; height: 32px; border-radius: 6px; margin-left: auto;"></div>
+                </div>
+                <div class="skeleton-card" style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem;">
+                    <div class="skeleton skeleton-title" style="width: 35%;"></div>
+                    <div class="skeleton skeleton-text" style="width: 20%;"></div>
+                    <div class="skeleton" style="width: 80px; height: 32px; border-radius: 6px; margin-left: auto;"></div>
+                </div>
             </div>
         </div>
 

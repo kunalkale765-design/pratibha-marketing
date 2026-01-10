@@ -1,0 +1,68 @@
+/**
+ * Input Animations
+ * Use: Form fields, search inputs
+ *
+ * Usage:
+ * <input class="input-animated" />
+ * <input class="input-error" /> (add temporarily for shake)
+ */
+
+/* Focus glow effect */
+.input-animated {
+    transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+}
+
+.input-animated:focus {
+    border-color: var(--dusty-olive, #7e9181);
+    box-shadow: 0 0 0 4px rgba(126, 145, 129, 0.15);
+    background: var(--warm-white, #fefdfb);
+}
+
+/* Error shake */
+@keyframes inputShake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-6px); }
+    20%, 40%, 60%, 80% { transform: translateX(6px); }
+}
+
+.input-error {
+    border-color: var(--error, #9a6565) !important;
+    animation: inputShake 0.5s ease;
+}
+
+/* Floating label */
+.floating-label {
+    position: relative;
+}
+
+.floating-label label {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1rem;
+    color: var(--text-muted, #8a918c);
+    pointer-events: none;
+    transition: all 0.25s ease;
+    background: transparent;
+    padding: 0 0.25rem;
+}
+
+.floating-label input:focus + label,
+.floating-label input:not(:placeholder-shown) + label {
+    top: 0;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--dusty-olive-dark, #5d6b5f);
+    background: var(--warm-white, #fefdfb);
+}
+
+/* Search input pulse (when empty) */
+@keyframes searchPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(126, 145, 129, 0); }
+    50% { box-shadow: 0 0 0 4px rgba(126, 145, 129, 0.1); }
+}
+
+.input-hint-pulse:not(:focus):placeholder-shown {
+    animation: searchPulse 2s ease infinite;
+}

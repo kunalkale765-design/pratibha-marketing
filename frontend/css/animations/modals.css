@@ -1,0 +1,66 @@
+/**
+ * Modal Animations
+ * Use: Dialogs, confirmations, forms
+ *
+ * Note: Enhances existing modal styles in components.css
+ */
+
+/* Backdrop fade */
+.modal-overlay-animated {
+    background: rgba(0, 0, 0, 0);
+    backdrop-filter: blur(0);
+    -webkit-backdrop-filter: blur(0);
+    transition: background 0.3s ease, backdrop-filter 0.3s ease;
+}
+
+.modal-overlay-animated.show {
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+/* Modal scale + slide */
+.modal-animated {
+    transform: scale(0.95) translateY(20px);
+    opacity: 0;
+    transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.35s ease;
+}
+
+.modal-overlay-animated.show .modal-animated {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+}
+
+/* Bottom sheet style modal (mobile) */
+.modal-sheet {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-height: 90vh;
+    border-radius: 20px 20px 0 0;
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.modal-overlay-animated.show .modal-sheet {
+    transform: translateY(0);
+}
+
+/* Sheet handle */
+.modal-sheet-handle {
+    width: 36px;
+    height: 5px;
+    background: var(--cream-dark, #efe9df);
+    border-radius: 3px;
+    margin: 0 auto 16px;
+}
+
+/* Close button rotation */
+.modal-close-animated {
+    transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.modal-close-animated:hover {
+    transform: rotate(90deg);
+}

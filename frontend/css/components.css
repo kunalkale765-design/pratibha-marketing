@@ -443,6 +443,52 @@
   border-top: 1px solid var(--cream-dark);
 }
 
+/* Modal Buttons */
+.btn-modal {
+  flex: 1;
+  padding: 0.875rem;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 52px;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: all var(--transition-base);
+}
+
+.btn-modal:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.btn-modal:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-modal.primary {
+  background: linear-gradient(135deg, var(--dusty-olive) 0%, var(--dusty-olive-dark) 100%);
+  color: white;
+}
+
+.btn-modal.primary:hover:not(:disabled) {
+  box-shadow: 0 4px 12px rgba(126, 145, 129, 0.3);
+}
+
+.btn-modal.secondary {
+  background: var(--cream);
+  color: var(--text-primary);
+  border: 1.5px solid var(--cream-dark);
+}
+
+.btn-modal.secondary:hover:not(:disabled) {
+  background: var(--cream-dark);
+}
+
 /* ===================
    TOAST NOTIFICATIONS
    =================== */

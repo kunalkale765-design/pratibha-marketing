@@ -1,0 +1,74 @@
+/**
+ * Segmented Control / Tab Animations
+ * Use: Order filters (All/Pending/Delivered), tabs
+ *
+ * Usage:
+ * <div class="segment-control">
+ *   <div class="segment-indicator"></div>
+ *   <button class="segment-btn active">All</button>
+ *   <button class="segment-btn">Pending</button>
+ * </div>
+ */
+
+.segment-control {
+    display: inline-flex;
+    background: var(--cream, #f9f7f3);
+    padding: 4px;
+    border-radius: 12px;
+    position: relative;
+    gap: 0;
+}
+
+.segment-btn {
+    padding: 10px 20px;
+    background: transparent;
+    border: none;
+    font-family: inherit;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-muted, #8a918c);
+    cursor: pointer;
+    position: relative;
+    z-index: 2;
+    transition: color 0.25s ease;
+    white-space: nowrap;
+}
+
+.segment-btn:active {
+    transform: scale(0.97);
+}
+
+.segment-btn.active {
+    color: var(--gunmetal, #2e3532);
+}
+
+/* The sliding pill indicator */
+.segment-indicator {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    left: 4px;
+    background: var(--warm-white, #fefdfb);
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+    z-index: 1;
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+}
+
+/* Content fade when switching */
+.segment-content {
+    animation: segmentFadeIn 0.3s ease;
+}
+
+@keyframes segmentFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
