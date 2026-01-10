@@ -398,12 +398,12 @@ node backend/scripts/init-counters.js
 |------|--------|--------|
 | `backend/models/Customer.js` | Removed legacy `personalizedPricing` field | Unused field cleanup |
 | `backend/routes/supplier.js` | Removed unused `Product` import | Dead code removal |
-| `backend/routes/auth.js` | Made magic link expiry configurable via `MAGIC_LINK_EXPIRY_HOURS` env var | Configuration flexibility |
+| `backend/routes/auth.js` | Made magic link expiry configurable via `MAGIC_LINK_EXPIRY_DAYS` env var | Configuration flexibility |
 
 **Details:**
 - Removed `personalizedPricing` Map field that was kept for backward compatibility but never used
 - Removed unused `Product` import from supplier.js (MarketRate is still used)
-- Magic link expiry now configurable via `process.env.MAGIC_LINK_EXPIRY_HOURS` (default: 48 hours)
+- Magic link expiry now configurable via `process.env.MAGIC_LINK_EXPIRY_DAYS` (default: 30 days)
 
 ---
 

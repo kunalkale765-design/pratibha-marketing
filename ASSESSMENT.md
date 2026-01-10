@@ -259,9 +259,9 @@ orderSchema.index({ createdAt: -1 });
 #### 4.3 Magic Numbers
 **File:** `backend/routes/auth.js:279`
 
-**Issue:** `MAGIC_LINK_EXPIRY_HOURS = 48` hardcoded.
+**Issue:** `MAGIC_LINK_EXPIRY_DAYS = 30` was hardcoded.
 
-**Fix:** Move to environment variable.
+**Fix:** Moved to environment variable `MAGIC_LINK_EXPIRY_DAYS` (default: 30 days).
 
 ---
 
