@@ -10,6 +10,8 @@ const customerSchema = new mongoose.Schema({
   phone: {
     type: String,
     trim: true,
+    unique: true,
+    sparse: true, // Allows multiple null/empty values
     validate: {
       validator: function(v) {
         // Allow empty or valid 10-digit phone
@@ -81,6 +83,22 @@ const customerSchema = new mongoose.Schema({
   },
   magicLinkCreatedAt: {
     type: Date
+  },
+  // Audit fields
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  updatedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  deletedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  deletedAt: {
+    type: Date
   }
 }, {
   timestamps: true
@@ -88,6 +106,6 @@ const customerSchema = new mongoose.Schema({
 
 // Index for faster searches
 customerSchema.index({ name: 1 });
-customerSchema.index({ phone: 1 }, { sparse: true });
+// Note: phone index is created by unique: true, sparse: true on field definition
 
 module.exports = mongoose.model('Customer', customerSchema);

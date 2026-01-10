@@ -72,7 +72,18 @@ const orderSchema = new mongoose.Schema({
   },
   packedAt: Date,
   shippedAt: Date,
-  deliveredAt: Date
+  deliveredAt: Date,
+  // Cancellation audit
+  cancelledAt: Date,
+  cancelledBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  // Track if contract pricing fallback was used
+  usedPricingFallback: {
+    type: Boolean,
+    default: false
+  }
 }, {
   timestamps: true
 });

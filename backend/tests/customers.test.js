@@ -284,7 +284,7 @@ describe('Customer Endpoints', () => {
       // Token is no longer returned directly for security - only the full link URL
       expect(res.body.data.link).toContain('token=');
       expect(res.body.data.createdAt).toBeDefined();
-      expect(res.body.data.expiresIn).toBe('48 hours');
+      expect(res.body.data.expiresIn).toBe('30 days');
     });
 
     it('should revoke a magic link', async () => {

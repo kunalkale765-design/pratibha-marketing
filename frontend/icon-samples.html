@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Icon Style Options - Pratibha Marketing</title>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gunmetal: #2e3532;
+            --dusty-olive: #7e9181;
+            --dusty-olive-dark: #5d6b5f;
+            --cream: #f9f7f3;
+            --warm-white: #fefdfb;
+            --terracotta: #c4a77d;
+            --terracotta-dark: #a68b5b;
+            --success: #5d7a5f;
+            --earth-brown: #8b7355;
+            --wheat-gold: #d4a853;
+            --leaf-green: #6b8f71;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: linear-gradient(180deg, var(--cream) 0%, #ebe8e2 100%);
+            color: var(--gunmetal);
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--dusty-olive) 0%, var(--dusty-olive-dark) 100%);
+            padding: 3rem 2rem;
+            text-align: center;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 5c1 3 2 8 0 12-2-4-1-9 0-12zm-8 8c3 1 7 4 8 8-4-1-7-5-8-8zm16 0c-3 1-7 4-8 8 4-1 7-5 8-8z' fill='%23ffffff' fill-opacity='0.05'/%3E%3C/svg%3E");
+            animation: float 30s linear infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(30px, 30px); }
+        }
+
+        .header h1 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 2.8rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .brand-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255,255,255,0.15);
+            padding: 0.5rem 1rem;
+            border-radius: 30px;
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .brand-badge svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .intro {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: var(--warm-white);
+            border-radius: 16px;
+            border-left: 4px solid var(--terracotta);
+        }
+
+        .intro h2 {
+            font-family: 'Crimson Pro', serif;
+            color: var(--gunmetal);
+            margin-bottom: 0.5rem;
+        }
+
+        .intro p {
+            color: var(--dusty-olive-dark);
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 2rem;
+        }
+
+        .option-card {
+            background: var(--warm-white);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 4px 24px rgba(46, 53, 50, 0.08);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .option-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 12px 40px rgba(46, 53, 50, 0.15);
+        }
+
+        .option-header {
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            border-bottom: 1px solid var(--cream);
+        }
+
+        .option-number {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1rem;
+        }
+
+        .option-info {
+            flex: 1;
+        }
+
+        .option-title {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--gunmetal);
+        }
+
+        .option-subtitle {
+            font-size: 0.8rem;
+            color: var(--dusty-olive-dark);
+            margin-top: 0.15rem;
+        }
+
+        .option-tag {
+            font-size: 0.7rem;
+            padding: 0.3rem 0.7rem;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        .option-body {
+            padding: 1.5rem;
+        }
+
+        .icons-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 1rem;
+        }
+
+        .icon-cell {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .icon-wrap {
+            width: 52px;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            transition: transform 0.2s;
+        }
+
+        .icon-wrap:hover {
+            transform: scale(1.15);
+        }
+
+        .icon-wrap svg {
+            width: 26px;
+            height: 26px;
+        }
+
+        .icon-name {
+            font-size: 0.65rem;
+            color: var(--dusty-olive-dark);
+            text-align: center;
+        }
+
+        .preview-bar {
+            display: flex;
+            gap: 0.75rem;
+            padding: 1rem 1.5rem;
+            background: var(--cream);
+            border-top: 1px solid #e8e5df;
+        }
+
+        .preview-btn {
+            flex: 1;
+            padding: 0.7rem 1rem;
+            border: none;
+            border-radius: 10px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .preview-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .btn-select {
+            background: var(--dusty-olive);
+            color: white;
+        }
+
+        .btn-select:hover {
+            background: var(--dusty-olive-dark);
+        }
+
+        /* Style 1: Wheat & Grain */
+        .style-1 .option-number { background: linear-gradient(135deg, #d4a853 0%, #c4a77d 100%); color: white; }
+        .style-1 .option-tag { background: #fdf6e3; color: #a68b5b; }
+        .style-1 .icon-wrap { background: linear-gradient(145deg, #fdf8ed 0%, #f5edd8 100%); }
+        .style-1 .icon-wrap svg { stroke: #8b7355; stroke-width: 1.75; fill: none; }
+        .style-1 .icon-wrap svg .fill { fill: #d4a853; stroke: none; }
+
+        /* Style 2: Fresh Leaf */
+        .style-2 .option-number { background: linear-gradient(135deg, #6b8f71 0%, #5d7a5f 100%); color: white; }
+        .style-2 .option-tag { background: #e8f0e9; color: #5d7a5f; }
+        .style-2 .icon-wrap { background: var(--dusty-olive); border-radius: 50%; }
+        .style-2 .icon-wrap svg { stroke: white; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+        /* Style 3: Terracotta Clay */
+        .style-3 .option-number { background: linear-gradient(135deg, #c4a77d 0%, #a68b5b 100%); color: white; }
+        .style-3 .option-tag { background: #f5ebe0; color: #8b7355; }
+        .style-3 .icon-wrap { background: #c4a77d; border-radius: 8px; box-shadow: 3px 3px 0 #8b7355; }
+        .style-3 .icon-wrap svg { fill: var(--warm-white); }
+
+        /* Style 4: Mandi Market */
+        .style-4 .option-number { background: var(--gunmetal); color: white; }
+        .style-4 .option-tag { background: #e8e6e2; color: var(--gunmetal); }
+        .style-4 .icon-wrap { background: var(--warm-white); border: 2px solid var(--gunmetal); border-radius: 6px; }
+        .style-4 .icon-wrap svg { stroke: var(--gunmetal); stroke-width: 2; fill: none; }
+
+        /* Style 5: Seed & Sprout */
+        .style-5 .option-number { background: linear-gradient(135deg, #7e9181 0%, #6b8f71 100%); color: white; }
+        .style-5 .option-tag { background: #e8f0e9; color: #5d6b5f; }
+        .style-5 .icon-wrap { background: linear-gradient(145deg, #e8f0e9 0%, #d4e0d6 100%); border-radius: 50% 50% 50% 10%; }
+        .style-5 .icon-wrap svg { stroke: var(--dusty-olive-dark); stroke-width: 1.75; fill: none; }
+        .style-5 .icon-wrap svg .accent { fill: var(--dusty-olive); opacity: 0.3; }
+
+        /* Style 6: Block Print */
+        .style-6 .option-number { background: linear-gradient(135deg, #2e3532 0%, #4a5550 100%); color: #c4a77d; }
+        .style-6 .option-tag { background: #2e3532; color: #c4a77d; }
+        .style-6 .icon-wrap { background: var(--gunmetal); border-radius: 4px; }
+        .style-6 .icon-wrap svg { fill: #c4a77d; }
+
+        /* Style 7: Harvest Gold */
+        .style-7 .option-number { background: linear-gradient(135deg, #d4a853 0%, #e8c171 100%); color: #5d4e37; }
+        .style-7 .option-tag { background: #fef9ed; color: #8b7355; }
+        .style-7 .icon-wrap { background: transparent; }
+        .style-7 .icon-wrap svg { stroke: var(--gunmetal); stroke-width: 1.5; fill: none; }
+        .style-7 .icon-wrap svg .accent { fill: #d4a853; stroke: none; }
+
+        /* Style 8: Earthen Pot */
+        .style-8 .option-number { background: linear-gradient(135deg, #a68b5b 0%, #8b7355 100%); color: white; }
+        .style-8 .option-tag { background: #f0e6d8; color: #6b5a45; }
+        .style-8 .icon-wrap { background: linear-gradient(180deg, #d4c4a8 0%, #c4a77d 100%); border-radius: 14px 14px 8px 8px; border-bottom: 3px solid #8b7355; }
+        .style-8 .icon-wrap svg { stroke: #5d4e37; stroke-width: 2; fill: none; }
+
+        /* Style 9: Modern Agri */
+        .style-9 .option-number { background: linear-gradient(135deg, #7e9181 0%, #5d6b5f 100%); color: white; }
+        .style-9 .option-tag { background: var(--cream); color: var(--dusty-olive-dark); }
+        .style-9 .icon-wrap { background: transparent; }
+        .style-9 .icon-wrap svg { stroke: var(--dusty-olive); stroke-width: 1.5; fill: none; }
+
+        /* Style 10: Village Craft */
+        .style-10 .option-number { background: linear-gradient(135deg, #c4a77d 0%, #d4a853 100%); color: #4a3728; }
+        .style-10 .option-tag { background: #fdf6e3; color: #8b7355; }
+        .style-10 .icon-wrap { background: var(--cream); border: 2px dashed var(--terracotta); border-radius: 50%; }
+        .style-10 .icon-wrap svg { stroke: #8b7355; stroke-width: 1.5; fill: none; stroke-linecap: round; }
+        .style-10 .icon-wrap svg .dot { fill: var(--terracotta); stroke: none; }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--dusty-olive-dark);
+            font-size: 0.9rem;
+        }
+
+        footer strong {
+            color: var(--gunmetal);
+        }
+
+        @media (max-width: 768px) {
+            .options-grid {
+                grid-template-columns: 1fr;
+            }
+            .icons-grid {
+                grid-template-columns: repeat(5, 1fr);
+                gap: 0.5rem;
+            }
+            .icon-wrap {
+                width: 44px;
+                height: 44px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>Pratibha Marketing</h1>
+        <p>Choose an icon style that represents your agricultural trading business</p>
+        <div class="brand-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2C8 6 4 10 4 14a8 8 0 0016 0c0-4-4-8-8-12z"/>
+                <path d="M12 22v-8"/>
+                <path d="M9 17l3-3 3 3"/>
+            </svg>
+            Icon Style Selector
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="intro">
+            <h2>Personalized for Agricultural Trading</h2>
+            <p>Each style below is designed to reflect your business - from wheat fields to market vibes. Pick one that feels right for Pratibha.</p>
+        </div>
+
+        <div class="options-grid">
+
+            <!-- Style 1: Wheat & Grain -->
+            <div class="option-card style-1">
+                <div class="option-header">
+                    <div class="option-number">1</div>
+                    <div class="option-info">
+                        <div class="option-title">Wheat & Grain</div>
+                        <div class="option-subtitle">Golden harvest tones, warm & trustworthy</div>
+                    </div>
+                    <span class="option-tag">Premium</span>
+                </div>
+                <div class="option-body">
+                    <div class="icons-grid">
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><circle class="fill" cx="12" cy="12" r="8" opacity="0.2"/><line x1="12" y1="7" x2="12" y2="17"/><line x1="7" y1="12" x2="17" y2="12"/></svg>
+                            </div>
+                            <span class="icon-name">Add</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+                            </div>
+                            <span class="icon-name">Menu</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            </div>
+                            <span class="icon-name">Close</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><circle class="fill" cx="12" cy="12" r="3"/></svg>
+                            </div>
+                            <span class="icon-name">Products</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><path d="M12 3L3 12l9 9 9-9z"/></svg>
+                            </div>
+                            <span class="icon-name">Rates</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><line x1="4" y1="10" x2="20" y2="10"/><line x1="10" y1="10" x2="10" y2="20"/></svg>
+                            </div>
+                            <span class="icon-name">Orders</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M4 20v-1a5 5 0 015-5h0a5 5 0 015 5v1"/><line x1="19" y1="11" x2="19" y2="17"/><line x1="16" y1="14" x2="22" y2="14"/></svg>
+                            </div>
+                            <span class="icon-name">Customer</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9"/></svg>
+                            </div>
+                            <span class="icon-name">Down</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><polyline points="6,15 12,9 18,15"/></svg>
+                            </div>
+                            <span class="icon-name">Up</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,5 17,10"/><line x1="12" y1="5" x2="12" y2="17"/></svg>
+                            </div>
+                            <span class="icon-name">Export</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="preview-bar">
+                    <button class="preview-btn btn-select" onclick="alert('Style 1: Wheat & Grain selected!')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>
+                        Select This Style
+                    </button>
+                </div>
+            </div>
+
+            <!-- Style 2: Fresh Leaf -->
+            <div class="option-card style-2">
+                <div class="option-header">
+                    <div class="option-number">2</div>
+                    <div class="option-info">
+                        <div class="option-title">Fresh Leaf</div>
+                        <div class="option-subtitle">Circular badges, fresh produce feel</div>
+                    </div>
+                    <span class="option-tag">Organic</span>
+                </div>
+                <div class="option-body">
+                    <div class="icons-grid">
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><line x1="12" y1="7" x2="12" y2="17"/><line x1="7" y1="12" x2="17" y2="12"/></svg>
+                            </div>
+                            <span class="icon-name">Add</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><line x1="5" y1="7" x2="19" y2="7"/><line x1="5" y1="12" x2="19" y2="12"/><line x1="5" y1="17" x2="19" y2="17"/></svg>
+                            </div>
+                            <span class="icon-name">Menu</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><line x1="17" y1="7" x2="7" y2="17"/><line x1="7" y1="7" x2="17" y2="17"/></svg>
+                            </div>
+                            <span class="icon-name">Close</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6"/></svg>
+                            </div>
+                            <span class="icon-name">Products</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><path d="M12 5l6 7-6 7-6-7z"/></svg>
+                            </div>
+                            <span class="icon-name">Rates</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/><line x1="5" y1="10" x2="19" y2="10"/></svg>
+                            </div>
+                            <span class="icon-name">Orders</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><circle cx="10" cy="8" r="3"/><path d="M5 19v-1a4 4 0 014-4h2a4 4 0 014 4v1"/><path d="M17 11v4m-2-2h4"/></svg>
+                            </div>
+                            <span class="icon-name">Customer</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><polyline points="7,10 12,15 17,10"/></svg>
+                            </div>
+                            <span class="icon-name">Down</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><polyline points="7,14 12,9 17,14"/></svg>
+                            </div>
+                            <span class="icon-name">Up</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><path d="M12 5v12m-4-8l4-4 4 4"/></svg>
+                            </div>
+                            <span class="icon-name">Export</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="preview-bar">
+                    <button class="preview-btn btn-select" onclick="alert('Style 2: Fresh Leaf selected!')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>
+                        Select This Style
+                    </button>
+                </div>
+            </div>
+
+            <!-- Style 3: Terracotta Clay -->
+            <div class="option-card style-3">
+                <div class="option-header">
+                    <div class="option-number">3</div>
+                    <div class="option-info">
+                        <div class="option-title">Terracotta Clay</div>
+                        <div class="option-subtitle">Earthy pottery vibes, bold shadows</div>
+                    </div>
+                    <span class="option-tag">Rustic</span>
+                </div>
+                <div class="option-body">
+                    <div class="icons-grid">
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12" stroke="none" fill="currentColor" stroke-width="2.5" stroke-linecap="round"/><rect x="10" y="6" width="4" height="12" rx="1"/><rect x="6" y="10" width="12" height="4" rx="1"/></svg>
+                            </div>
+                            <span class="icon-name">Add</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="2.5" rx="1"/><rect x="4" y="10.75" width="16" height="2.5" rx="1"/><rect x="4" y="16.5" width="16" height="2.5" rx="1"/></svg>
+                            </div>
+                            <span class="icon-name">Menu</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" stroke="none"/><path d="M7.4 5.6l11 11a1 1 0 010 1.4 1 1 0 01-1.4 0l-11-11a1 1 0 010-1.4 1 1 0 011.4 0z"/><path d="M16.6 5.6l-11 11a1 1 0 000 1.4 1 1 0 001.4 0l11-11a1 1 0 000-1.4 1 1 0 00-1.4 0z"/></svg>
+                            </div>
+                            <span class="icon-name">Close</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></svg>
+                            </div>
+                            <span class="icon-name">Products</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><path d="M12 2L2 12l10 10 10-10z"/></svg>
+                            </div>
+                            <span class="icon-name">Rates</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><rect x="3" y="3" width="18" height="6" rx="2"/></svg>
+                            </div>
+                            <span class="icon-name">Orders</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><circle cx="18" cy="12" r="3"/></svg>
+                            </div>
+                            <span class="icon-name">Customer</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><path d="M6 9l6 7 6-7z"/></svg>
+                            </div>
+                            <span class="icon-name">Down</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><path d="M6 15l6-7 6 7z"/></svg>
+                            </div>
+                            <span class="icon-name">Up</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><path d="M12 3l-6 7h4v10h4V10h4z"/></svg>
+                            </div>
+                            <span class="icon-name">Export</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="preview-bar">
+                    <button class="preview-btn btn-select" onclick="alert('Style 3: Terracotta Clay selected!')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>
+                        Select This Style
+                    </button>
+                </div>
+            </div>
+
+            <!-- Style 4: Mandi Market -->
+            <div class="option-card style-4">
+                <div class="option-header">
+                    <div class="option-number">4</div>
+                    <div class="option-info">
+                        <div class="option-title">Mandi Market</div>
+                        <div class="option-subtitle">Clean borders, professional trading</div>
+                    </div>
+                    <span class="option-tag">Business</span>
+                </div>
+                <div class="option-body">
+                    <div class="icons-grid">
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            </div>
+                            <span class="icon-name">Add</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+                            </div>
+                            <span class="icon-name">Menu</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            </div>
+                            <span class="icon-name">Close</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14"/></svg>
+                            </div>
+                            <span class="icon-name">Products</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><polygon points="12,3 21,12 12,21 3,12"/></svg>
+                            </div>
+                            <span class="icon-name">Rates</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16"/><line x1="4" y1="10" x2="20" y2="10"/></svg>
+                            </div>
+                            <span class="icon-name">Orders</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><rect x="5" y="4" width="8" height="10"/><line x1="17" y1="9" x2="17" y2="15"/><line x1="14" y1="12" x2="20" y2="12"/></svg>
+                            </div>
+                            <span class="icon-name">Customer</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9"/></svg>
+                            </div>
+                            <span class="icon-name">Down</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><polyline points="6,15 12,9 18,15"/></svg>
+                            </div>
+                            <span class="icon-name">Up</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><polygon points="12,4 7,11 17,11"/><rect x="10" y="11" width="4" height="9"/></svg>
+                            </div>
+                            <span class="icon-name">Export</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="preview-bar">
+                    <button class="preview-btn btn-select" onclick="alert('Style 4: Mandi Market selected!')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>
+                        Select This Style
+                    </button>
+                </div>
+            </div>
+
+            <!-- Style 5: Seed & Sprout -->
+            <div class="option-card style-5">
+                <div class="option-header">
+                    <div class="option-number">5</div>
+                    <div class="option-info">
+                        <div class="option-title">Seed & Sprout</div>
+                        <div class="option-subtitle">Growth-inspired organic shapes</div>
+                    </div>
+                    <span class="option-tag">Natural</span>
+                </div>
+                <div class="option-body">
+                    <div class="icons-grid">
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><circle class="accent" cx="12" cy="12" r="9"/><line x1="12" y1="7" x2="12" y2="17"/><line x1="7" y1="12" x2="17" y2="12"/></svg>
+                            </div>
+                            <span class="icon-name">Add</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><line x1="5" y1="7" x2="19" y2="7"/><line x1="5" y1="12" x2="19" y2="12"/><line x1="5" y1="17" x2="19" y2="17"/></svg>
+                            </div>
+                            <span class="icon-name">Menu</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><line x1="17" y1="7" x2="7" y2="17"/><line x1="7" y1="7" x2="17" y2="17"/></svg>
+                            </div>
+                            <span class="icon-name">Close</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><ellipse class="accent" cx="12" cy="12" rx="8" ry="9"/><ellipse cx="12" cy="12" rx="8" ry="9"/></svg>
+                            </div>
+                            <span class="icon-name">Products</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><path d="M12 4c-4 4-7 8-7 10a7 7 0 0014 0c0-2-3-6-7-10z"/></svg>
+                            </div>
+                            <span class="icon-name">Rates</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="3"/><line x1="5" y1="10" x2="19" y2="10"/></svg>
+                            </div>
+                            <span class="icon-name">Orders</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><ellipse cx="10" cy="8" rx="4" ry="5"/><path d="M5 20c0-3 2-6 5-6s5 3 5 6"/><path d="M17 10v6m-2-3h4"/></svg>
+                            </div>
+                            <span class="icon-name">Customer</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><path d="M7 10c2 2 3 4 5 5 2-1 3-3 5-5"/></svg>
+                            </div>
+                            <span class="icon-name">Down</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><path d="M7 14c2-2 3-4 5-5 2 1 3 3 5 5"/></svg>
+                            </div>
+                            <span class="icon-name">Up</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><path d="M12 20V8"/><path d="M7 12c2-2 3-5 5-7 2 2 3 5 5 7"/></svg>
+                            </div>
+                            <span class="icon-name">Export</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="preview-bar">
+                    <button class="preview-btn btn-select" onclick="alert('Style 5: Seed & Sprout selected!')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>
+                        Select This Style
+                    </button>
+                </div>
+            </div>
+
+            <!-- Style 6: Block Print -->
+            <div class="option-card style-6">
+                <div class="option-header">
+                    <div class="option-number">6</div>
+                    <div class="option-info">
+                        <div class="option-title">Block Print</div>
+                        <div class="option-subtitle">Traditional Indian craft inspired</div>
+                    </div>
+                    <span class="option-tag">Heritage</span>
+                </div>
+                <div class="option-body">
+                    <div class="icons-grid">
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke-width="3"/></svg>
+                            </div>
+                            <span class="icon-name">Add</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="2.5"/><rect x="4" y="10.75" width="16" height="2.5"/><rect x="4" y="16.5" width="16" height="2.5"/></svg>
+                            </div>
+                            <span class="icon-name">Menu</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke-width="3"/></svg>
+                            </div>
+                            <span class="icon-name">Close</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3" fill="#2e3532"/></svg>
+                            </div>
+                            <span class="icon-name">Products</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><path d="M12 2L2 12l10 10 10-10z"/><path d="M12 7l-4 5 4 5 4-5z" fill="#2e3532"/></svg>
+                            </div>
+                            <span class="icon-name">Rates</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="1"/><rect x="3" y="3" width="18" height="5" fill="#2e3532"/></svg>
+                            </div>
+                            <span class="icon-name">Orders</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="5"/><path d="M2 21v-2a6 6 0 016-6h2a6 6 0 016 6v2"/><rect x="16" y="9" width="6" height="6"/></svg>
+                            </div>
+                            <span class="icon-name">Customer</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><path d="M6 9l6 7 6-7z"/></svg>
+                            </div>
+                            <span class="icon-name">Down</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><path d="M6 15l6-7 6 7z"/></svg>
+                            </div>
+                            <span class="icon-name">Up</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><rect x="8" y="10" width="8" height="10"/><path d="M12 3l-6 7h12z"/></svg>
+                            </div>
+                            <span class="icon-name">Export</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="preview-bar">
+                    <button class="preview-btn btn-select" onclick="alert('Style 6: Block Print selected!')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>
+                        Select This Style
+                    </button>
+                </div>
+            </div>
+
+            <!-- Style 7: Harvest Gold -->
+            <div class="option-card style-7">
+                <div class="option-header">
+                    <div class="option-number">7</div>
+                    <div class="option-info">
+                        <div class="option-title">Harvest Gold</div>
+                        <div class="option-subtitle">Minimal lines with golden accents</div>
+                    </div>
+                    <span class="option-tag">Elegant</span>
+                </div>
+                <div class="option-body">
+                    <div class="icons-grid">
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><circle class="accent" cx="12" cy="12" r="4"/><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            </div>
+                            <span class="icon-name">Add</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><circle class="accent" cx="4" cy="12" r="2"/><line x1="6" y1="6" x2="20" y2="6"/><line x1="6" y1="12" x2="20" y2="12"/><line x1="6" y1="18" x2="20" y2="18"/></svg>
+                            </div>
+                            <span class="icon-name">Menu</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            </div>
+                            <span class="icon-name">Close</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><circle class="accent" cx="12" cy="12" r="3"/></svg>
+                            </div>
+                            <span class="icon-name">Products</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><path d="M12 4l8 8-8 8-8-8z"/><circle class="accent" cx="12" cy="12" r="2"/></svg>
+                            </div>
+                            <span class="icon-name">Rates</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><line x1="4" y1="10" x2="20" y2="10"/><circle class="accent" cx="8" cy="7" r="1.5"/></svg>
+                            </div>
+                            <span class="icon-name">Orders</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><circle cx="10" cy="8" r="4"/><path d="M4 20v-1a5 5 0 015-5h2a5 5 0 015 5v1"/><circle class="accent" cx="18" cy="12" r="3"/></svg>
+                            </div>
+                            <span class="icon-name">Customer</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><polyline points="6,10 12,16 18,10"/><circle class="accent" cx="12" cy="16" r="2"/></svg>
+                            </div>
+                            <span class="icon-name">Down</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><polyline points="6,14 12,8 18,14"/><circle class="accent" cx="12" cy="8" r="2"/></svg>
+                            </div>
+                            <span class="icon-name">Up</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="7,10 12,5 17,10"/><circle class="accent" cx="12" cy="5" r="2"/></svg>
+                            </div>
+                            <span class="icon-name">Export</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="preview-bar">
+                    <button class="preview-btn btn-select" onclick="alert('Style 7: Harvest Gold selected!')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>
+                        Select This Style
+                    </button>
+                </div>
+            </div>
+
+            <!-- Style 8: Earthen Pot -->
+            <div class="option-card style-8">
+                <div class="option-header">
+                    <div class="option-number">8</div>
+                    <div class="option-info">
+                        <div class="option-title">Earthen Pot</div>
+                        <div class="option-subtitle">Soft clay tones, handcrafted feel</div>
+                    </div>
+                    <span class="option-tag">Artisan</span>
+                </div>
+                <div class="option-body">
+                    <div class="icons-grid">
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><line x1="12" y1="6" x2="12" y2="18"/><line x1="6" y1="12" x2="18" y2="12"/></svg>
+                            </div>
+                            <span class="icon-name">Add</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><line x1="5" y1="7" x2="19" y2="7"/><line x1="5" y1="12" x2="19" y2="12"/><line x1="5" y1="17" x2="19" y2="17"/></svg>
+                            </div>
+                            <span class="icon-name">Menu</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><line x1="17" y1="7" x2="7" y2="17"/><line x1="7" y1="7" x2="17" y2="17"/></svg>
+                            </div>
+                            <span class="icon-name">Close</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6"/></svg>
+                            </div>
+                            <span class="icon-name">Products</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><path d="M12 5l7 7-7 7-7-7z"/></svg>
+                            </div>
+                            <span class="icon-name">Rates</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/><line x1="5" y1="10" x2="19" y2="10"/></svg>
+                            </div>
+                            <span class="icon-name">Orders</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><circle cx="10" cy="8" r="4"/><path d="M4 20v-1a5 5 0 015-5h2a5 5 0 015 5v1"/><line x1="18" y1="9" x2="18" y2="15"/><line x1="15" y1="12" x2="21" y2="12"/></svg>
+                            </div>
+                            <span class="icon-name">Customer</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><polyline points="7,10 12,15 17,10"/></svg>
+                            </div>
+                            <span class="icon-name">Down</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><polyline points="7,14 12,9 17,14"/></svg>
+                            </div>
+                            <span class="icon-name">Up</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="7,10 12,5 17,10"/></svg>
+                            </div>
+                            <span class="icon-name">Export</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="preview-bar">
+                    <button class="preview-btn btn-select" onclick="alert('Style 8: Earthen Pot selected!')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>
+                        Select This Style
+                    </button>
+                </div>
+            </div>
+
+            <!-- Style 9: Modern Agri -->
+            <div class="option-card style-9">
+                <div class="option-header">
+                    <div class="option-number">9</div>
+                    <div class="option-info">
+                        <div class="option-title">Modern Agri</div>
+                        <div class="option-subtitle">Clean tech meets agriculture</div>
+                    </div>
+                    <span class="option-tag">Tech</span>
+                </div>
+                <div class="option-body">
+                    <div class="icons-grid">
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><line x1="12" y1="6" x2="12" y2="18"/><line x1="6" y1="12" x2="18" y2="12"/></svg>
+                            </div>
+                            <span class="icon-name">Add</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><line x1="5" y1="7" x2="19" y2="7"/><line x1="5" y1="12" x2="15" y2="12"/><line x1="5" y1="17" x2="12" y2="17"/></svg>
+                            </div>
+                            <span class="icon-name">Menu</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><line x1="17" y1="7" x2="7" y2="17"/><line x1="7" y1="7" x2="17" y2="17"/></svg>
+                            </div>
+                            <span class="icon-name">Close</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+                            </div>
+                            <span class="icon-name">Products</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><path d="M12 5l7 7-7 7-7-7z"/></svg>
+                            </div>
+                            <span class="icon-name">Rates</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/><line x1="5" y1="10" x2="19" y2="10"/><line x1="10" y1="10" x2="10" y2="19"/></svg>
+                            </div>
+                            <span class="icon-name">Orders</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><circle cx="10" cy="8" r="4"/><path d="M4 20v-1a5 5 0 015-5h2a5 5 0 015 5v1"/><line x1="18" y1="9" x2="18" y2="15"/><line x1="15" y1="12" x2="21" y2="12"/></svg>
+                            </div>
+                            <span class="icon-name">Customer</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><polyline points="7,10 12,15 17,10"/></svg>
+                            </div>
+                            <span class="icon-name">Down</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><polyline points="7,14 12,9 17,14"/></svg>
+                            </div>
+                            <span class="icon-name">Up</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="7,10 12,5 17,10"/></svg>
+                            </div>
+                            <span class="icon-name">Export</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="preview-bar">
+                    <button class="preview-btn btn-select" onclick="alert('Style 9: Modern Agri selected!')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>
+                        Select This Style
+                    </button>
+                </div>
+            </div>
+
+            <!-- Style 10: Village Craft -->
+            <div class="option-card style-10">
+                <div class="option-header">
+                    <div class="option-number">10</div>
+                    <div class="option-info">
+                        <div class="option-title">Village Craft</div>
+                        <div class="option-subtitle">Folk art inspired, dotted borders</div>
+                    </div>
+                    <span class="option-tag">Folk</span>
+                </div>
+                <div class="option-body">
+                    <div class="icons-grid">
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><line x1="12" y1="6" x2="12" y2="18"/><line x1="6" y1="12" x2="18" y2="12"/><circle class="dot" cx="12" cy="6" r="1.5"/><circle class="dot" cx="12" cy="18" r="1.5"/><circle class="dot" cx="6" cy="12" r="1.5"/><circle class="dot" cx="18" cy="12" r="1.5"/></svg>
+                            </div>
+                            <span class="icon-name">Add</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><line x1="6" y1="7" x2="18" y2="7"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="6" y1="17" x2="18" y2="17"/><circle class="dot" cx="6" cy="7" r="1.5"/><circle class="dot" cx="6" cy="12" r="1.5"/><circle class="dot" cx="6" cy="17" r="1.5"/></svg>
+                            </div>
+                            <span class="icon-name">Menu</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><line x1="17" y1="7" x2="7" y2="17"/><line x1="7" y1="7" x2="17" y2="17"/><circle class="dot" cx="12" cy="12" r="2"/></svg>
+                            </div>
+                            <span class="icon-name">Close</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6"/><circle class="dot" cx="12" cy="12" r="2"/></svg>
+                            </div>
+                            <span class="icon-name">Products</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><path d="M12 5l7 7-7 7-7-7z"/><circle class="dot" cx="12" cy="5" r="1.5"/><circle class="dot" cx="19" cy="12" r="1.5"/><circle class="dot" cx="12" cy="19" r="1.5"/><circle class="dot" cx="5" cy="12" r="1.5"/></svg>
+                            </div>
+                            <span class="icon-name">Rates</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/><line x1="5" y1="10" x2="19" y2="10"/><circle class="dot" cx="8" cy="7" r="1.5"/></svg>
+                            </div>
+                            <span class="icon-name">Orders</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><circle cx="10" cy="8" r="4"/><path d="M4 20v-1a5 5 0 015-5h2a5 5 0 015 5v1"/><circle class="dot" cx="18" cy="10" r="1.5"/><circle class="dot" cx="18" cy="14" r="1.5"/><circle class="dot" cx="16" cy="12" r="1.5"/><circle class="dot" cx="20" cy="12" r="1.5"/></svg>
+                            </div>
+                            <span class="icon-name">Customer</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><polyline points="7,10 12,15 17,10"/><circle class="dot" cx="7" cy="10" r="1.5"/><circle class="dot" cx="12" cy="15" r="1.5"/><circle class="dot" cx="17" cy="10" r="1.5"/></svg>
+                            </div>
+                            <span class="icon-name">Down</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><polyline points="7,14 12,9 17,14"/><circle class="dot" cx="7" cy="14" r="1.5"/><circle class="dot" cx="12" cy="9" r="1.5"/><circle class="dot" cx="17" cy="14" r="1.5"/></svg>
+                            </div>
+                            <span class="icon-name">Up</span>
+                        </div>
+                        <div class="icon-cell">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="7,10 12,5 17,10"/><circle class="dot" cx="12" cy="5" r="1.5"/></svg>
+                            </div>
+                            <span class="icon-name">Export</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="preview-bar">
+                    <button class="preview-btn btn-select" onclick="alert('Style 10: Village Craft selected!')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>
+                        Select This Style
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <footer>
+        <p><strong>Instructions:</strong> Click "Select This Style" on your favorite option, then tell me the number.</p>
+        <p style="margin-top: 0.5rem;">I'll replace all icons across your app with the chosen style.</p>
+    </footer>
+</body>
+</html>

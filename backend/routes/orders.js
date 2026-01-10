@@ -21,6 +21,40 @@ async function getMarketRate(productId) {
 }
 
 // Helper function to calculate price based on customer's pricing type
+// Uses pre-fetched market rate to avoid race conditions
+// Returns { rate: number, usedFallback: boolean }
+function calculatePriceWithRate(customer, product, prefetchedMarketRate, requestedRate = null) {
+  // If rate is explicitly provided (staff creating order), use it
+  if (requestedRate !== null && requestedRate !== undefined && requestedRate > 0) {
+    return { rate: requestedRate, usedFallback: false };
+  }
+
+  const pricingType = customer.pricingType || 'market';
+  const marketRate = prefetchedMarketRate || 0;
+
+  switch (pricingType) {
+    case 'contract':
+      // Use fixed contract price if available
+      const contractPrice = customer.contractPrices?.get(product._id.toString());
+      if (contractPrice) {
+        return { rate: contractPrice, usedFallback: false };
+      }
+      // Fall back to market rate if no contract price set - track this
+      return { rate: marketRate, usedFallback: true };
+
+    case 'markup':
+      // Apply markup to market rate
+      const markup = customer.markupPercentage || 0;
+      return { rate: marketRate * (1 + markup / 100), usedFallback: false };
+
+    case 'market':
+    default:
+      // Use current market rate
+      return { rate: marketRate, usedFallback: false };
+  }
+}
+
+// Legacy async function for customer-edit endpoint (single product updates)
 async function calculatePrice(customer, product, requestedRate = null) {
   // If rate is explicitly provided (staff creating order), use it
   if (requestedRate !== null && requestedRate !== undefined && requestedRate > 0) {
@@ -223,38 +257,72 @@ router.post('/', protect, validateOrder, async (req, res, next) => {
       });
     }
 
-    // Verify customer exists
+    // Verify customer exists and is active
     const customer = await Customer.findById(req.body.customer);
     if (!customer) {
       res.status(404);
       throw new Error('Customer not found');
     }
+    if (!customer.isActive) {
+      res.status(400);
+      throw new Error('Cannot create order for inactive customer');
+    }
+
+    // Pre-fetch all products and market rates to avoid race conditions
+    // This ensures consistent pricing across all products in one order
+    const productIds = req.body.products.map(item => item.product);
+    const [products, marketRates] = await Promise.all([
+      Product.find({ _id: { $in: productIds } }),
+      MarketRate.find({ product: { $in: productIds } }).sort({ effectiveDate: -1 })
+    ]);
+
+    // Create lookup maps for O(1) access
+    const productMap = new Map(products.map(p => [p._id.toString(), p]));
+    const rateMap = new Map();
+    // Get latest rate for each product (rates are sorted by effectiveDate desc)
+    for (const rate of marketRates) {
+      const productId = rate.product.toString();
+      if (!rateMap.has(productId)) {
+        rateMap.set(productId, rate.rate);
+      }
+    }
 
     // Calculate amounts and populate product names
     // Price is calculated based on customer's pricing type if not provided
     let totalAmount = 0;
-    const processedProducts = await Promise.all(
-      req.body.products.map(async (item) => {
-        const product = await Product.findById(item.product);
-        if (!product) {
-          throw new Error(`Product ${item.product} not found`);
-        }
+    let usedPricingFallback = false;
+    const processedProducts = [];
 
-        // Calculate rate based on customer's pricing type
-        const rate = await calculatePrice(customer, product, item.rate);
-        const amount = item.quantity * rate;
-        totalAmount += amount;
+    for (const item of req.body.products) {
+      const product = productMap.get(item.product);
+      if (!product) {
+        res.status(404);
+        throw new Error(`Product ${item.product} not found`);
+      }
+      if (!product.isActive) {
+        res.status(400);
+        throw new Error(`Product "${product.name}" is no longer available`);
+      }
 
-        return {
-          product: item.product,
-          productName: product.name,
-          quantity: item.quantity,
-          unit: product.unit,
-          rate: rate,
-          amount: amount
-        };
-      })
-    );
+      // Calculate rate based on customer's pricing type
+      // Pass the pre-fetched market rate to avoid race conditions
+      const priceResult = calculatePriceWithRate(customer, product, rateMap.get(product._id.toString()), item.rate);
+      const amount = item.quantity * priceResult.rate;
+      totalAmount += amount;
+
+      if (priceResult.usedFallback) {
+        usedPricingFallback = true;
+      }
+
+      processedProducts.push({
+        product: item.product,
+        productName: product.name,
+        quantity: item.quantity,
+        unit: product.unit,
+        rate: priceResult.rate,
+        amount: amount
+      });
+    }
 
     // Create order
     const order = await Order.create({
@@ -262,19 +330,17 @@ router.post('/', protect, validateOrder, async (req, res, next) => {
       products: processedProducts,
       totalAmount: totalAmount,
       deliveryAddress: req.body.deliveryAddress,
-      notes: req.body.notes
+      notes: req.body.notes,
+      usedPricingFallback: usedPricingFallback
     });
 
-    // Update customer credit if payment is on credit
-    if (req.body.paymentStatus === 'unpaid') {
-      try {
-        customer.currentCredit += totalAmount;
-        await customer.save();
-      } catch (creditError) {
-        // Log but don't fail the order - credit can be reconciled later
-        // Note: Avoiding logging sensitive IDs to prevent data leakage
-        console.error('Failed to update customer credit after order creation:', creditError.message);
-      }
+    // Update customer credit for unpaid orders
+    try {
+      customer.currentCredit += totalAmount;
+      await customer.save();
+    } catch (creditError) {
+      // Log but don't fail the order - credit can be reconciled later
+      console.error('Failed to update customer credit after order creation:', creditError.message);
     }
 
     // Populate and return
@@ -282,10 +348,17 @@ router.post('/', protect, validateOrder, async (req, res, next) => {
       .populate('customer', 'name phone')
       .populate('products.product', 'name unit');
 
-    res.status(201).json({
+    // Build response with warning if contract pricing fallback was used
+    const response = {
       success: true,
       data: populatedOrder
-    });
+    };
+
+    if (usedPricingFallback) {
+      response.warning = 'Some products used market rate fallback because contract prices were not set';
+    }
+
+    res.status(201).json(response);
   } catch (error) {
     next(error);
   }
@@ -521,7 +594,12 @@ router.put('/:id/payment', protect, authorize('admin', 'staff'), [
       throw new Error('Order not found');
     }
 
-    order.paidAmount = req.body.paidAmount;
+    // Calculate credit adjustment (difference between old and new paid amount)
+    const oldPaidAmount = order.paidAmount || 0;
+    const newPaidAmount = req.body.paidAmount;
+    const creditAdjustment = newPaidAmount - oldPaidAmount;
+
+    order.paidAmount = newPaidAmount;
 
     // Update payment status
     if (order.paidAmount >= order.totalAmount) {
@@ -533,6 +611,22 @@ router.put('/:id/payment', protect, authorize('admin', 'staff'), [
     }
 
     await order.save();
+
+    // Update customer credit (reduce by payment amount)
+    if (creditAdjustment !== 0 && order.status !== 'cancelled') {
+      try {
+        const customer = await Customer.findById(order.customer);
+        if (customer) {
+          // Positive adjustment = more paid = reduce credit
+          // Negative adjustment = less paid = increase credit
+          customer.currentCredit = Math.max(0, customer.currentCredit - creditAdjustment);
+          await customer.save();
+        }
+      } catch (creditError) {
+        console.error('Failed to update customer credit after payment:', creditError.message);
+        // Continue - payment was recorded, credit can be reconciled manually
+      }
+    }
 
     res.json({
       success: true,
@@ -548,15 +642,42 @@ router.put('/:id/payment', protect, authorize('admin', 'staff'), [
 // @access  Private (Admin, Staff)
 router.delete('/:id', protect, authorize('admin', 'staff'), async (req, res, next) => {
   try {
-    const order = await Order.findByIdAndUpdate(
-      req.params.id,
-      { status: 'cancelled' },
-      { new: true }
-    );
+    const order = await Order.findById(req.params.id);
 
     if (!order) {
       res.status(404);
       throw new Error('Order not found');
+    }
+
+    // Don't allow cancelling already cancelled orders
+    if (order.status === 'cancelled') {
+      return res.status(400).json({
+        success: false,
+        message: 'Order is already cancelled'
+      });
+    }
+
+    // Calculate unpaid amount to restore to customer credit
+    const unpaidAmount = order.totalAmount - (order.paidAmount || 0);
+
+    // Update order status
+    order.status = 'cancelled';
+    order.cancelledBy = req.user._id;
+    order.cancelledAt = new Date();
+    await order.save();
+
+    // Restore customer credit for unpaid portion
+    if (unpaidAmount > 0) {
+      try {
+        const customer = await Customer.findById(order.customer);
+        if (customer) {
+          customer.currentCredit = Math.max(0, customer.currentCredit - unpaidAmount);
+          await customer.save();
+        }
+      } catch (creditError) {
+        console.error('Failed to restore customer credit on order cancellation:', creditError.message);
+        // Continue - order is cancelled, credit can be reconciled manually
+      }
     }
 
     res.json({

@@ -1,9 +1,21 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
 const { body, validationResult } = require('express-validator');
 const Customer = require('../models/Customer');
+const User = require('../models/User');
 const { protect, authorize } = require('../middleware/auth');
+
+// Rate limiter for magic link generation - 5 per hour per IP to prevent abuse
+const magicLinkLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5,
+  message: { success: false, message: 'Too many magic link requests. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === 'test'
+});
 
 // Validation middleware
 const validateCustomer = [
@@ -101,7 +113,13 @@ router.post('/', protect, authorize('admin', 'staff'), validateCustomer, async (
       });
     }
 
-    const customer = await Customer.create(req.body);
+    // Add audit field
+    const customerData = {
+      ...req.body,
+      createdBy: req.user._id
+    };
+
+    const customer = await Customer.create(customerData);
 
     res.status(201).json({
       success: true,
@@ -132,6 +150,8 @@ router.put('/:id', protect, authorize('admin', 'staff'), validateCustomer, async
       throw new Error('Customer not found');
     }
 
+    const oldName = customer.name;
+
     // Update basic fields
     if (req.body.name) customer.name = req.body.name;
     if (req.body.phone !== undefined) customer.phone = req.body.phone;
@@ -145,7 +165,23 @@ router.put('/:id', protect, authorize('admin', 'staff'), validateCustomer, async
       customer.contractPrices = new Map(Object.entries(req.body.contractPrices));
     }
 
+    // Add audit field
+    customer.updatedBy = req.user._id;
+
     await customer.save();
+
+    // Sync name change to linked User record
+    if (req.body.name && req.body.name !== oldName) {
+      try {
+        await User.updateMany(
+          { customer: customer._id },
+          { name: req.body.name }
+        );
+      } catch (syncError) {
+        console.error('Failed to sync customer name to user:', syncError.message);
+        // Continue - customer was updated, user sync can be retried
+      }
+    }
 
     res.json({
       success: true,
@@ -163,7 +199,15 @@ router.delete('/:id', protect, authorize('admin', 'staff'), async (req, res, nex
   try {
     const customer = await Customer.findByIdAndUpdate(
       req.params.id,
-      { isActive: false },
+      {
+        isActive: false,
+        // Clear magic link on deletion for security
+        magicLinkToken: undefined,
+        magicLinkCreatedAt: undefined,
+        // Record who deleted and when
+        deletedBy: req.user._id,
+        deletedAt: new Date()
+      },
       { new: true }
     );
 
@@ -229,7 +273,7 @@ router.post('/:id/payment', protect, authorize('admin', 'staff'), [
 // @route   POST /api/customers/:id/magic-link
 // @desc    Generate magic link for customer
 // @access  Private (Admin, Staff)
-router.post('/:id/magic-link', protect, authorize('admin', 'staff'), async (req, res, next) => {
+router.post('/:id/magic-link', magicLinkLimiter, protect, authorize('admin', 'staff'), async (req, res, next) => {
   try {
     const customer = await Customer.findById(req.params.id);
 
@@ -255,12 +299,13 @@ router.post('/:id/magic-link', protect, authorize('admin', 'staff'), async (req,
     const magicLink = `${baseUrl}/customer-order-form.html?token=${token}`;
 
     // Return only the magic link, not the raw token (security best practice)
+    const expiryDays = parseInt(process.env.MAGIC_LINK_EXPIRY_DAYS) || 30;
     res.json({
       success: true,
       data: {
         link: magicLink,
         createdAt: customer.magicLinkCreatedAt,
-        expiresIn: '48 hours'
+        expiresIn: `${expiryDays} days`
       }
     });
   } catch (error) {

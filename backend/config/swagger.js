@@ -459,7 +459,7 @@ swaggerSpec.paths = {
                     type: 'object',
                     properties: {
                       link: { type: 'string', example: 'http://localhost:5000/api/auth/magic/abc123...' },
-                      expiresIn: { type: 'string', example: '48 hours' }
+                      expiresIn: { type: 'string', example: '30 days' }
                     }
                   }
                 }

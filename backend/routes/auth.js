@@ -67,23 +67,37 @@ router.post('/register', [
 
     // Create user - always as customer for public registration
     // Admin/staff accounts must be created by an existing admin
-    const user = await User.create({
-      name,
-      email,
-      password,
-      phone,
-      role: 'customer'
-    });
+    // Use a try-catch to ensure no orphaned records
+    let user;
+    let customer;
 
-    // If customer role, create a customer record
-    if (user.role === 'customer') {
-      const customer = await Customer.create({
+    try {
+      // Create customer record first (can be orphaned but less problematic)
+      customer = await Customer.create({
         name,
         phone: phone || '',
         whatsapp: phone || ''
       });
-      user.customer = customer._id;
-      await user.save();
+
+      // Create user with customer reference
+      user = await User.create({
+        name,
+        email,
+        password,
+        phone,
+        role: 'customer',
+        customer: customer._id
+      });
+    } catch (createError) {
+      // Cleanup: if user creation failed but customer was created, delete the customer
+      if (customer && !user) {
+        try {
+          await Customer.findByIdAndDelete(customer._id);
+        } catch (cleanupError) {
+          console.error('Failed to cleanup orphaned customer:', cleanupError.message);
+        }
+      }
+      throw createError;
     }
 
     // Generate token
@@ -311,11 +325,15 @@ router.get('/magic/:token', async (req, res, next) => {
       });
     }
 
-    // Check if magic link is expired (configurable, default 48 hours)
-    const MAGIC_LINK_EXPIRY_HOURS = parseInt(process.env.MAGIC_LINK_EXPIRY_HOURS) || 48;
+    // Check if magic link is expired (configurable, default 30 days)
+    const MAGIC_LINK_EXPIRY_DAYS = parseInt(process.env.MAGIC_LINK_EXPIRY_DAYS) || 30;
     if (customer.magicLinkCreatedAt) {
-      const expiryTime = new Date(customer.magicLinkCreatedAt.getTime() + (MAGIC_LINK_EXPIRY_HOURS * 60 * 60 * 1000));
+      const expiryTime = new Date(customer.magicLinkCreatedAt.getTime() + (MAGIC_LINK_EXPIRY_DAYS * 24 * 60 * 60 * 1000));
       if (new Date() > expiryTime) {
+        // Clear expired token
+        customer.magicLinkToken = undefined;
+        customer.magicLinkCreatedAt = undefined;
+        await customer.save();
         return res.status(401).json({
           success: false,
           message: 'Magic link has expired. Please request a new one.'

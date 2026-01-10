@@ -115,9 +115,12 @@ const testUtils = {
   async createCustomerUser(customerOverrides = {}) {
     await ensureDbConnected();
 
+    // Generate unique phone number using timestamp to avoid conflicts
+    const uniquePhone = `12${Date.now().toString().slice(-8)}`;
+
     const customer = await Customer.create({
       name: 'Test Customer',
-      phone: '1234567890',
+      phone: uniquePhone,
       pricingType: 'market',
       ...customerOverrides
     });
@@ -148,9 +151,12 @@ const testUtils = {
   async createTestCustomer(overrides = {}) {
     await ensureDbConnected();
 
+    // Generate unique phone number using timestamp to avoid conflicts
+    const uniquePhone = `98${Date.now().toString().slice(-8)}`;
+
     return Customer.create({
       name: `Test Customer ${Date.now()}`,
-      phone: '9876543210',
+      phone: uniquePhone,
       pricingType: 'market',
       isActive: true,
       ...overrides

@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <!-- Warm terracotta gradient -->
+    <linearGradient id="warmGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e8d5b7"/>
+      <stop offset="50%" stop-color="#c4a77d"/>
+      <stop offset="100%" stop-color="#a67c52"/>
+    </linearGradient>
+
+    <!-- Olive accent gradient -->
+    <linearGradient id="oliveGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#5d6b5f"/>
+      <stop offset="100%" stop-color="#7e9181"/>
+    </linearGradient>
+
+    <!-- Subtle shadow -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#2e3532" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Cream background with rounded corners -->
+  <rect width="512" height="512" rx="96" fill="#2e3532"/>
+
+  <!-- Inner cream panel -->
+  <rect x="32" y="32" width="448" height="448" rx="72" fill="#f9f7f3"/>
+
+  <!-- Decorative wheat stalks behind the P -->
+  <g opacity="0.15" fill="#7e9181">
+    <!-- Left stalk -->
+    <path d="M140 420 Q130 320 150 220 Q140 200 155 180"/>
+    <ellipse cx="145" cy="250" rx="12" ry="25" transform="rotate(-20 145 250)"/>
+    <ellipse cx="138" cy="290" rx="10" ry="22" transform="rotate(-25 138 290)"/>
+    <ellipse cx="152" cy="210" rx="10" ry="20" transform="rotate(-15 152 210)"/>
+
+    <!-- Right stalk -->
+    <path d="M372 420 Q382 320 362 220 Q372 200 357 180"/>
+    <ellipse cx="367" cy="250" rx="12" ry="25" transform="rotate(20 367 250)"/>
+    <ellipse cx="374" cy="290" rx="10" ry="22" transform="rotate(25 374 290)"/>
+    <ellipse cx="360" cy="210" rx="10" ry="20" transform="rotate(15 360 210)"/>
+  </g>
+
+  <!-- The "P" letterform - elegant serif style -->
+  <g transform="translate(256, 265)" filter="url(#shadow)">
+    <!-- Main P body -->
+    <path d="
+      M -65 145
+      L -65 -115
+      C -65 -125 -58 -130 -48 -130
+      L 45 -130
+      C 95 -130 130 -100 130 -50
+      C 130 0 95 30 45 30
+      L -15 30
+      L -15 145
+      C -15 155 -22 160 -32 160
+      L -48 160
+      C -58 160 -65 155 -65 145
+      Z
+    " fill="url(#oliveGrad)"/>
+
+    <!-- Bowl cutout -->
+    <path d="
+      M -15 -85
+      L 40 -85
+      C 70 -85 85 -70 85 -50
+      C 85 -30 70 -15 40 -15
+      L -15 -15
+      Z
+    " fill="#f9f7f3"/>
+  </g>
+
+  <!-- Underline accent -->
+  <rect x="176" y="410" width="160" height="4" rx="2" fill="url(#warmGrad)"/>
+
+  <!-- Corner flourishes -->
+  <path d="M80 60 Q60 60 60 80" fill="none" stroke="#c4a77d" stroke-width="3" stroke-linecap="round"/>
+  <path d="M432 60 Q452 60 452 80" fill="none" stroke="#c4a77d" stroke-width="3" stroke-linecap="round"/>
+  <path d="M80 452 Q60 452 60 432" fill="none" stroke="#c4a77d" stroke-width="3" stroke-linecap="round"/>
+  <path d="M432 452 Q452 452 452 432" fill="none" stroke="#c4a77d" stroke-width="3" stroke-linecap="round"/>
+</svg>
