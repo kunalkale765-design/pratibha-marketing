@@ -10,6 +10,54 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+#### 2026-01-11 - Animation System & Orders Page Redesign
+
+**Files Created:**
+| File | Purpose |
+|------|---------|
+| `frontend/css/animations/skeleton.css` | Skeleton loading placeholders with shimmer effect |
+| `frontend/css/animations/cards.css` | Card fade-in and hover animations |
+| `frontend/css/animations/buttons.css` | Button loading spinners and success states |
+| `frontend/css/animations/inputs.css` | Input focus animations |
+| `frontend/css/animations/badges.css` | Badge pulse animation for pending status |
+| `frontend/css/animations/segments.css` | Segmented control with sliding indicator |
+| `frontend/css/animations/swipe.css` | iOS-style swipe-to-action for list items |
+| `frontend/css/animations/page.css` | Page-level animations (header, content) |
+| `frontend/animation-preview.html` | Animation preview/demo page |
+
+**Files Modified:**
+| File | Change |
+|------|--------|
+| `frontend/orders.html` | Complete redesign with swipe-to-action, customer avatar, segmented filters |
+| `frontend/customer-management.html` | Added skeleton loading, category tabs in Contract Prices modal |
+| `frontend/products.html` | Added skeleton loading and card animations |
+| `frontend/market-rates.html` | Added skeleton loading and input animations |
+| `frontend/index.html` | Added skeleton loading for procurement list |
+| `frontend/login.html` | Added button loading state |
+| `frontend/css/components.css` | Added shared `.btn-modal` styles |
+| `frontend/service-worker.js` | Added animation CSS files to cache, bumped to v13 |
+
+**Orders Page Redesign:**
+- New card layout: Customer avatar (initials) → Name + Order # → Amount pill
+- Swipe-to-action: Swipe left reveals Print and Delete (admin only) buttons
+- Segmented control filter with smooth sliding indicator (replaces pill buttons)
+- "All" filter now excludes cancelled orders (dedicated Cancelled tab)
+- Delete action cancels order and reloads list
+
+**Animation Features:**
+- Skeleton loading placeholders on all list pages
+- Staggered card fade-in animations
+- Button loading spinners with `btn-loading` class
+- Success state with `btn-success` class
+- Input focus glow animation
+- Badge pulse for pending status
+
+**Contract Prices Modal:**
+- Added category filter tabs
+- Filter products by category while editing contract prices
+
+---
+
 #### 2026-01-10 - Orders Page Security & Validation Improvements
 
 **Files Modified:**

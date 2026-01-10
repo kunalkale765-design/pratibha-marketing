@@ -266,20 +266,56 @@ Complete feature documentation with UI/UX design details for testing and modific
 ┌─────────────────────────────────────────┐
 │  HEADER (text logo + New/Home btns)     │
 ├─────────────────────────────────────────┤
-│  FILTER PILLS (scrollable)              │
-│  [All] [Pending] [Confirmed] [Delivered]│
+│  SEGMENTED CONTROL                      │
+│  ┌─────────────────────────────────┐    │
+│  │ [All] [Pending] [Delivered] [X] │    │
+│  │   ▔▔▔▔ (sliding indicator)      │    │
+│  └─────────────────────────────────┘    │
 ├─────────────────────────────────────────┤
 │  SEARCH BAR                             │
-│  [* Search order or customer...]       │
+│  [🔍 Search order or customer...]       │
 ├─────────────────────────────────────────┤
-│  ORDER CARDS                            │
+│  SWIPE-TO-ACTION CARDS                  │
 │  ┌─────────────────────────────────┐    │
-│  │ #ORD26010001           ₹699     │    │
-│  │ Kunal Kale                      │    │
-│  │ 08/01/2026   [PENDING] [UNPAID] │    │
+│  │ [HS] Hotel Sunrise    [₹2,500]  │    │
+│  │      Order #ORD26010001         │    │
+│  │                    ← swipe left │    │
 │  └─────────────────────────────────┘    │
 │  ...                                    │
 └─────────────────────────────────────────┘
+
+SWIPE ACTIONS (revealed on swipe left):
+┌─────────────────────────────────────────┐
+│ [HS] Hotel Sunrise    [Print] [Delete]  │
+│      Order #ORD...     (blue)  (red)    │
+└─────────────────────────────────────────┘
+```
+
+**Segmented Control:**
+| Element | Style |
+|---------|-------|
+| Container | Cream background, rounded, centered |
+| Indicator | White pill with shadow, slides on selection |
+| Buttons | All, Pending, Delivered, Cancelled |
+
+**Order Card (Swipe Item):**
+| Element | Style |
+|---------|-------|
+| Avatar | 48px rounded square, customer initials, dusty-olive bg |
+| Customer name | Bold, primary text, truncated |
+| Order number | Monospace, muted, below name |
+| Amount pill | Terracotta accent, rounded pill |
+
+**Swipe Actions:**
+| Action | Color | Visibility |
+|--------|-------|------------|
+| Print | Blue (edit color) | All users |
+| Delete | Red (delete color) | Admin only |
+
+**Filter Behavior:**
+- "All" excludes cancelled orders (there's a dedicated Cancelled tab)
+- Cancelled orders only visible in Cancelled tab
+- Sliding indicator animates between tabs
 
 ORDER DETAIL (Bottom Sheet Modal):
 ┌─────────────────────────────────────────┐
@@ -582,7 +618,69 @@ border-bottom: 1px solid var(--cream-dark);
 background: var(--cream);
 ```
 
-### Animation Specs
+### Animation System (`/css/animations/`)
+
+**Animation CSS Files:**
+| File | Purpose |
+|------|---------|
+| `skeleton.css` | Loading placeholder with shimmer |
+| `cards.css` | Card fade-in, hover lift |
+| `buttons.css` | Loading spinner, success state |
+| `inputs.css` | Focus glow animation |
+| `badges.css` | Pulse for pending status |
+| `segments.css` | Sliding indicator control |
+| `swipe.css` | iOS-style swipe-to-action |
+| `page.css` | Header/content animations |
+
+**Skeleton Loading:**
+```html
+<div class="skeleton-card">
+    <div class="skeleton skeleton-title"></div>
+    <div class="skeleton skeleton-text"></div>
+</div>
+```
+
+**Button States:**
+```html
+<!-- Loading state -->
+<button class="btn-modal primary btn-loading">
+    <span class="btn-text">Save</span>
+</button>
+
+<!-- Success state (add after save completes) -->
+<button class="btn-modal primary btn-success">...</button>
+```
+
+**Card Animations:**
+```html
+<!-- Staggered fade-in -->
+<div class="card-animated card-fade-in" style="animation-delay: 0.1s">
+```
+
+**Swipe-to-Action:**
+```html
+<div class="swipe-item">
+    <div class="swipe-content">...</div>
+    <div class="swipe-actions">
+        <button class="swipe-action edit">Edit</button>
+        <button class="swipe-action delete">Delete</button>
+    </div>
+</div>
+<!-- Add .swiped class to reveal actions (144px for 2 buttons) -->
+<!-- Add .swiped-single class for 1 button (72px) -->
+```
+
+**Segmented Control:**
+```html
+<div class="segment-control">
+    <div class="segment-indicator"></div>
+    <button class="segment-btn active">All</button>
+    <button class="segment-btn">Pending</button>
+</div>
+<!-- Position indicator with JS: indicator.style.left/width -->
+```
+
+### Legacy Animation Specs
 
 **Page Load:**
 ```css
