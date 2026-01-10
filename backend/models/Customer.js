@@ -101,7 +101,33 @@ const customerSchema = new mongoose.Schema({
     type: Date
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  toJSON: {
+    // Ensure Map is converted to plain object for JSON serialization
+    transform: function(doc, ret) {
+      // Convert contractPrices Map to plain object for reliable frontend access
+      if (ret.contractPrices instanceof Map) {
+        ret.contractPrices = Object.fromEntries(ret.contractPrices);
+      } else if (ret.contractPrices && typeof ret.contractPrices === 'object') {
+        // Already an object (happens in some Mongoose versions)
+        // Ensure it's a plain object, not a Map-like structure
+        const plainObj = {};
+        for (const [key, value] of Object.entries(ret.contractPrices)) {
+          plainObj[key] = value;
+        }
+        ret.contractPrices = plainObj;
+      }
+      return ret;
+    }
+  },
+  toObject: {
+    transform: function(doc, ret) {
+      if (ret.contractPrices instanceof Map) {
+        ret.contractPrices = Object.fromEntries(ret.contractPrices);
+      }
+      return ret;
+    }
+  }
 });
 
 // Index for faster searches

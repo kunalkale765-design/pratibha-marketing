@@ -170,8 +170,10 @@ frontend/
 | GET | / | Private | List orders (filtered by role) |
 | GET | /:id | Private | Get one order |
 | GET | /customer/:id | Private | Orders by customer |
-| POST | / | Private | Create order |
-| PUT | /:id/status | Admin/Staff | Update status |
+| POST | / | Private | Create order (supports idempotencyKey) |
+| PUT | /:id | Admin/Staff | Update order prices only |
+| PUT | /:id/customer-edit | Private | Customer edit pending order (products/quantities) |
+| PUT | /:id/status | Admin/Staff | Update status (enforces state machine) |
 | PUT | /:id/payment | Admin/Staff | Update payment |
 | DELETE | /:id | Admin/Staff | Cancel order |
 

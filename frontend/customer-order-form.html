@@ -1015,11 +1015,26 @@
             updateSummary();
         }
 
+        // Helper to safely get contract price (handles Map serialization edge cases)
+        function getContractPrice(contractPrices, productId) {
+            if (!contractPrices) return null;
+            // Try direct property access (normal object)
+            if (contractPrices[productId] !== undefined) {
+                return contractPrices[productId];
+            }
+            // Try .get() in case it's still a Map-like structure
+            if (typeof contractPrices.get === 'function') {
+                return contractPrices.get(productId);
+            }
+            return null;
+        }
+
         function getPrice(product) {
             if (!selectedCustomer) return marketRates[product._id] || 0;
             const type = selectedCustomer.pricingType || 'market';
             if (type === 'contract') {
-                return selectedCustomer.contractPrices?.[product._id] || marketRates[product._id] || 0;
+                const contractPrice = getContractPrice(selectedCustomer.contractPrices, product._id);
+                return contractPrice !== null ? contractPrice : (marketRates[product._id] || 0);
             } else if (type === 'markup') {
                 const rate = marketRates[product._id] || 0;
                 return Math.round(rate * (1 + (selectedCustomer.markupPercentage || 0) / 100));
@@ -1232,6 +1247,21 @@
 
                 if (res.ok) {
                     showToast(`Order placed! #${data.data.orderNumber}`, 'success');
+
+                    // Show warning if contract pricing fallback was used
+                    if (data.warning) {
+                        setTimeout(() => {
+                            showToast(data.warning, 'warning');
+                        }, 1500);
+                    }
+
+                    // Show confirmation if new contract prices were saved
+                    if (data.message && data.newContractPrices && data.newContractPrices.length > 0) {
+                        setTimeout(() => {
+                            showToast(data.message, 'info');
+                        }, data.warning ? 3000 : 1500); // Delay if warning shown first
+                    }
+
                     document.querySelectorAll('.qty-input').forEach(input => {
                         input.value = '0';
                         input.classList.remove('has-value');

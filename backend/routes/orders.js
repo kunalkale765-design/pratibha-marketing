@@ -22,69 +22,109 @@ async function getMarketRate(productId) {
 
 // Helper function to calculate price based on customer's pricing type
 // Uses pre-fetched market rate to avoid race conditions
-// Returns { rate: number, usedFallback: boolean }
+// Returns { rate: number, usedFallback: boolean, isContractPrice: boolean, saveAsContractPrice: boolean }
 function calculatePriceWithRate(customer, product, prefetchedMarketRate, requestedRate = null) {
-  // If rate is explicitly provided (staff creating order), use it
-  if (requestedRate !== null && requestedRate !== undefined && requestedRate > 0) {
-    return { rate: requestedRate, usedFallback: false };
-  }
-
   const pricingType = customer.pricingType || 'market';
   const marketRate = prefetchedMarketRate || 0;
+  const productId = product._id.toString();
 
-  switch (pricingType) {
-    case 'contract':
-      // Use fixed contract price if available
-      const contractPrice = customer.contractPrices?.get(product._id.toString());
-      if (contractPrice) {
-        return { rate: contractPrice, usedFallback: false };
-      }
-      // Fall back to market rate if no contract price set - track this
-      return { rate: marketRate, usedFallback: true };
+  // For contract customers, contract prices are LOCKED
+  if (pricingType === 'contract') {
+    const existingContractPrice = customer.contractPrices?.get(productId);
 
-    case 'markup':
-      // Apply markup to market rate
-      const markup = customer.markupPercentage || 0;
-      return { rate: marketRate * (1 + markup / 100), usedFallback: false };
+    if (existingContractPrice !== undefined && existingContractPrice !== null) {
+      // Contract price exists - ALWAYS use it (ignore any staff-provided rate)
+      return {
+        rate: existingContractPrice,
+        usedFallback: false,
+        isContractPrice: true,
+        saveAsContractPrice: false
+      };
+    }
 
-    case 'market':
-    default:
-      // Use current market rate
-      return { rate: marketRate, usedFallback: false };
+    // No contract price exists for this product
+    if (requestedRate !== null && requestedRate !== undefined && requestedRate > 0) {
+      // Staff provided a rate - use it and mark for saving as new contract price
+      return {
+        rate: requestedRate,
+        usedFallback: false,
+        isContractPrice: true, // Will become contract price
+        saveAsContractPrice: true // Flag to save this as new contract price
+      };
+    }
+
+    // No contract price and no staff rate - fall back to market rate
+    return {
+      rate: marketRate,
+      usedFallback: true,
+      isContractPrice: false,
+      saveAsContractPrice: false
+    };
   }
+
+  // For non-contract customers (market/markup), use staff rate if provided
+  if (requestedRate !== null && requestedRate !== undefined && requestedRate > 0) {
+    return {
+      rate: requestedRate,
+      usedFallback: false,
+      isContractPrice: false,
+      saveAsContractPrice: false
+    };
+  }
+
+  // Calculate based on pricing type
+  if (pricingType === 'markup') {
+    const markup = customer.markupPercentage || 0;
+    return {
+      rate: marketRate * (1 + markup / 100),
+      usedFallback: false,
+      isContractPrice: false,
+      saveAsContractPrice: false
+    };
+  }
+
+  // Market pricing (default)
+  return {
+    rate: marketRate,
+    usedFallback: false,
+    isContractPrice: false,
+    saveAsContractPrice: false
+  };
 }
 
 // Legacy async function for customer-edit endpoint (single product updates)
+// Returns { rate: number, isContractPrice: boolean }
 async function calculatePrice(customer, product, requestedRate = null) {
-  // If rate is explicitly provided (staff creating order), use it
-  if (requestedRate !== null && requestedRate !== undefined && requestedRate > 0) {
-    return requestedRate;
-  }
-
   const pricingType = customer.pricingType || 'market';
+  const productId = product._id.toString();
 
-  switch (pricingType) {
-    case 'contract':
-      // Use fixed contract price if available
-      const contractPrice = customer.contractPrices?.get(product._id.toString());
-      if (contractPrice) {
-        return contractPrice;
-      }
-      // Fall back to market rate if no contract price set
-      return await getMarketRate(product._id) || 0;
-
-    case 'markup':
-      // Get market rate and apply markup
-      const marketRate = await getMarketRate(product._id) || 0;
-      const markup = customer.markupPercentage || 0;
-      return marketRate * (1 + markup / 100);
-
-    case 'market':
-    default:
-      // Use current market rate
-      const currentRate = await getMarketRate(product._id);
-      return currentRate || 0;
+  // For contract customers
+  if (pricingType === 'contract') {
+    const existingContractPrice = customer.contractPrices?.get(productId);
+    if (existingContractPrice !== undefined && existingContractPrice !== null) {
+      // Contract price exists - always use it (locked)
+      return { rate: existingContractPrice, isContractPrice: true };
+    }
+    // No contract price - fall back to market rate
+    const fallbackRate = await getMarketRate(product._id) || 0;
+    return { rate: fallbackRate, isContractPrice: false };
   }
+
+  // For non-contract customers, use staff rate if provided
+  if (requestedRate !== null && requestedRate !== undefined && requestedRate > 0) {
+    return { rate: requestedRate, isContractPrice: false };
+  }
+
+  // Calculate based on pricing type
+  if (pricingType === 'markup') {
+    const marketRate = await getMarketRate(product._id) || 0;
+    const markup = customer.markupPercentage || 0;
+    return { rate: marketRate * (1 + markup / 100), isContractPrice: false };
+  }
+
+  // Market pricing (default)
+  const currentRate = await getMarketRate(product._id);
+  return { rate: currentRate || 0, isContractPrice: false };
 }
 
 // Validation middleware
@@ -92,9 +132,34 @@ const validateOrder = [
   body('customer').notEmpty().withMessage('Customer is required'),
   body('products').isArray({ min: 1 }).withMessage('At least one product is required'),
   body('products.*.product').notEmpty().withMessage('Product ID is required'),
-  body('products.*.quantity').isFloat({ min: 0.01 }).withMessage('Quantity must be greater than 0'),
+  // Quantity: min 0.01, max 1,000,000 (reasonable upper limit to prevent abuse)
+  body('products.*.quantity')
+    .isFloat({ min: 0.01, max: 1000000 })
+    .withMessage('Quantity must be between 0.01 and 1,000,000'),
   // Rate is optional - will be calculated based on customer pricing type if not provided
-  body('products.*.rate').optional().isFloat({ min: 0 }).withMessage('Rate must be positive')
+  // Max rate: 10,000,000 (reasonable upper limit), max 2 decimal precision enforced in business logic
+  body('products.*.rate')
+    .optional()
+    .isFloat({ min: 0, max: 10000000 })
+    .withMessage('Rate must be between 0 and 10,000,000'),
+  // Delivery address validation
+  body('deliveryAddress')
+    .optional()
+    .isString()
+    .isLength({ max: 500 })
+    .withMessage('Delivery address must be 500 characters or less'),
+  // Notes validation
+  body('notes')
+    .optional()
+    .isString()
+    .isLength({ max: 1000 })
+    .withMessage('Notes must be 1000 characters or less'),
+  // Idempotency key for preventing duplicate orders on network failures
+  body('idempotencyKey')
+    .optional()
+    .isString()
+    .isLength({ max: 64 })
+    .withMessage('Idempotency key must be a string up to 64 characters')
 ];
 
 // @route   GET /api/orders
@@ -257,6 +322,24 @@ router.post('/', protect, validateOrder, async (req, res, next) => {
       });
     }
 
+    // Check for idempotency key to prevent duplicate orders
+    const idempotencyKey = req.body.idempotencyKey;
+    if (idempotencyKey) {
+      const existingOrder = await Order.findOne({ idempotencyKey })
+        .populate('customer', 'name phone')
+        .populate('products.product', 'name unit');
+
+      if (existingOrder) {
+        // Return the existing order (idempotent response)
+        return res.status(200).json({
+          success: true,
+          data: existingOrder,
+          idempotent: true,
+          message: 'Order already exists (idempotent response)'
+        });
+      }
+    }
+
     // Verify customer exists and is active
     const customer = await Customer.findById(req.body.customer);
     if (!customer) {
@@ -266,6 +349,20 @@ router.post('/', protect, validateOrder, async (req, res, next) => {
     if (!customer.isActive) {
       res.status(400);
       throw new Error('Cannot create order for inactive customer');
+    }
+
+    // SECURITY: Customers can only create orders for themselves
+    if (req.user.role === 'customer') {
+      const userCustomerId = typeof req.user.customer === 'object'
+        ? req.user.customer._id.toString()
+        : req.user.customer?.toString();
+
+      if (userCustomerId !== req.body.customer.toString()) {
+        return res.status(403).json({
+          success: false,
+          message: 'You can only create orders for yourself'
+        });
+      }
     }
 
     // Pre-fetch all products and market rates to avoid race conditions
@@ -292,6 +389,7 @@ router.post('/', protect, validateOrder, async (req, res, next) => {
     let totalAmount = 0;
     let usedPricingFallback = false;
     const processedProducts = [];
+    const newContractPrices = []; // Track new contract prices to save
 
     for (const item of req.body.products) {
       const product = productMap.get(item.product);
@@ -304,6 +402,13 @@ router.post('/', protect, validateOrder, async (req, res, next) => {
         throw new Error(`Product "${product.name}" is no longer available`);
       }
 
+      // Validate quantity precision based on unit type
+      // "piece" requires whole numbers, other units allow decimals
+      if (product.unit === 'piece' && !Number.isInteger(item.quantity)) {
+        res.status(400);
+        throw new Error(`Product "${product.name}" is sold by piece and requires a whole number quantity (got ${item.quantity})`);
+      }
+
       // Calculate rate based on customer's pricing type
       // Pass the pre-fetched market rate to avoid race conditions
       const priceResult = calculatePriceWithRate(customer, product, rateMap.get(product._id.toString()), item.rate);
@@ -314,25 +419,67 @@ router.post('/', protect, validateOrder, async (req, res, next) => {
         usedPricingFallback = true;
       }
 
+      // Track new contract prices to save
+      if (priceResult.saveAsContractPrice) {
+        newContractPrices.push({
+          productId: product._id.toString(),
+          productName: product.name,
+          rate: priceResult.rate
+        });
+      }
+
       processedProducts.push({
         product: item.product,
         productName: product.name,
         quantity: item.quantity,
         unit: product.unit,
         rate: priceResult.rate,
-        amount: amount
+        amount: amount,
+        isContractPrice: priceResult.isContractPrice
       });
     }
 
-    // Create order
-    const order = await Order.create({
+    // Save new contract prices to customer if any
+    if (newContractPrices.length > 0) {
+      try {
+        // Re-fetch customer to avoid race condition where pricingType changed
+        // between initial fetch and now
+        const freshCustomer = await Customer.findById(req.body.customer);
+        if (freshCustomer && freshCustomer.pricingType === 'contract') {
+          if (!freshCustomer.contractPrices) {
+            freshCustomer.contractPrices = new Map();
+          }
+          for (const cp of newContractPrices) {
+            freshCustomer.contractPrices.set(cp.productId, cp.rate);
+          }
+          await freshCustomer.save();
+        } else {
+          // Customer's pricing type changed - don't save contract prices
+          console.warn(`Skipping contract price save: customer ${req.body.customer} is no longer contract pricing type`);
+          // Clear the newContractPrices so response doesn't claim they were saved
+          newContractPrices.length = 0;
+        }
+      } catch (contractError) {
+        console.error('Failed to save new contract prices:', contractError.message);
+        // Continue - order can still be created, contract prices can be added manually
+      }
+    }
+
+    // Create order (include idempotencyKey if provided)
+    const orderData = {
       customer: req.body.customer,
       products: processedProducts,
       totalAmount: totalAmount,
       deliveryAddress: req.body.deliveryAddress,
       notes: req.body.notes,
       usedPricingFallback: usedPricingFallback
-    });
+    };
+
+    if (idempotencyKey) {
+      orderData.idempotencyKey = idempotencyKey;
+    }
+
+    const order = await Order.create(orderData);
 
     // Update customer credit for unpaid orders
     try {
@@ -348,7 +495,7 @@ router.post('/', protect, validateOrder, async (req, res, next) => {
       .populate('customer', 'name phone')
       .populate('products.product', 'name unit');
 
-    // Build response with warning if contract pricing fallback was used
+    // Build response with warnings/info
     const response = {
       success: true,
       data: populatedOrder
@@ -358,6 +505,15 @@ router.post('/', protect, validateOrder, async (req, res, next) => {
       response.warning = 'Some products used market rate fallback because contract prices were not set';
     }
 
+    // Include info about new contract prices saved
+    if (newContractPrices.length > 0) {
+      response.newContractPrices = newContractPrices.map(cp => ({
+        productName: cp.productName,
+        rate: cp.rate
+      }));
+      response.message = `New contract prices saved for: ${newContractPrices.map(cp => cp.productName).join(', ')}`;
+    }
+
     res.status(201).json(response);
   } catch (error) {
     next(error);
@@ -365,7 +521,7 @@ router.post('/', protect, validateOrder, async (req, res, next) => {
 });
 
 // @route   PUT /api/orders/:id
-// @desc    Update order products/prices
+// @desc    Update order prices only (products and quantities cannot be changed)
 // @access  Private (Admin, Staff)
 router.put('/:id', protect, authorize('admin', 'staff'), async (req, res, next) => {
   try {
@@ -376,33 +532,122 @@ router.put('/:id', protect, authorize('admin', 'staff'), async (req, res, next) 
       throw new Error('Order not found');
     }
 
-    // Update products with new prices
+    // Fetch customer to check pricing type
+    const customer = await Customer.findById(order.customer);
+
+    // Update product prices only - quantities and products cannot be changed
     if (req.body.products && Array.isArray(req.body.products)) {
+      // Build a map of original order products for validation
+      const originalProductMap = new Map();
+      for (const p of order.products) {
+        const productId = p.product.toString();
+        originalProductMap.set(productId, {
+          quantity: p.quantity,
+          productName: p.productName,
+          unit: p.unit,
+          rate: p.rate,
+          isContractPrice: p.isContractPrice || false
+        });
+      }
+
+      // Validate that request products match original order exactly
+      if (req.body.products.length !== order.products.length) {
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot add or remove products. Only prices can be updated.'
+        });
+      }
+
+      // Validate each product in request exists in original order with same quantity
+      for (const item of req.body.products) {
+        const productId = item.product?.toString();
+        const original = originalProductMap.get(productId);
+
+        if (!original) {
+          return res.status(400).json({
+            success: false,
+            message: `Product ${productId} is not in this order. Only prices can be updated.`
+          });
+        }
+
+        if (item.quantity !== original.quantity) {
+          return res.status(400).json({
+            success: false,
+            message: `Quantity for product "${original.productName}" cannot be changed. Only prices can be updated.`
+          });
+        }
+
+        // For contract customers: prevent modification of contract prices
+        const requestedRate = item.priceAtTime || item.rate;
+        if (original.isContractPrice && requestedRate !== undefined && requestedRate !== original.rate) {
+          return res.status(400).json({
+            success: false,
+            message: `Contract price for "${original.productName}" cannot be changed. Edit contract prices in customer management.`
+          });
+        }
+      }
+
+      // All validations passed - update prices only
       let totalAmount = 0;
-      const updatedProducts = await Promise.all(
-        req.body.products.map(async (item) => {
-          const product = await Product.findById(item.product);
-          if (!product) {
-            throw new Error(`Product ${item.product} not found`);
-          }
+      const updatedProducts = [];
 
-          const rate = item.priceAtTime || item.rate || 0;
-          const amount = item.quantity * rate;
-          totalAmount += amount;
+      for (const item of req.body.products) {
+        const productId = item.product.toString();
+        const original = originalProductMap.get(productId);
 
-          return {
-            product: item.product,
-            productName: product.name,
-            quantity: item.quantity,
-            unit: product.unit,
-            rate: rate,
-            amount: amount
-          };
-        })
-      );
+        // Use original rate for contract prices, otherwise use provided rate
+        let rate;
+        if (original.isContractPrice) {
+          rate = original.rate; // Contract prices are locked
+        } else {
+          rate = item.priceAtTime || item.rate || original.rate || 0;
+        }
+
+        if (rate < 0) {
+          return res.status(400).json({
+            success: false,
+            message: `Rate for product "${original.productName}" cannot be negative.`
+          });
+        }
+
+        const amount = original.quantity * rate;
+        totalAmount += amount;
+
+        updatedProducts.push({
+          product: item.product,
+          productName: original.productName,
+          quantity: original.quantity,
+          unit: original.unit,
+          rate: rate,
+          amount: amount,
+          isContractPrice: original.isContractPrice
+        });
+      }
+
+      // Calculate credit adjustment if total changed
+      const oldTotal = order.totalAmount || 0;
+      const totalDifference = totalAmount - oldTotal;
 
       order.products = updatedProducts;
       order.totalAmount = totalAmount;
+
+      // Adjust customer credit if total amount changed and order is not cancelled
+      if (totalDifference !== 0 && order.status !== 'cancelled') {
+        try {
+          const customer = await Customer.findById(order.customer);
+          if (customer) {
+            // Increase total = increase credit, decrease total = decrease credit
+            // But only adjust for unpaid portion
+            const oldUnpaid = oldTotal - (order.paidAmount || 0);
+            const newUnpaid = totalAmount - (order.paidAmount || 0);
+            const creditAdjustment = newUnpaid - oldUnpaid;
+            customer.currentCredit = Math.max(0, customer.currentCredit + creditAdjustment);
+            await customer.save();
+          }
+        } catch (creditError) {
+          console.error('Failed to adjust customer credit after price update:', creditError.message);
+        }
+      }
     }
 
     // Update notes if provided
@@ -491,8 +736,8 @@ router.put('/:id/customer-edit', protect, async (req, res, next) => {
         }
 
         // Recalculate rate based on customer's pricing type (never trust client prices)
-        const rate = await calculatePrice(customer, product);
-        const amount = item.quantity * rate;
+        const priceResult = await calculatePrice(customer, product);
+        const amount = item.quantity * priceResult.rate;
         totalAmount += amount;
 
         return {
@@ -500,8 +745,9 @@ router.put('/:id/customer-edit', protect, async (req, res, next) => {
           productName: product.name,
           quantity: item.quantity,
           unit: product.unit,
-          rate: rate,
-          amount: amount
+          rate: priceResult.rate,
+          amount: amount,
+          isContractPrice: priceResult.isContractPrice
         };
       })
     );
@@ -524,12 +770,31 @@ router.put('/:id/customer-edit', protect, async (req, res, next) => {
   }
 });
 
+// Valid status transitions (state machine)
+// Flow: pending → confirmed → processing → packed → shipped → delivered
+// Cancellation: any status except 'delivered' can go to 'cancelled'
+const VALID_STATUS_TRANSITIONS = {
+  pending: ['confirmed', 'cancelled'],
+  confirmed: ['processing', 'cancelled'],
+  processing: ['packed', 'cancelled'],
+  packed: ['shipped', 'cancelled'],
+  shipped: ['delivered', 'cancelled'],
+  delivered: [], // Terminal state - no transitions allowed
+  cancelled: []  // Terminal state - no transitions allowed
+};
+
 // @route   PUT /api/orders/:id/status
-// @desc    Update order status
+// @desc    Update order status (enforces valid state transitions)
 // @access  Private (Admin, Staff)
 router.put('/:id/status', protect, authorize('admin', 'staff'), [
   body('status').isIn(['pending', 'confirmed', 'processing', 'packed', 'shipped', 'delivered', 'cancelled'])
-    .withMessage('Invalid status')
+    .withMessage('Invalid status'),
+  body('assignedWorker')
+    .optional()
+    .isString()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Assigned worker name must be 100 characters or less')
 ], async (req, res, next) => {
   try {
     const errors = validationResult(req);
@@ -540,32 +805,76 @@ router.put('/:id/status', protect, authorize('admin', 'staff'), [
       });
     }
 
-    const updateData = { status: req.body.status };
-
-    // Update timestamps based on status
-    if (req.body.status === 'packed') {
-      updateData.packedAt = new Date();
-      updateData.assignedWorker = req.body.assignedWorker;
-    } else if (req.body.status === 'shipped') {
-      updateData.shippedAt = new Date();
-    } else if (req.body.status === 'delivered') {
-      updateData.deliveredAt = new Date();
-    }
-
-    const order = await Order.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true, runValidators: true }
-    ).populate('customer', 'name phone');
-
+    // First, fetch the current order to validate state transition
+    const order = await Order.findById(req.params.id);
     if (!order) {
       res.status(404);
       throw new Error('Order not found');
     }
 
+    const currentStatus = order.status;
+    const newStatus = req.body.status;
+
+    // Check if this is a valid transition
+    const allowedTransitions = VALID_STATUS_TRANSITIONS[currentStatus] || [];
+    if (!allowedTransitions.includes(newStatus)) {
+      // Allow setting same status (no-op)
+      if (currentStatus === newStatus) {
+        return res.json({
+          success: true,
+          data: order,
+          message: 'Status unchanged'
+        });
+      }
+
+      return res.status(400).json({
+        success: false,
+        message: `Invalid status transition: cannot change from '${currentStatus}' to '${newStatus}'. Allowed transitions: ${allowedTransitions.length > 0 ? allowedTransitions.join(', ') : 'none (terminal state)'}`
+      });
+    }
+
+    const updateData = { status: newStatus };
+    const now = new Date();
+
+    // Update timestamps based on status with validation
+    if (newStatus === 'packed') {
+      updateData.packedAt = now;
+      // Validate and sanitize assignedWorker
+      if (req.body.assignedWorker) {
+        updateData.assignedWorker = req.body.assignedWorker.trim();
+      }
+    } else if (newStatus === 'shipped') {
+      // Ensure shipped is after packed
+      if (order.packedAt && now < order.packedAt) {
+        return res.status(400).json({
+          success: false,
+          message: 'Shipped time cannot be before packed time'
+        });
+      }
+      updateData.shippedAt = now;
+    } else if (newStatus === 'delivered') {
+      // Ensure delivered is after shipped (and packed)
+      if (order.shippedAt && now < order.shippedAt) {
+        return res.status(400).json({
+          success: false,
+          message: 'Delivered time cannot be before shipped time'
+        });
+      }
+      updateData.deliveredAt = now;
+    } else if (newStatus === 'cancelled') {
+      updateData.cancelledAt = now;
+      updateData.cancelledBy = req.user._id;
+    }
+
+    const updatedOrder = await Order.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true, runValidators: true }
+    ).populate('customer', 'name phone');
+
     res.json({
       success: true,
-      data: order
+      data: updatedOrder
     });
   } catch (error) {
     next(error);
@@ -594,9 +903,17 @@ router.put('/:id/payment', protect, authorize('admin', 'staff'), [
       throw new Error('Order not found');
     }
 
+    // Validate payment amount does not exceed order total
+    const newPaidAmount = req.body.paidAmount;
+    if (newPaidAmount > order.totalAmount) {
+      return res.status(400).json({
+        success: false,
+        message: `Payment amount (₹${newPaidAmount}) cannot exceed order total (₹${order.totalAmount})`
+      });
+    }
+
     // Calculate credit adjustment (difference between old and new paid amount)
     const oldPaidAmount = order.paidAmount || 0;
-    const newPaidAmount = req.body.paidAmount;
     const creditAdjustment = newPaidAmount - oldPaidAmount;
 
     order.paidAmount = newPaidAmount;

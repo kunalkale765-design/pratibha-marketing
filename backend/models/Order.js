@@ -35,6 +35,11 @@ const orderSchema = new mongoose.Schema({
     amount: {
       type: Number,
       required: true
+    },
+    // Indicates if rate is from contract pricing (locked, cannot be edited)
+    isContractPrice: {
+      type: Boolean,
+      default: false
     }
   }],
   totalAmount: {
@@ -83,6 +88,12 @@ const orderSchema = new mongoose.Schema({
   usedPricingFallback: {
     type: Boolean,
     default: false
+  },
+  // Idempotency key for preventing duplicate orders on network failures
+  idempotencyKey: {
+    type: String,
+    sparse: true,
+    index: true
   }
 }, {
   timestamps: true

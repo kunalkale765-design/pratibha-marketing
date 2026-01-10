@@ -255,6 +255,25 @@
             box-shadow: 0 0 0 3px rgba(126, 145, 129, 0.15);
         }
 
+        .price-input.contract-locked {
+            background: var(--cream);
+            color: var(--gunmetal);
+            cursor: not-allowed;
+            opacity: 0.8;
+        }
+
+        .contract-badge {
+            display: inline-block;
+            background: var(--dusty-olive);
+            color: white;
+            font-size: 0.65rem;
+            padding: 1px 6px;
+            border-radius: 8px;
+            margin-left: 4px;
+            font-weight: 500;
+            vertical-align: middle;
+        }
+
         .price-input.changed {
             border-color: var(--dusty-olive);
             background: rgba(126, 145, 129, 0.08);
@@ -484,6 +503,7 @@
         let currentOrder = null;
         let currentUser = null;
         let priceChanges = {};
+        let isSaving = false; // Prevent concurrent saves
 
         async function init() {
             currentUser = await Auth.requireAuth();
@@ -519,11 +539,19 @@
         async function loadOrders() {
             try {
                 const res = await fetch('/api/orders?limit=100', { credentials: 'include' });
+                if (!res.ok) {
+                    throw new Error(`Server returned ${res.status}`);
+                }
                 const data = await res.json();
+                if (!data.success) {
+                    throw new Error(data.message || 'Failed to load orders');
+                }
                 orders = data.data || [];
                 renderOrders();
             } catch (e) {
+                console.error('Failed to load orders:', e);
                 showToast('Failed to load orders', 'error');
+                // Don't clear orders on error - keep showing stale data
             }
         }
 
@@ -639,15 +667,17 @@
                                         <div class="price-value">₹${purchasePrice}</div>
                                     </div>
                                     <div class="price-box">
-                                        <div class="price-label">Selling</div>
+                                        <div class="price-label">Selling${p.isContractPrice ? ' <span class="contract-badge">Fixed</span>' : ''}</div>
                                         ${isStaff ? `
-                                            <input type="number" class="price-input"
+                                            <input type="number" class="price-input${p.isContractPrice ? ' contract-locked' : ''}"
                                                 id="price-${idx}"
                                                 data-idx="${idx}"
                                                 data-original="${p.rate}"
                                                 data-qty="${p.quantity}"
+                                                data-contract="${p.isContractPrice || false}"
                                                 value="${p.rate}"
                                                 min="0" step="0.01"
+                                                ${p.isContractPrice ? 'disabled title="Contract price - edit in customer management"' : ''}
                                                 onfocus="clearZero(this)"
                                                 onblur="restoreValue(this)"
                                                 onchange="handlePriceChange(${idx})"
@@ -708,9 +738,9 @@
 
             input.classList.toggle('changed', current !== original);
 
-            // Update amount display
-            const amount = current * qty;
-            document.getElementById(`amount-${idx}`).textContent = `₹${amount.toFixed(0)}`;
+            // Update amount display (round to 2 decimal places for consistency)
+            const amount = Math.round(current * qty * 100) / 100;
+            document.getElementById(`amount-${idx}`).textContent = `₹${amount.toLocaleString('en-IN')}`;
 
             // Update total
             updateOrderTotal();
@@ -742,13 +772,24 @@
                 total += rate * p.quantity;
             });
 
-            document.getElementById('orderTotal').textContent = `₹${total.toFixed(0)}`;
-            document.getElementById('orderBalance').textContent = `₹${(total - (currentOrder.paidAmount || 0)).toFixed(0)}`;
+            // Round to 2 decimal places for consistency with backend
+            total = Math.round(total * 100) / 100;
+            const balance = Math.round((total - (currentOrder.paidAmount || 0)) * 100) / 100;
+
+            document.getElementById('orderTotal').textContent = `₹${total.toLocaleString('en-IN')}`;
+            document.getElementById('orderBalance').textContent = `₹${balance.toLocaleString('en-IN')}`;
         }
 
         async function savePrices() {
             if (!currentOrderId || !currentOrder || Object.keys(priceChanges).length === 0) return;
 
+            // Prevent concurrent saves
+            if (isSaving) {
+                showToast('Save in progress...', 'info');
+                return;
+            }
+
+            isSaving = true;
             const btn = document.getElementById('savePricesBtn');
             btn.disabled = true;
             btn.textContent = 'Saving...';
@@ -768,28 +809,47 @@
                 }
 
                 const payload = { products: updatedProducts };
+                const orderId = currentOrderId; // Capture to avoid race conditions
 
-                let res = await fetch(`/api/orders/${currentOrderId}`, {
+                let res = await fetch(`/api/orders/${orderId}`, {
                     method: 'PUT',
                     headers,
                     credentials: 'include',
                     body: JSON.stringify(payload)
                 });
 
-                // Handle CSRF error with retry
+                // Handle CSRF error with single retry
                 if (res.status === 403) {
-                    const err = await res.json();
-                    if (err.message?.toLowerCase().includes('csrf')) {
+                    let errData;
+                    try {
+                        errData = await res.json();
+                    } catch {
+                        errData = { message: 'Access denied' };
+                    }
+
+                    if (errData.message?.toLowerCase().includes('csrf')) {
                         const newToken = await Auth.refreshCsrfToken();
                         if (newToken) {
                             headers['X-CSRF-Token'] = newToken;
-                            res = await fetch(`/api/orders/${currentOrderId}`, {
+                            res = await fetch(`/api/orders/${orderId}`, {
                                 method: 'PUT',
                                 headers,
                                 credentials: 'include',
                                 body: JSON.stringify(payload)
                             });
+                        } else {
+                            showToast('Session expired. Please refresh the page.', 'error');
+                            isSaving = false;
+                            btn.textContent = 'Save Changes';
+                            btn.disabled = false;
+                            return;
                         }
+                    } else {
+                        showToast(errData.message || 'Access denied', 'error');
+                        isSaving = false;
+                        btn.textContent = 'Save Changes';
+                        btn.disabled = false;
+                        return;
                     }
                 }
 
@@ -798,11 +858,19 @@
                     priceChanges = {};
                     btn.disabled = true;
                     loadOrders();
-                    // Refresh the modal
-                    viewOrder(currentOrderId);
+                    // Refresh the modal if still viewing same order
+                    if (currentOrderId === orderId) {
+                        viewOrder(orderId);
+                    }
                 } else {
-                    const err = await res.json();
-                    showToast(err.message || 'Failed to update', 'error');
+                    let errData;
+                    try {
+                        errData = await res.json();
+                    } catch {
+                        errData = { message: `Server error (${res.status})` };
+                    }
+                    showToast(errData.message || 'Failed to update', 'error');
+                    btn.disabled = false;
                 }
             } catch (e) {
                 console.error('Save prices error:', e);
@@ -811,14 +879,24 @@
                 } else {
                     showToast('Failed to save prices. Please try again.', 'error');
                 }
+                btn.disabled = false;
+            } finally {
+                isSaving = false;
+                btn.textContent = 'Save Changes';
             }
-
-            btn.textContent = 'Save Changes';
         }
 
         function closeModal() {
+            // Warn about unsaved changes
+            if (Object.keys(priceChanges).length > 0) {
+                if (!confirm('You have unsaved price changes. Discard them?')) {
+                    return;
+                }
+            }
             document.getElementById('orderModal').classList.remove('show');
             currentOrderId = null;
+            currentOrder = null;
+            priceChanges = {}; // Clear price changes on modal close
         }
         // Expose to window for onclick handlers
         window.closeModal = closeModal;

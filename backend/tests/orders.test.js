@@ -219,24 +219,33 @@ describe('Order Endpoints', () => {
 
   describe('PUT /api/orders/:id', () => {
     let testOrder;
+    let orderQuantity;
 
     beforeEach(async () => {
+      // Create order with known quantity for price-only updates
+      orderQuantity = 10;
       testOrder = await testUtils.createTestOrder(testCustomer, testProduct, {
         totalAmount: 1000,
-        notes: 'Original notes'
+        notes: 'Original notes',
+        products: [{
+          product: testProduct._id,
+          productName: testProduct.name,
+          quantity: orderQuantity,
+          unit: testProduct.unit,
+          rate: 100,
+          amount: 1000
+        }]
       });
     });
 
-    it('should allow admin to update order products', async () => {
-      const newProduct = await testUtils.createTestProduct({ name: 'New Product', unit: 'bag' });
-
+    it('should allow admin to update order prices', async () => {
       const res = await request(app)
         .put(`/api/orders/${testOrder._id}`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
           products: [{
-            product: newProduct._id,
-            quantity: 10,
+            product: testProduct._id,
+            quantity: orderQuantity,  // Must match original quantity
             rate: 50
           }]
         });
@@ -246,20 +255,20 @@ describe('Order Endpoints', () => {
       expect(res.body.data.totalAmount).toBe(500); // 10 * 50
     });
 
-    it('should allow staff to update order', async () => {
+    it('should allow staff to update order prices', async () => {
       const res = await request(app)
         .put(`/api/orders/${testOrder._id}`)
         .set('Authorization', `Bearer ${staffToken}`)
         .send({
           products: [{
             product: testProduct._id,
-            quantity: 20,
-            rate: 100
+            quantity: orderQuantity,  // Must match original quantity
+            rate: 200
           }]
         });
 
       expect(res.statusCode).toBe(200);
-      expect(res.body.data.totalAmount).toBe(2000);
+      expect(res.body.data.totalAmount).toBe(2000); // 10 * 200
     });
 
     it('should deny customer from updating order', async () => {
@@ -269,7 +278,7 @@ describe('Order Endpoints', () => {
         .send({
           products: [{
             product: testProduct._id,
-            quantity: 5,
+            quantity: orderQuantity,
             rate: 100
           }]
         });
@@ -305,7 +314,7 @@ describe('Order Endpoints', () => {
       expect(res.body.data.notes).toBe('Updated notes');
     });
 
-    it('should handle non-existent product in update', async () => {
+    it('should reject product not in original order', async () => {
       const fakeProductId = '507f1f77bcf86cd799439011';
       const res = await request(app)
         .put(`/api/orders/${testOrder._id}`)
@@ -313,15 +322,16 @@ describe('Order Endpoints', () => {
         .send({
           products: [{
             product: fakeProductId,
-            quantity: 5,
+            quantity: orderQuantity,
             rate: 100
           }]
         });
 
-      expect(res.statusCode).toBe(500); // Product not found error
+      expect(res.statusCode).toBe(400); // Product not in order error
+      expect(res.body.message).toContain('not in this order');
     });
 
-    it('should update multiple products in order', async () => {
+    it('should reject adding new products (only prices can be updated)', async () => {
       const product2 = await testUtils.createTestProduct({ name: 'Product 2', unit: 'kg' });
 
       const res = await request(app)
@@ -329,14 +339,29 @@ describe('Order Endpoints', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
           products: [
-            { product: testProduct._id, quantity: 5, rate: 100 },
+            { product: testProduct._id, quantity: orderQuantity, rate: 100 },
             { product: product2._id, quantity: 10, rate: 50 }
           ]
         });
 
-      expect(res.statusCode).toBe(200);
-      expect(res.body.data.products.length).toBe(2);
-      expect(res.body.data.totalAmount).toBe(1000); // (5*100) + (10*50)
+      expect(res.statusCode).toBe(400);
+      expect(res.body.message).toContain('Cannot add or remove products');
+    });
+
+    it('should reject quantity changes (only prices can be updated)', async () => {
+      const res = await request(app)
+        .put(`/api/orders/${testOrder._id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          products: [{
+            product: testProduct._id,
+            quantity: 999,  // Different from original
+            rate: 100
+          }]
+        });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.message).toContain('cannot be changed');
     });
 
     it('should use priceAtTime if provided', async () => {
@@ -346,13 +371,13 @@ describe('Order Endpoints', () => {
         .send({
           products: [{
             product: testProduct._id,
-            quantity: 5,
+            quantity: orderQuantity,
             priceAtTime: 200
           }]
         });
 
       expect(res.statusCode).toBe(200);
-      expect(res.body.data.totalAmount).toBe(1000); // 5 * 200
+      expect(res.body.data.totalAmount).toBe(2000); // 10 * 200
     });
   });
 
@@ -374,6 +399,16 @@ describe('Order Endpoints', () => {
     });
 
     it('should update to packed and set packedAt timestamp', async () => {
+      // Follow proper state transition: pending -> confirmed -> processing -> packed
+      await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send({ status: 'confirmed' });
+      await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send({ status: 'processing' });
+
       const res = await request(app)
         .put(`/api/orders/${testOrder._id}/status`)
         .set('Authorization', `Bearer ${staffToken}`)
@@ -385,6 +420,20 @@ describe('Order Endpoints', () => {
     });
 
     it('should update to shipped and set shippedAt timestamp', async () => {
+      // Follow proper state transition: pending -> confirmed -> processing -> packed -> shipped
+      await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send({ status: 'confirmed' });
+      await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send({ status: 'processing' });
+      await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send({ status: 'packed' });
+
       const res = await request(app)
         .put(`/api/orders/${testOrder._id}/status`)
         .set('Authorization', `Bearer ${staffToken}`)
@@ -396,6 +445,24 @@ describe('Order Endpoints', () => {
     });
 
     it('should update to delivered and set deliveredAt timestamp', async () => {
+      // Follow proper state transition: pending -> confirmed -> processing -> packed -> shipped -> delivered
+      await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send({ status: 'confirmed' });
+      await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send({ status: 'processing' });
+      await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send({ status: 'packed' });
+      await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send({ status: 'shipped' });
+
       const res = await request(app)
         .put(`/api/orders/${testOrder._id}/status`)
         .set('Authorization', `Bearer ${staffToken}`)
