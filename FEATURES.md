@@ -336,6 +336,7 @@ ORDER DETAIL (Bottom Sheet Modal):
 - Selling price editable input
 - Amount updates live as price changes
 - Total recalculates automatically
+- Contract prices shown as "Fixed" and cannot be edited
 
 *Input Behavior:*
 - Auto-clear on focus
@@ -347,6 +348,28 @@ ORDER DETAIL (Bottom Sheet Modal):
 - Full-width at bottom
 - Disabled until changes made
 - Shows "Saving..." during save
+- Prevents concurrent saves (disabled while saving)
+
+*Unsaved Changes Protection:*
+- Confirmation dialog when closing modal with unsaved changes
+- State properly cleared on modal close
+
+**Order Status State Machine:**
+```
+pending → confirmed → processing → packed → shipped → delivered
+                                                    ↘ cancelled
+```
+- Status transitions enforced by backend
+- Cannot skip states or go backwards
+- `delivered` and `cancelled` are terminal states
+
+**Validation Rules:**
+| Rule | Description |
+|------|-------------|
+| Payment cap | Payment cannot exceed order total |
+| Piece unit | Products with "piece" unit require whole numbers |
+| Price-only updates | Staff can only update prices, not add/remove products |
+| Timestamp order | packed < shipped < delivered timestamps enforced |
 
 **Mobile Optimizations:**
 - Bottom sheet modal (slides up)

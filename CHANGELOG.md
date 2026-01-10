@@ -10,6 +10,83 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+#### 2026-01-10 - Orders Page Security & Validation Improvements
+
+**Files Modified:**
+| File | Change |
+|------|--------|
+| `backend/routes/orders.js` | Added comprehensive validation and security improvements |
+| `backend/models/Order.js` | Added idempotencyKey field for duplicate prevention |
+| `frontend/orders.html` | Improved UX with unsaved changes protection and concurrent save prevention |
+| `frontend/customer-order-form.html` | Added pricing fallback warning display |
+| `CLAUDE.md` | Documented new PUT endpoints |
+
+**Security Fixes:**
+
+1. **Product Validation in Price Updates**
+   - Staff can only update prices, not swap products or change quantities
+   - Validates all products in request match original order
+   - Returns 400 error for any manipulation attempts
+
+2. **Payment Amount Validation**
+   - Payment cannot exceed order total
+   - Clear error message: "Payment amount (₹X) cannot exceed order total (₹Y)"
+
+3. **Order Status State Machine**
+   - Enforces valid transitions: `pending → confirmed → processing → packed → shipped → delivered`
+   - Cancellation allowed from any non-terminal state
+   - `delivered` and `cancelled` are terminal (no transitions allowed)
+   - Clear error messages for invalid transitions
+
+4. **Customer Order Security**
+   - Customers can only create orders for themselves
+   - Validates customer ID matches authenticated user's customer
+
+**Validation Improvements:**
+
+| Validation | Details |
+|------------|---------|
+| Max quantity | 1,000,000 limit to prevent abuse |
+| Max rate | 10,000,000 limit |
+| Piece unit | Requires whole numbers (rejects 1.5 pieces) |
+| Delivery address | Max 500 characters |
+| Notes | Max 1000 characters |
+| Assigned worker | Max 100 characters |
+| Timestamp order | packed < shipped < delivered enforced |
+
+**Idempotency Support:**
+- Added `idempotencyKey` field to Order model
+- Prevents duplicate orders on network failures
+- Returns existing order with `idempotent: true` flag
+
+**Frontend Improvements:**
+
+1. **Unsaved Changes Protection**
+   - Confirmation dialog when closing modal with unsaved price changes
+   - State properly cleared on modal close
+
+2. **Concurrent Save Prevention**
+   - `isSaving` flag prevents duplicate API calls
+   - Shows "Save in progress..." toast if user clicks again
+
+3. **Improved CSRF Handling**
+   - Max 1 retry for CSRF token refresh
+   - Proper error handling for failed retries
+   - "Session expired" message when token refresh fails
+
+4. **API Response Validation**
+   - Checks `res.ok` and `data.success` before using data
+   - Keeps stale data visible on load failure
+
+5. **Amount Rounding Consistency**
+   - Frontend and backend use same 2-decimal precision
+   - Uses `toLocaleString('en-IN')` for Indian number formatting
+
+6. **Pricing Fallback Warning**
+   - Shows warning toast when contract pricing falls back to market rate
+
+---
+
 #### 2026-01-09 - Comprehensive Test Suite Expansion
 
 **Files Created:**
