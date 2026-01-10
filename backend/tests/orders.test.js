@@ -173,6 +173,24 @@ describe('Order Endpoints', () => {
       expect(res.statusCode).toBe(201);
     });
 
+    it('should reject customer creating order for another customer', async () => {
+      // Customer trying to create order for otherCustomer (security test)
+      const res = await request(app)
+        .post('/api/orders')
+        .set('Authorization', `Bearer ${customerToken}`)
+        .send({
+          customer: otherCustomer._id,  // Different customer!
+          products: [{
+            product: testProduct._id,
+            quantity: 2,
+            rate: 100
+          }]
+        });
+
+      expect(res.statusCode).toBe(403);
+      expect(res.body.message).toContain('only create orders for yourself');
+    });
+
     it('should reject order without customer', async () => {
       const res = await request(app)
         .post('/api/orders')

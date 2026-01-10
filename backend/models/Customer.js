@@ -122,8 +122,16 @@ const customerSchema = new mongoose.Schema({
   },
   toObject: {
     transform: function(doc, ret) {
+      // Convert contractPrices Map to plain object (matches toJSON transform)
       if (ret.contractPrices instanceof Map) {
         ret.contractPrices = Object.fromEntries(ret.contractPrices);
+      } else if (ret.contractPrices && typeof ret.contractPrices === 'object') {
+        // Already an object - ensure it's a plain object
+        const plainObj = {};
+        for (const [key, value] of Object.entries(ret.contractPrices)) {
+          plainObj[key] = value;
+        }
+        ret.contractPrices = plainObj;
       }
       return ret;
     }
