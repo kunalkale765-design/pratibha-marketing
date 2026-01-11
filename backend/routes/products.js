@@ -7,7 +7,7 @@ const { protect, authorize } = require('../middleware/auth');
 // Validation middleware
 const validateProduct = [
   body('name').trim().notEmpty().withMessage('Product name is required'),
-  body('unit').isIn(['quintal', 'bag', 'kg', 'piece', 'ton']).withMessage('Invalid unit'),
+  body('unit').isIn(['quintal', 'bag', 'kg', 'piece', 'ton', 'bunch']).withMessage('Invalid unit'),
   body('category').optional().trim()
 ];
 

@@ -481,10 +481,11 @@ router.post('/', protect, validateOrder, async (req, res, next) => {
 
     const order = await Order.create(orderData);
 
-    // Update customer credit for unpaid orders
+    // Update customer credit for unpaid orders (atomic operation to prevent race conditions)
     try {
-      customer.currentCredit += totalAmount;
-      await customer.save();
+      await Customer.findByIdAndUpdate(order.customer, {
+        $inc: { currentCredit: totalAmount }
+      });
     } catch (creditError) {
       // Log but don't fail the order - credit can be reconciled later
       console.error('Failed to update customer credit after order creation:', creditError.message);
@@ -631,19 +632,18 @@ router.put('/:id', protect, authorize('admin', 'staff'), async (req, res, next) 
       order.products = updatedProducts;
       order.totalAmount = totalAmount;
 
-      // Adjust customer credit if total amount changed and order is not cancelled
+      // Adjust customer credit if total amount changed and order is not cancelled (atomic operation)
       if (totalDifference !== 0 && order.status !== 'cancelled') {
         try {
-          const customer = await Customer.findById(order.customer);
-          if (customer) {
-            // Increase total = increase credit, decrease total = decrease credit
-            // But only adjust for unpaid portion
-            const oldUnpaid = oldTotal - (order.paidAmount || 0);
-            const newUnpaid = totalAmount - (order.paidAmount || 0);
-            const creditAdjustment = newUnpaid - oldUnpaid;
-            customer.currentCredit = Math.max(0, customer.currentCredit + creditAdjustment);
-            await customer.save();
-          }
+          // Increase total = increase credit, decrease total = decrease credit
+          // But only adjust for unpaid portion
+          const oldUnpaid = oldTotal - (order.paidAmount || 0);
+          const newUnpaid = totalAmount - (order.paidAmount || 0);
+          const creditAdjustment = newUnpaid - oldUnpaid;
+          // Use aggregation pipeline for atomic update with Math.max(0, ...)
+          await Customer.findByIdAndUpdate(order.customer, [
+            { $set: { currentCredit: { $max: [0, { $add: ['$currentCredit', creditAdjustment] }] } } }
+          ]);
         } catch (creditError) {
           console.error('Failed to adjust customer credit after price update:', creditError.message);
         }
@@ -929,16 +929,15 @@ router.put('/:id/payment', protect, authorize('admin', 'staff'), [
 
     await order.save();
 
-    // Update customer credit (reduce by payment amount)
+    // Update customer credit (reduce by payment amount) - atomic operation
     if (creditAdjustment !== 0 && order.status !== 'cancelled') {
       try {
-        const customer = await Customer.findById(order.customer);
-        if (customer) {
-          // Positive adjustment = more paid = reduce credit
-          // Negative adjustment = less paid = increase credit
-          customer.currentCredit = Math.max(0, customer.currentCredit - creditAdjustment);
-          await customer.save();
-        }
+        // Positive adjustment = more paid = reduce credit
+        // Negative adjustment = less paid = increase credit
+        // Use aggregation pipeline for atomic update with Math.max(0, ...)
+        await Customer.findByIdAndUpdate(order.customer, [
+          { $set: { currentCredit: { $max: [0, { $add: ['$currentCredit', -creditAdjustment] }] } } }
+        ]);
       } catch (creditError) {
         console.error('Failed to update customer credit after payment:', creditError.message);
         // Continue - payment was recorded, credit can be reconciled manually
@@ -983,14 +982,13 @@ router.delete('/:id', protect, authorize('admin', 'staff'), async (req, res, nex
     order.cancelledAt = new Date();
     await order.save();
 
-    // Restore customer credit for unpaid portion
+    // Restore customer credit for unpaid portion - atomic operation
     if (unpaidAmount > 0) {
       try {
-        const customer = await Customer.findById(order.customer);
-        if (customer) {
-          customer.currentCredit = Math.max(0, customer.currentCredit - unpaidAmount);
-          await customer.save();
-        }
+        // Use aggregation pipeline for atomic update with Math.max(0, ...)
+        await Customer.findByIdAndUpdate(order.customer, [
+          { $set: { currentCredit: { $max: [0, { $add: ['$currentCredit', -unpaidAmount] }] } } }
+        ]);
       } catch (creditError) {
         console.error('Failed to restore customer credit on order cancellation:', creditError.message);
         // Continue - order is cancelled, credit can be reconciled manually
