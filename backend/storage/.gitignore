@@ -1,0 +1,5 @@
+# Ignore generated invoice PDFs (stored locally)
+invoices/*.pdf
+
+# Keep the directory structure
+!invoices/.gitkeep

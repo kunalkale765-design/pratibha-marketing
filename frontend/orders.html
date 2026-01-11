@@ -347,10 +347,29 @@
             padding-bottom: calc(1rem + env(safe-area-inset-bottom));
             border-top: 1px solid var(--cream-dark);
             background: var(--warm-white);
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .modal-footer .btn-modal.secondary {
+            flex: 1;
+            background: var(--cream);
+            border: 2px solid var(--dusty-olive);
+            color: var(--dusty-olive);
+            min-height: 52px;
+            padding: 1rem;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .modal-footer .btn-modal.secondary:active {
+            background: var(--dusty-olive);
+            color: white;
         }
 
         .btn-save-prices {
-            width: 100%;
+            flex: 1;
             background: var(--dusty-olive);
             min-height: 52px;
             padding: 1rem;
@@ -449,6 +468,168 @@
                 grid-template-columns: repeat(3, 1fr);
             }
         }
+
+        /* Invoice Modal Styles */
+        .invoice-loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+        }
+
+        .invoice-firm-section {
+            margin-bottom: 1.5rem;
+            background: var(--cream);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .invoice-firm-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.875rem 1rem;
+            background: var(--dusty-olive);
+            color: white;
+            cursor: pointer;
+        }
+
+        .invoice-firm-name {
+            font-weight: 600;
+            font-size: 0.9375rem;
+        }
+
+        .invoice-firm-total {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+        }
+
+        .invoice-firm-items {
+            padding: 0.5rem;
+        }
+
+        .invoice-item {
+            display: flex;
+            align-items: center;
+            padding: 0.625rem 0.75rem;
+            background: var(--warm-white);
+            border-radius: 8px;
+            margin-bottom: 0.375rem;
+            gap: 0.75rem;
+        }
+
+        .invoice-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .invoice-item-checkbox {
+            width: 20px;
+            height: 20px;
+            accent-color: var(--dusty-olive);
+        }
+
+        .invoice-item-details {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .invoice-item-name {
+            font-weight: 500;
+            font-size: 0.875rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .invoice-item-meta {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.125rem;
+        }
+
+        .invoice-item-amount {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: var(--dusty-olive);
+        }
+
+        .invoice-summary {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: var(--gunmetal);
+            color: white;
+            border-radius: 10px;
+            margin-top: 1rem;
+        }
+
+        .invoice-summary-label {
+            font-size: 0.875rem;
+        }
+
+        .invoice-summary-total {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .invoice-no-items {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+        }
+
+        /* Firm Selector */
+        .invoice-firm-selector {
+            margin-bottom: 1rem;
+        }
+
+        .firm-options {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .firm-option {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.875rem 1rem;
+            background: var(--cream);
+            border: 2px solid var(--cream-dark);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .firm-option:hover {
+            border-color: var(--dusty-olive);
+        }
+
+        .firm-option.selected {
+            background: var(--dusty-olive);
+            border-color: var(--dusty-olive);
+            color: white;
+        }
+
+        .firm-option input[type="radio"] {
+            display: none;
+        }
+
+        .firm-option-name {
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .invoice-items-list {
+            background: var(--cream);
+            border-radius: 10px;
+            padding: 0.5rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body>
@@ -515,8 +696,29 @@
             </div>
             <div class="modal-body" id="modalBody"></div>
             <div class="modal-footer" id="modalFooter">
+                <button class="btn-modal secondary btn-animated" id="printFromModalBtn" onclick="printFromModal()">
+                    <span class="btn-text">Print Invoice</span>
+                </button>
                 <button class="btn-save-prices btn-animated" id="savePricesBtn" onclick="savePrices()">
                     <span class="btn-text">Save Changes</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoice Modal -->
+    <div id="invoiceModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title" id="invoiceModalTitle">Generate Invoice</div>
+                <button class="btn-close" onclick="closeInvoiceModal()">×</button>
+            </div>
+            <div class="modal-body" id="invoiceModalBody">
+                <div class="invoice-loading">Loading...</div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modal primary btn-animated" id="generateInvoiceBtn" onclick="generateInvoice()" disabled>
+                    <span class="btn-text">Download PDF</span>
                 </button>
             </div>
         </div>
@@ -579,6 +781,11 @@
                     throw new Error(data.message || 'Failed to load orders');
                 }
                 orders = data.data || [];
+                // Debug: Log any orders with missing or invalid IDs
+                const invalidOrders = orders.filter(o => !o._id || !/^[a-f\d]{24}$/i.test(o._id));
+                if (invalidOrders.length > 0) {
+                    console.warn('Orders with invalid IDs:', invalidOrders.map(o => ({ orderNumber: o.orderNumber, _id: o._id })));
+                }
                 renderOrders();
             } catch (e) {
                 console.error('Failed to load orders:', e);
@@ -601,7 +808,8 @@
             const search = document.getElementById('searchInput').value.toLowerCase();
             const isAdmin = currentUser?.role === 'admin';
 
-            let filtered = orders;
+            // Filter out orders without valid _id first
+            let filtered = orders.filter(o => o._id && /^[a-f\d]{24}$/i.test(o._id));
 
             // Filter by status
             if (currentFilter === 'all') {
@@ -749,12 +957,226 @@
             });
         }
 
-        function printOrder(orderId) {
-            showToast('Print feature coming soon', 'info');
+        // Invoice state
+        let invoiceData = null;
+        let selectedFirmId = null;
+        let selectedProductIds = new Set();
+
+        async function printOrder(orderId) {
             // Close swipe
             document.querySelectorAll('.swipe-item.swiped, .swipe-item.swiped-single').forEach(item => {
                 item.classList.remove('swiped', 'swiped-single');
             });
+
+            // Validate order ID before proceeding
+            const isValidMongoId = /^[a-f\d]{24}$/i.test(orderId);
+            if (!orderId || !isValidMongoId) {
+                console.error('Invalid order ID:', orderId);
+                showToast('Invalid order ID. Please refresh the page.', 'error');
+                return;
+            }
+
+            // Show invoice modal with loading
+            document.getElementById('invoiceModal').classList.add('show');
+            document.getElementById('invoiceModalBody').innerHTML = '<div class="invoice-loading">Loading invoice data...</div>';
+            document.getElementById('generateInvoiceBtn').disabled = true;
+
+            try {
+                // Load firms list first
+                await loadFirms();
+
+                // Fetch split data from API
+                const res = await fetch(`/api/invoices/${orderId}/split`, { credentials: 'include' });
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    throw new Error(errData.message || 'Failed to load invoice data');
+                }
+                const data = await res.json();
+                invoiceData = data.data;
+
+                // Set modal title
+                document.getElementById('invoiceModalTitle').textContent = `Invoice for ${invoiceData.orderNumber}`;
+
+                // Render firms and items
+                renderInvoiceModal();
+            } catch (error) {
+                console.error('Print order error:', error);
+                document.getElementById('invoiceModalBody').innerHTML = `
+                    <div class="invoice-no-items">
+                        <p>Failed to load invoice data</p>
+                        <p style="font-size: 0.75rem; margin-top: 0.5rem;">${escapeHtml(error.message)}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // All available firms (fetched once)
+        let allFirms = [];
+
+        async function loadFirms() {
+            if (allFirms.length > 0) return;
+            try {
+                const res = await fetch('/api/invoices/firms', { credentials: 'include' });
+                if (res.ok) {
+                    const data = await res.json();
+                    allFirms = data.data || [];
+                }
+            } catch (e) {
+                console.error('Failed to load firms:', e);
+            }
+        }
+
+        function renderInvoiceModal() {
+            if (!invoiceData) {
+                document.getElementById('invoiceModalBody').innerHTML = '<div class="invoice-no-items">No items to invoice</div>';
+                return;
+            }
+
+            // Get all items from all firms (flatten)
+            const allItems = invoiceData.firms.flatMap(f => f.items);
+            if (allItems.length === 0) {
+                document.getElementById('invoiceModalBody').innerHTML = '<div class="invoice-no-items">No items to invoice</div>';
+                return;
+            }
+
+            // Auto-select first firm and all items if none selected
+            if (!selectedFirmId) {
+                selectedFirmId = allFirms.length > 0 ? allFirms[0].id : (invoiceData.firms[0]?.firmId || 'pratibha');
+                selectedProductIds = new Set(allItems.map(i => i.productId));
+            }
+
+            // Calculate selected total
+            const selectedTotal = allItems
+                .filter(i => selectedProductIds.has(i.productId))
+                .reduce((sum, i) => sum + (i.amount || 0), 0);
+
+            // Build firm selector
+            const firmsToShow = allFirms.length > 0 ? allFirms : invoiceData.firms.map(f => ({ id: f.firmId, name: f.firmName }));
+
+            let html = `
+                <div class="invoice-firm-selector">
+                    <div class="info-label" style="margin-bottom: 0.5rem;">Select Firm</div>
+                    <div class="firm-options">
+                        ${firmsToShow.map(firm => `
+                            <label class="firm-option ${selectedFirmId === firm.id ? 'selected' : ''}" onclick="selectFirm('${escapeHtml(firm.id)}')">
+                                <input type="radio" name="firm" value="${escapeHtml(firm.id)}" ${selectedFirmId === firm.id ? 'checked' : ''}>
+                                <span class="firm-option-name">${escapeHtml(firm.name)}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <div class="info-label" style="margin: 1rem 0 0.5rem;">Select Items</div>
+                <div class="invoice-items-list">
+                    ${allItems.map(item => `
+                        <div class="invoice-item">
+                            <input type="checkbox" class="invoice-item-checkbox"
+                                data-product="${escapeHtml(item.productId)}"
+                                ${selectedProductIds.has(item.productId) ? 'checked' : ''}
+                                onchange="toggleInvoiceItem(null, '${escapeHtml(item.productId)}')">
+                            <div class="invoice-item-details">
+                                <div class="invoice-item-name">${escapeHtml(item.productName)}</div>
+                                <div class="invoice-item-meta">${item.quantity} ${escapeHtml(item.unit)} × ₹${item.rate.toLocaleString('en-IN')}</div>
+                            </div>
+                            <div class="invoice-item-amount">₹${item.amount.toLocaleString('en-IN')}</div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div class="invoice-summary">
+                    <div class="invoice-summary-label">Total</div>
+                    <div class="invoice-summary-total">₹${selectedTotal.toLocaleString('en-IN')}</div>
+                </div>
+            `;
+
+            document.getElementById('invoiceModalBody').innerHTML = html;
+            document.getElementById('generateInvoiceBtn').disabled = selectedProductIds.size === 0;
+        }
+
+        function selectFirm(firmId) {
+            selectedFirmId = firmId;
+            renderInvoiceModal();
+        }
+
+        function toggleInvoiceItem(firmId, productId) {
+            if (selectedProductIds.has(productId)) {
+                selectedProductIds.delete(productId);
+            } else {
+                selectedProductIds.add(productId);
+            }
+            renderInvoiceModal();
+        }
+
+        async function generateInvoice() {
+            if (!invoiceData || !selectedFirmId || selectedProductIds.size === 0) {
+                showToast('Please select items to invoice', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('generateInvoiceBtn');
+            btn.classList.add('btn-loading');
+            btn.disabled = true;
+
+            try {
+                const headers = { 'Content-Type': 'application/json' };
+                const csrfToken = await Auth.ensureCsrfToken();
+                if (csrfToken) {
+                    headers['X-CSRF-Token'] = csrfToken;
+                }
+
+                const res = await fetch(`/api/invoices/${invoiceData.orderId}/pdf`, {
+                    method: 'POST',
+                    headers,
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        firmId: selectedFirmId,
+                        productIds: Array.from(selectedProductIds)
+                    })
+                });
+
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    throw new Error(errData.message || 'Failed to generate invoice');
+                }
+
+                // Download the PDF
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `INV${invoiceData.orderNumber.replace('ORD', '')}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                showToast('Invoice downloaded', 'success');
+                closeInvoiceModal();
+            } catch (error) {
+                console.error('Generate invoice error:', error);
+                showToast(error.message || 'Failed to generate invoice', 'error');
+            } finally {
+                btn.classList.remove('btn-loading');
+                btn.disabled = false;
+            }
+        }
+
+        function closeInvoiceModal() {
+            document.getElementById('invoiceModal').classList.remove('show');
+            invoiceData = null;
+            selectedFirmId = null;
+            selectedProductIds = new Set();
+        }
+
+        function printFromModal() {
+            if (!currentOrderId) {
+                showToast('No order selected', 'error');
+                return;
+            }
+            // Save the ID before closeModal clears it
+            const orderId = currentOrderId;
+            closeModal(); // Close order detail modal (this sets currentOrderId = null)
+            printOrder(orderId); // Open invoice modal with saved ID
         }
 
         async function deleteOrder(orderId) {
@@ -1103,10 +1525,21 @@
         window.savePrices = savePrices;
         window.deleteOrder = deleteOrder;
         window.printOrder = printOrder;
+        // Invoice modal functions
+        window.closeInvoiceModal = closeInvoiceModal;
+        window.selectFirm = selectFirm;
+        window.toggleInvoiceItem = toggleInvoiceItem;
+        window.generateInvoice = generateInvoice;
+        window.printFromModal = printFromModal;
 
         // Close modal on overlay click
         document.getElementById('orderModal').onclick = (e) => {
             if (e.target.id === 'orderModal') closeModal();
+        };
+
+        // Close invoice modal on overlay click
+        document.getElementById('invoiceModal').onclick = (e) => {
+            if (e.target.id === 'invoiceModal') closeInvoiceModal();
         };
 
         init();

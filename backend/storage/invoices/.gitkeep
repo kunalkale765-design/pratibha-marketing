@@ -1,0 +1,2 @@
+# This file ensures the invoices directory is tracked in git
+# PDF files in this directory are ignored (see .gitignore)

@@ -206,6 +206,8 @@ app.use('/api/orders', writeOperationsLimiter, require('./routes/orders'));
 app.use('/api/products', require('./routes/products'));
 app.use('/api/market-rates', require('./routes/marketRates'));
 app.use('/api/supplier', require('./routes/supplier'));
+app.use('/api/invoices', require('./routes/invoices'));
+app.use('/api/reports', require('./routes/reports'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

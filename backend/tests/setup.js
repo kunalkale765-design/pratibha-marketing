@@ -194,6 +194,95 @@ const testUtils = {
       rate: rate,
       effectiveDate: new Date()
     });
+  },
+
+  // Create customer with contract pricing
+  async createContractCustomer(productPrices = {}) {
+    await ensureDbConnected();
+    const uniquePhone = `91${Date.now().toString().slice(-8)}`;
+
+    return Customer.create({
+      name: `Contract Customer ${Date.now()}`,
+      phone: uniquePhone,
+      pricingType: 'contract',
+      contractPrices: new Map(Object.entries(productPrices)),
+      isActive: true
+    });
+  },
+
+  // Create customer with markup pricing
+  async createMarkupCustomer(markupPercentage = 10) {
+    await ensureDbConnected();
+    const uniquePhone = `92${Date.now().toString().slice(-8)}`;
+
+    return Customer.create({
+      name: `Markup Customer ${Date.now()}`,
+      phone: uniquePhone,
+      pricingType: 'markup',
+      markupPercentage: markupPercentage,
+      isActive: true
+    });
+  },
+
+  // Create product with specific category (for invoice tests)
+  async createCategorizedProduct(category, overrides = {}) {
+    await ensureDbConnected();
+
+    return Product.create({
+      name: `${category} Product ${Date.now()}`,
+      unit: 'kg',
+      category: category,
+      isActive: true,
+      ...overrides
+    });
+  },
+
+  // Get customer's current credit
+  async getCustomerCredit(customerId) {
+    await ensureDbConnected();
+    const customer = await Customer.findById(customerId);
+    return customer ? customer.currentCredit : 0;
+  },
+
+  // Refresh customer from database
+  async refreshCustomer(customerId) {
+    await ensureDbConnected();
+    return Customer.findById(customerId);
+  },
+
+  // Create order via API (for full flow tests including credit updates)
+  async createOrderViaAPI(app, token, customerId, products) {
+    const request = require('supertest');
+    return request(app)
+      .post('/api/orders')
+      .set('Cookie', [`token=${token}`])
+      .send({
+        customer: customerId,
+        products: products
+      });
+  },
+
+  // Generate magic link token for customer
+  async generateMagicLinkToken(customerId) {
+    await ensureDbConnected();
+    const crypto = require('crypto');
+    const token = crypto.randomBytes(32).toString('hex');
+
+    await Customer.findByIdAndUpdate(customerId, {
+      magicLinkToken: token,
+      magicLinkCreatedAt: new Date()
+    });
+
+    return token;
+  },
+
+  // Create magic link JWT token for testing
+  createMagicLinkJWT(customerId) {
+    return jwt.sign(
+      { customerId: customerId, type: 'magic' },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
   }
 };
 

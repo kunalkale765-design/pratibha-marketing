@@ -651,4 +651,368 @@ describe('Order Endpoints', () => {
       expect(seq2).toBe(seq1 + 1);
     });
   });
+
+  describe('Order Status State Machine - Invalid Transitions', () => {
+    let testOrder;
+
+    beforeEach(async () => {
+      testOrder = await testUtils.createTestOrder(testCustomer, testProduct);
+    });
+
+    it('should reject pending -> processing (must confirm first)', async () => {
+      const res = await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'processing' });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.message).toMatch(/invalid.*transition|cannot.*transition/i);
+    });
+
+    it('should reject pending -> packed (must go through confirm, processing)', async () => {
+      const res = await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'packed' });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('should reject pending -> shipped', async () => {
+      const res = await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'shipped' });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('should reject pending -> delivered', async () => {
+      const res = await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'delivered' });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('should reject confirmed -> packed (must process first)', async () => {
+      // First confirm the order
+      await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'confirmed' });
+
+      // Try to skip to packed
+      const res = await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'packed' });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('should reject confirmed -> shipped (must pack first)', async () => {
+      await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'confirmed' });
+
+      const res = await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'shipped' });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('should reject processing -> shipped (must pack first)', async () => {
+      await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'confirmed' });
+
+      await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'processing' });
+
+      const res = await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'shipped' });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('should reject packed -> delivered (must ship first)', async () => {
+      // Go through: pending -> confirmed -> processing -> packed
+      await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'confirmed' });
+
+      await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'processing' });
+
+      await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'packed' });
+
+      // Try to skip to delivered
+      const res = await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'delivered' });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('should reject transition from delivered (terminal state)', async () => {
+      // Go through full flow to delivered
+      await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'confirmed' });
+
+      await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'processing' });
+
+      await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'packed' });
+
+      await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'shipped' });
+
+      await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'delivered' });
+
+      // Try to change from delivered
+      const res = await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'pending' });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.message).toMatch(/cannot.*transition|invalid/i);
+    });
+
+    it('should reject transition from cancelled (terminal state)', async () => {
+      // Cancel the order
+      await request(app)
+        .delete(`/api/orders/${testOrder._id}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      // Try to change from cancelled
+      const res = await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'pending' });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('should allow same status update (no-op)', async () => {
+      const res = await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'pending' });
+
+      // Should succeed but order is unchanged
+      expect(res.statusCode).toBe(200);
+      expect(res.body.data.status).toBe('pending');
+    });
+
+    it('should allow cancellation from pending', async () => {
+      const res = await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'cancelled' });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.data.status).toBe('cancelled');
+      expect(res.body.data.cancelledAt).toBeDefined();
+    });
+
+    it('should allow cancellation from confirmed', async () => {
+      await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'confirmed' });
+
+      const res = await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'cancelled' });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.data.status).toBe('cancelled');
+    });
+
+    it('should allow cancellation from processing', async () => {
+      await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'confirmed' });
+
+      await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'processing' });
+
+      const res = await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'cancelled' });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.data.status).toBe('cancelled');
+    });
+
+    it('should allow cancellation from packed', async () => {
+      await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'confirmed' });
+
+      await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'processing' });
+
+      await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'packed' });
+
+      const res = await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'cancelled' });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.data.status).toBe('cancelled');
+    });
+
+    it('should allow cancellation from shipped', async () => {
+      await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'confirmed' });
+
+      await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'processing' });
+
+      await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'packed' });
+
+      await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'shipped' });
+
+      const res = await request(app)
+        .put(`/api/orders/${testOrder._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'cancelled' });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.data.status).toBe('cancelled');
+    });
+  });
+
+  describe('Idempotency', () => {
+    it('should return existing order for duplicate idempotencyKey', async () => {
+      const idempotencyKey = `test-${Date.now()}`;
+
+      // First request
+      const res1 = await request(app)
+        .post('/api/orders')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          customer: testCustomer._id,
+          products: [{ product: testProduct._id, quantity: 10, rate: 100 }],
+          idempotencyKey
+        });
+
+      expect(res1.statusCode).toBe(201);
+      const orderId = res1.body.data._id;
+
+      // Second request with same key
+      const res2 = await request(app)
+        .post('/api/orders')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          customer: testCustomer._id,
+          products: [{ product: testProduct._id, quantity: 20, rate: 200 }], // Different data
+          idempotencyKey
+        });
+
+      // Should return existing order, not create new one
+      expect(res2.statusCode).toBe(200);
+      expect(res2.body.data._id).toBe(orderId);
+      expect(res2.body.idempotent).toBe(true);
+    });
+
+    it('should create separate orders for different idempotencyKeys', async () => {
+      const res1 = await request(app)
+        .post('/api/orders')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          customer: testCustomer._id,
+          products: [{ product: testProduct._id, quantity: 10, rate: 100 }],
+          idempotencyKey: `key1-${Date.now()}`
+        });
+
+      const res2 = await request(app)
+        .post('/api/orders')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          customer: testCustomer._id,
+          products: [{ product: testProduct._id, quantity: 10, rate: 100 }],
+          idempotencyKey: `key2-${Date.now()}`
+        });
+
+      expect(res1.statusCode).toBe(201);
+      expect(res2.statusCode).toBe(201);
+      expect(res1.body.data._id).not.toBe(res2.body.data._id);
+    });
+
+    it('should create order normally without idempotencyKey', async () => {
+      const res1 = await request(app)
+        .post('/api/orders')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          customer: testCustomer._id,
+          products: [{ product: testProduct._id, quantity: 10, rate: 100 }]
+        });
+
+      const res2 = await request(app)
+        .post('/api/orders')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          customer: testCustomer._id,
+          products: [{ product: testProduct._id, quantity: 10, rate: 100 }]
+        });
+
+      expect(res1.statusCode).toBe(201);
+      expect(res2.statusCode).toBe(201);
+      expect(res1.body.data._id).not.toBe(res2.body.data._id);
+    });
+  });
 });

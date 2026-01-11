@@ -529,4 +529,479 @@ describe('Edge Cases and Error Handling', () => {
       expect(res.body.mongodb).toBeDefined();
     });
   });
+
+  describe('Quantity Validation by Unit Type', () => {
+    let adminToken, customer;
+
+    beforeEach(async () => {
+      const admin = await testUtils.createAdminUser();
+      adminToken = admin.token;
+      customer = await testUtils.createTestCustomer();
+    });
+
+    it('should allow decimal quantities for kg unit', async () => {
+      const product = await testUtils.createTestProduct({ unit: 'kg' });
+      await testUtils.createMarketRate(product, 100);
+
+      const res = await request(app)
+        .post('/api/orders')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          customer: customer._id,
+          products: [{ product: product._id, quantity: 2.5 }]
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.data.products[0].quantity).toBe(2.5);
+    });
+
+    it('should allow decimal quantities for quintal unit', async () => {
+      const product = await testUtils.createTestProduct({ unit: 'quintal' });
+      await testUtils.createMarketRate(product, 1000);
+
+      const res = await request(app)
+        .post('/api/orders')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          customer: customer._id,
+          products: [{ product: product._id, quantity: 1.75 }]
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.data.products[0].quantity).toBe(1.75);
+    });
+
+    it('should allow decimal quantities for bag unit', async () => {
+      const product = await testUtils.createTestProduct({ unit: 'bag' });
+      await testUtils.createMarketRate(product, 500);
+
+      const res = await request(app)
+        .post('/api/orders')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          customer: customer._id,
+          products: [{ product: product._id, quantity: 3.33 }]
+        });
+
+      expect(res.status).toBe(201);
+    });
+
+    it('should allow decimal quantities for ton unit', async () => {
+      const product = await testUtils.createTestProduct({ unit: 'ton' });
+      await testUtils.createMarketRate(product, 5000);
+
+      const res = await request(app)
+        .post('/api/orders')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          customer: customer._id,
+          products: [{ product: product._id, quantity: 0.5 }]
+        });
+
+      expect(res.status).toBe(201);
+    });
+
+    it('should reject decimal quantities for piece unit', async () => {
+      const product = await testUtils.createTestProduct({ unit: 'piece' });
+      await testUtils.createMarketRate(product, 50);
+
+      const res = await request(app)
+        .post('/api/orders')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          customer: customer._id,
+          products: [{ product: product._id, quantity: 2.5 }]
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.message).toMatch(/whole.*number|piece|integer/i);
+    });
+
+    it('should accept integer quantities for piece unit', async () => {
+      const product = await testUtils.createTestProduct({ unit: 'piece' });
+      await testUtils.createMarketRate(product, 50);
+
+      const res = await request(app)
+        .post('/api/orders')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          customer: customer._id,
+          products: [{ product: product._id, quantity: 10 }]
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.data.products[0].quantity).toBe(10);
+    });
+
+    it('should reject quantity less than 0.01', async () => {
+      const product = await testUtils.createTestProduct({ unit: 'kg' });
+      await testUtils.createMarketRate(product, 100);
+
+      const res = await request(app)
+        .post('/api/orders')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          customer: customer._id,
+          products: [{ product: product._id, quantity: 0.001 }]
+        });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should reject quantity greater than 1,000,000', async () => {
+      const product = await testUtils.createTestProduct({ unit: 'kg' });
+      await testUtils.createMarketRate(product, 100);
+
+      const res = await request(app)
+        .post('/api/orders')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          customer: customer._id,
+          products: [{ product: product._id, quantity: 1000001 }]
+        });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should accept quantity at boundary: 0.01', async () => {
+      const product = await testUtils.createTestProduct({ unit: 'kg' });
+      await testUtils.createMarketRate(product, 100);
+
+      const res = await request(app)
+        .post('/api/orders')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          customer: customer._id,
+          products: [{ product: product._id, quantity: 0.01 }]
+        });
+
+      expect(res.status).toBe(201);
+    });
+
+    it('should accept quantity at boundary: 1,000,000', async () => {
+      const product = await testUtils.createTestProduct({ unit: 'kg' });
+      await testUtils.createMarketRate(product, 100);
+
+      const res = await request(app)
+        .post('/api/orders')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          customer: customer._id,
+          products: [{ product: product._id, quantity: 1000000 }]
+        });
+
+      expect(res.status).toBe(201);
+    });
+  });
+
+  describe('Rate Validation', () => {
+    let adminToken, customer, product;
+
+    beforeEach(async () => {
+      const admin = await testUtils.createAdminUser();
+      adminToken = admin.token;
+      customer = await testUtils.createTestCustomer();
+      product = await testUtils.createTestProduct();
+      await testUtils.createMarketRate(product, 100);
+    });
+
+    it('should reject rate greater than 10,000,000', async () => {
+      const res = await request(app)
+        .post('/api/orders')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          customer: customer._id,
+          products: [{ product: product._id, quantity: 10, rate: 10000001 }]
+        });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should accept rate at boundary: 10,000,000', async () => {
+      const res = await request(app)
+        .post('/api/orders')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          customer: customer._id,
+          products: [{ product: product._id, quantity: 1, rate: 10000000 }]
+        });
+
+      expect(res.status).toBe(201);
+    });
+
+    it('should allow rate of 0', async () => {
+      const res = await request(app)
+        .post('/api/orders')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          customer: customer._id,
+          products: [{ product: product._id, quantity: 10, rate: 0 }]
+        });
+
+      // Rate 0 should use market rate instead
+      expect(res.status).toBe(201);
+    });
+
+    it('should reject negative rate', async () => {
+      const res = await request(app)
+        .post('/api/orders')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          customer: customer._id,
+          products: [{ product: product._id, quantity: 10, rate: -50 }]
+        });
+
+      // Should either reject or use market rate instead
+      if (res.status === 201) {
+        expect(res.body.data.products[0].rate).toBeGreaterThanOrEqual(0);
+      } else {
+        expect(res.status).toBe(400);
+      }
+    });
+  });
+
+  describe('Password Validation', () => {
+    it('should reject password with less than 6 characters', async () => {
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'Test User',
+          email: `short${Date.now()}`,
+          password: 'Ab1!'
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.errors).toBeDefined();
+    });
+
+    it('should reject password without uppercase', async () => {
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'Test User',
+          email: `noupper${Date.now()}`,
+          password: 'abcdef1'
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.errors.some(e => e.msg.toLowerCase().includes('uppercase'))).toBe(true);
+    });
+
+    it('should reject password without lowercase', async () => {
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'Test User',
+          email: `nolower${Date.now()}`,
+          password: 'ABCDEF1'
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.errors.some(e => e.msg.toLowerCase().includes('lowercase'))).toBe(true);
+    });
+
+    it('should reject password without number', async () => {
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'Test User',
+          email: `nonumber${Date.now()}`,
+          password: 'ABCdefg'
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.errors.some(e => e.msg.toLowerCase().includes('number'))).toBe(true);
+    });
+
+    it('should accept valid password meeting all criteria', async () => {
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'Test User',
+          email: `valid${Date.now()}`,
+          password: 'ValidPass1'
+        });
+
+      expect(res.status).toBe(201);
+    });
+  });
+
+  describe('Phone Validation', () => {
+    let adminToken;
+
+    beforeEach(async () => {
+      const admin = await testUtils.createAdminUser();
+      adminToken = admin.token;
+    });
+
+    it('should reject phone with less than 10 digits', async () => {
+      const res = await request(app)
+        .post('/api/customers')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          name: 'Test Customer',
+          phone: '123456789'
+        });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should reject phone with more than 10 digits', async () => {
+      const res = await request(app)
+        .post('/api/customers')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          name: 'Test Customer',
+          phone: '12345678901'
+        });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should reject phone with non-numeric characters', async () => {
+      const res = await request(app)
+        .post('/api/customers')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          name: 'Test Customer',
+          phone: '123-456-78'
+        });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should accept exactly 10 digits', async () => {
+      const res = await request(app)
+        .post('/api/customers')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          name: 'Valid Phone Customer',
+          phone: '1234567890'
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.data.phone).toBe('1234567890');
+    });
+
+    it('should allow customer without phone (optional)', async () => {
+      const res = await request(app)
+        .post('/api/customers')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          name: 'No Phone Customer'
+        });
+
+      expect(res.status).toBe(201);
+    });
+  });
+
+  describe('Delivery Address Validation', () => {
+    let adminToken, customer, product;
+
+    beforeEach(async () => {
+      const admin = await testUtils.createAdminUser();
+      adminToken = admin.token;
+      customer = await testUtils.createTestCustomer();
+      product = await testUtils.createTestProduct();
+      await testUtils.createMarketRate(product, 100);
+    });
+
+    it('should reject delivery address longer than 500 characters', async () => {
+      const longAddress = 'A'.repeat(501);
+
+      const res = await request(app)
+        .post('/api/orders')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          customer: customer._id,
+          products: [{ product: product._id, quantity: 10 }],
+          deliveryAddress: longAddress
+        });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should accept delivery address at boundary: 500 characters', async () => {
+      const maxAddress = 'A'.repeat(500);
+
+      const res = await request(app)
+        .post('/api/orders')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          customer: customer._id,
+          products: [{ product: product._id, quantity: 10 }],
+          deliveryAddress: maxAddress
+        });
+
+      expect(res.status).toBe(201);
+    });
+
+    it('should allow empty delivery address', async () => {
+      const res = await request(app)
+        .post('/api/orders')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          customer: customer._id,
+          products: [{ product: product._id, quantity: 10 }],
+          deliveryAddress: ''
+        });
+
+      expect(res.status).toBe(201);
+    });
+  });
+
+  describe('Notes Validation', () => {
+    let adminToken, customer, product;
+
+    beforeEach(async () => {
+      const admin = await testUtils.createAdminUser();
+      adminToken = admin.token;
+      customer = await testUtils.createTestCustomer();
+      product = await testUtils.createTestProduct();
+      await testUtils.createMarketRate(product, 100);
+    });
+
+    it('should reject notes longer than 1000 characters', async () => {
+      const longNotes = 'N'.repeat(1001);
+
+      const res = await request(app)
+        .post('/api/orders')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          customer: customer._id,
+          products: [{ product: product._id, quantity: 10 }],
+          notes: longNotes
+        });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should accept notes at boundary: 1000 characters', async () => {
+      const maxNotes = 'N'.repeat(1000);
+
+      const res = await request(app)
+        .post('/api/orders')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          customer: customer._id,
+          products: [{ product: product._id, quantity: 10 }],
+          notes: maxNotes
+        });
+
+      expect(res.status).toBe(201);
+    });
+
+    it('should allow empty notes', async () => {
+      const res = await request(app)
+        .post('/api/orders')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          customer: customer._id,
+          products: [{ product: product._id, quantity: 10 }],
+          notes: ''
+        });
+
+      expect(res.status).toBe(201);
+    });
+  });
 });

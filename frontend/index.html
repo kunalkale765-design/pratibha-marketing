@@ -370,6 +370,81 @@
             margin-top: 3rem;
         }
 
+        /* Reports Section */
+        .reports-container {
+            background: var(--warm-white);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--pale-slate-light);
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+
+        .reports-header {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--pale-slate-light);
+            background: var(--cream);
+        }
+
+        .reports-header h2 {
+            font-family: var(--font-heading);
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--gunmetal);
+        }
+
+        .reports-content {
+            padding: 0.75rem;
+        }
+
+        .report-card {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--cream);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .report-card:hover {
+            background: var(--cream-dark);
+        }
+
+        .report-card:active {
+            transform: scale(0.99);
+        }
+
+        .report-icon {
+            font-size: 1.5rem;
+        }
+
+        .report-info {
+            flex: 1;
+        }
+
+        .report-title {
+            font-weight: 600;
+            color: var(--gunmetal);
+        }
+
+        .report-desc {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+            margin-top: 0.125rem;
+        }
+
+        .report-arrow {
+            color: var(--dusty-olive);
+            font-size: 1.25rem;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
         /* Analytics Section */
         .analytics-section {
             margin-top: 1.5rem;
@@ -505,6 +580,7 @@
         .action-card:nth-child(4) { animation-delay: 0.25s; }
         .action-card:nth-child(5) { animation-delay: 0.3s; }
         .procurement-container { animation: fadeInUp 0.4s ease backwards; animation-delay: 0.3s; }
+        .reports-container { animation: fadeInUp 0.4s ease backwards; animation-delay: 0.35s; }
         .analytics-section { animation: fadeInUp 0.4s ease backwards; animation-delay: 0.4s; }
     </style>
 </head>
@@ -604,6 +680,55 @@
                     <div class="skeleton skeleton-title" style="width: 35%;"></div>
                     <div class="skeleton skeleton-text" style="width: 20%;"></div>
                     <div class="skeleton" style="width: 80px; height: 32px; border-radius: 6px; margin-left: auto;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reports Section -->
+        <div class="reports-container">
+            <div class="reports-header">
+                <h2>Reports</h2>
+            </div>
+            <div class="reports-content">
+                <div class="report-card" onclick="openLedgerModal()">
+                    <div class="report-icon">📊</div>
+                    <div class="report-info">
+                        <div class="report-title">Customer Ledger</div>
+                        <div class="report-desc">Invoice history with dates and amounts</div>
+                    </div>
+                    <div class="report-arrow">→</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ledger Report Modal -->
+        <div id="ledgerModal" class="modal-overlay">
+            <div class="modal" style="max-width: 400px;">
+                <div class="modal-header">
+                    <h2 class="modal-title">Download Ledger</h2>
+                    <button class="modal-close" onclick="closeLedgerModal()">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">Customer (optional)</label>
+                        <select id="ledgerCustomer" class="form-input">
+                            <option value="">All Customers</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">From Date</label>
+                            <input type="date" id="ledgerFromDate" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">To Date</label>
+                            <input type="date" id="ledgerToDate" class="form-input">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="closeLedgerModal()">Cancel</button>
+                    <button class="btn btn-primary" onclick="downloadLedger()">Download Excel</button>
                 </div>
             </div>
         </div>
@@ -1258,6 +1383,97 @@
 
             } catch (error) {
                 console.error('Error loading analytics:', error);
+            }
+        }
+
+        // ====================
+        // LEDGER REPORT
+        // ====================
+        let ledgerCustomers = [];
+
+        async function loadLedgerCustomers() {
+            try {
+                const res = await fetch('/api/customers', { credentials: 'include' });
+                const data = await res.json();
+                if (res.ok) {
+                    ledgerCustomers = data.data || [];
+                    const select = document.getElementById('ledgerCustomer');
+                    select.innerHTML = '<option value="">All Customers</option>';
+                    ledgerCustomers.forEach(c => {
+                        select.innerHTML += `<option value="${c._id}">${c.name}</option>`;
+                    });
+                }
+            } catch (e) {
+                console.error('Error loading customers:', e);
+            }
+        }
+
+        window.openLedgerModal = function() {
+            // Load customers if not loaded
+            if (ledgerCustomers.length === 0) {
+                loadLedgerCustomers();
+            }
+            // Set default dates (current month)
+            const now = new Date();
+            const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+            document.getElementById('ledgerFromDate').value = firstDay.toISOString().split('T')[0];
+            document.getElementById('ledgerToDate').value = now.toISOString().split('T')[0];
+
+            document.getElementById('ledgerModal').classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        window.closeLedgerModal = function() {
+            document.getElementById('ledgerModal').classList.remove('show');
+            document.body.style.overflow = '';
+        }
+
+        window.downloadLedger = async function() {
+            const customerId = document.getElementById('ledgerCustomer').value;
+            const fromDate = document.getElementById('ledgerFromDate').value;
+            const toDate = document.getElementById('ledgerToDate').value;
+
+            // Build query params
+            const params = new URLSearchParams();
+            if (customerId) params.append('customerId', customerId);
+            if (fromDate) params.append('fromDate', fromDate);
+            if (toDate) params.append('toDate', toDate);
+
+            try {
+                showToast('Downloading ledger...', 'info');
+
+                const res = await fetch(`/api/reports/ledger?${params}`, {
+                    credentials: 'include'
+                });
+
+                if (!res.ok) {
+                    const error = await res.json();
+                    throw new Error(error.message || 'Failed to download ledger');
+                }
+
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+
+                // Get filename from header or generate
+                const disposition = res.headers.get('Content-Disposition');
+                let filename = 'ledger.xlsx';
+                if (disposition && disposition.includes('filename=')) {
+                    filename = disposition.split('filename=')[1].replace(/"/g, '');
+                }
+
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+
+                showToast('Ledger downloaded!', 'success');
+                closeLedgerModal();
+            } catch (e) {
+                console.error('Download ledger error:', e);
+                showToast(e.message || 'Failed to download ledger', 'error');
             }
         }
 

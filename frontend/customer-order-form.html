@@ -551,6 +551,51 @@
             margin-top: 0.125rem;
         }
 
+        /* Invoice Items */
+        .invoices-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .invoice-item {
+            background: var(--cream);
+            border-radius: 10px;
+            padding: 0.875rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+
+        .invoice-item:active {
+            background: var(--cream-dark);
+        }
+
+        .invoice-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .invoice-number {
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--gunmetal);
+        }
+
+        .invoice-meta {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+            margin-top: 0.125rem;
+        }
+
+        .invoice-download {
+            color: var(--dusty-olive);
+            padding: 0.5rem;
+        }
+
         .product-amount {
             font-family: 'JetBrains Mono', monospace;
             font-weight: 600;
@@ -1407,20 +1452,35 @@
         // ====================
         let currentOrder = null;
         let editedProducts = [];
+        let orderInvoices = [];
 
         window.openOrderDetail = async function(orderId) {
             try {
-                const res = await fetch(`/api/orders/${orderId}`, { credentials: 'include' });
-                const data = await res.json();
+                // Fetch order and invoices in parallel
+                const [orderRes, invoicesRes] = await Promise.all([
+                    fetch(`/api/orders/${orderId}`, { credentials: 'include' }),
+                    fetch(`/api/invoices/my-order/${orderId}`, { credentials: 'include' })
+                ]);
 
-                if (res.ok) {
-                    currentOrder = data.data;
+                const orderData = await orderRes.json();
+
+                if (orderRes.ok) {
+                    currentOrder = orderData.data;
                     editedProducts = JSON.parse(JSON.stringify(currentOrder.products));
+
+                    // Load invoices (don't fail if invoice endpoint errors)
+                    try {
+                        const invoicesData = await invoicesRes.json();
+                        orderInvoices = invoicesRes.ok ? (invoicesData.data || []) : [];
+                    } catch {
+                        orderInvoices = [];
+                    }
+
                     renderOrderModal();
                     document.getElementById('orderModal').classList.add('show');
                     document.body.style.overflow = 'hidden';
                 } else {
-                    showToast(data.message || 'Failed to load order', 'error');
+                    showToast(orderData.message || 'Failed to load order', 'error');
                 }
             } catch (e) {
                 console.error('Load order detail error:', e);
@@ -1433,6 +1493,7 @@
             document.body.style.overflow = '';
             currentOrder = null;
             editedProducts = [];
+            orderInvoices = [];
         }
 
         function renderOrderModal() {
@@ -1478,6 +1539,28 @@
                 <div id="orderProductsList">
                     ${renderOrderProducts(isPending)}
                 </div>
+
+                ${orderInvoices.length > 0 ? `
+                    <div class="divider"></div>
+                    <div class="info-label" style="margin-bottom: 0.5rem;">Invoices</div>
+                    <div class="invoices-list">
+                        ${orderInvoices.map(inv => `
+                            <div class="invoice-item" onclick="downloadInvoice('${escapeHtml(inv.invoiceNumber)}')">
+                                <div class="invoice-info">
+                                    <div class="invoice-number">${escapeHtml(inv.invoiceNumber)}</div>
+                                    <div class="invoice-meta">${escapeHtml(inv.firm?.name || 'Unknown Firm')} • ${new Date(inv.generatedAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}</div>
+                                </div>
+                                <div class="invoice-download">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                        <polyline points="7 10 12 15 17 10"/>
+                                        <line x1="12" y1="15" x2="12" y2="3"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
             `;
 
             bodyEl.innerHTML = bodyHtml;
@@ -1543,6 +1626,36 @@
             const val = Math.max(0, parseInt(input.value) || 0);
             input.value = val;
             editedProducts[index].quantity = val;
+        }
+
+        window.downloadInvoice = async function(invoiceNumber) {
+            try {
+                showToast('Downloading invoice...', 'info');
+
+                const res = await fetch(`/api/invoices/my/${invoiceNumber}/download`, {
+                    credentials: 'include'
+                });
+
+                if (!res.ok) {
+                    const error = await res.json();
+                    throw new Error(error.message || 'Failed to download invoice');
+                }
+
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${invoiceNumber}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+
+                showToast('Invoice downloaded!', 'success');
+            } catch (e) {
+                console.error('Download invoice error:', e);
+                showToast(e.message || 'Failed to download invoice', 'error');
+            }
         }
 
         window.saveOrderEdit = async function() {

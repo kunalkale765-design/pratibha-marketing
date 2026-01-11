@@ -10,6 +10,185 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+#### 2026-01-11 - Invoice System with Multi-Firm Support
+
+**Complete invoice generation system with PDF export and ledger reports.**
+
+**Files Created:**
+| File | Purpose |
+|------|---------|
+| `backend/config/companies.js` | Multi-firm configuration (Pratibha Marketing, Vikas Frozen Foods) |
+| `backend/services/invoiceService.js` | PDF generation, order splitting, invoice numbering |
+| `backend/routes/invoices.js` | Invoice API endpoints |
+| `backend/routes/reports.js` | Ledger report endpoints with Excel export |
+| `backend/models/Invoice.js` | Invoice persistence model |
+| `backend/storage/invoices/` | PDF storage directory |
+
+**Files Modified:**
+| File | Change |
+|------|--------|
+| `backend/server.js` | Mounted invoice and report routes |
+| `frontend/orders.html` | Invoice modal with firm selection |
+| `frontend/index.html` | Reports section with ledger download |
+| `frontend/customer-order-form.html` | Invoice download for customers |
+
+**Features:**
+- Multi-firm invoice generation (auto-splits by product category)
+- Unique invoice numbers (INV{YYMM}{0001} format)
+- PDF generation with pdfkit
+- Invoice persistence (MongoDB + filesystem)
+- Customer invoice access (after staff generates)
+- Ledger reports with Excel export (xlsx)
+- Filter by customer and date range
+
+**API Endpoints Added:**
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/invoices/firms` | List available firms |
+| GET | `/api/invoices/:orderId/split` | Auto-split order by firm |
+| POST | `/api/invoices/:orderId/pdf` | Generate invoice PDF |
+| GET | `/api/invoices` | List all invoices |
+| GET | `/api/invoices/:invoiceNumber/download` | Download invoice PDF |
+| GET | `/api/invoices/order/:orderId` | Get invoices for order |
+| GET | `/api/invoices/my-order/:orderId` | Customer: get own invoices |
+| GET | `/api/invoices/my/:invoiceNumber/download` | Customer: download own invoice |
+| GET | `/api/reports/ledger` | Download ledger Excel |
+| GET | `/api/reports/ledger/preview` | Preview ledger data |
+
+---
+
+#### 2026-01-11 - Security and Reliability Fixes
+
+**Critical security and reliability improvements to invoice system.**
+
+**Files Modified:**
+| File | Change |
+|------|--------|
+| `backend/routes/invoices.js` | Transaction handling, path traversal protection |
+| `backend/services/invoiceService.js` | Strict validation for dates/amounts |
+| `backend/routes/reports.js` | Memory exhaustion protection, customer validation |
+| `backend/models/Invoice.js` | Made pdfPath optional for transaction safety |
+
+**Fixes:**
+1. **Transaction Handling** - DB record created first, PDF generated, then updated (with rollback on failure)
+2. **Path Traversal Protection** - Sanitized PDF paths prevent directory traversal attacks
+3. **Strict Validation** - formatDate/formatCurrency now throw errors instead of silent fallbacks
+4. **Memory Protection** - Ledger export limited to 10,000 invoices max
+5. **Customer Validation** - Returns 404 instead of all invoices when customer not found
+
+---
+
+#### 2026-01-11 - Comprehensive Automated Test Suite
+
+**Files Created:**
+| File | Purpose | Tests |
+|------|---------|-------|
+| `backend/tests/pricing.test.js` | Pricing system (market, markup, contract) | 21 |
+| `backend/tests/credit.test.js` | Credit adjustments across order lifecycle | 15 |
+| `backend/tests/invoices.test.js` | Invoice endpoints and PDF generation | 12 |
+| `backend/tests/customerIsolation.test.js` | Cross-customer access prevention | 15 |
+
+**Files Modified:**
+| File | Change |
+|------|--------|
+| `backend/tests/setup.js` | Added new test helpers (createContractCustomer, createMarkupCustomer, createCategorizedProduct, getCustomerCredit, createMagicLinkJWT) |
+| `backend/tests/orders.test.js` | Added 20+ tests for status state machine and idempotency |
+| `backend/tests/edgeCases.test.js` | Added 10+ tests for quantity/rate validation by unit type |
+
+**Test Coverage Added:**
+
+| Category | Tests | Coverage |
+|----------|-------|----------|
+| Pricing System | 21 | Market rate, markup calculation, contract pricing, immutability |
+| Credit System | 15 | Order create/update/cancel, payment recording, edge cases |
+| Invoice System | 12 | Firms endpoint, order split by category, PDF generation |
+| Customer Isolation | 15 | Order access, creation, magic link isolation, staff access |
+| Status State Machine | 20 | Valid/invalid transitions, terminal states, timestamps |
+| Validation | 10 | Piece unit integers, rate limits, quantity bounds |
+
+**Total Tests:** 450 passing (up from ~200)
+
+**Run Tests:**
+```bash
+npm test              # Run all tests
+npm run test:coverage # With coverage report
+```
+
+---
+
+### Fixed
+
+#### 2026-01-11 - Print Invoice Button Bug
+
+**Issue:** Clicking "Print Invoice" button in order modal showed "Invalid order ID" error.
+
+**Root Cause:** `printFromModal()` called `closeModal()` first which set `currentOrderId = null`, then tried to use the now-null ID.
+
+**Files Modified:**
+| File | Change |
+|------|--------|
+| `frontend/orders.html` | Save order ID before closeModal clears it |
+| `frontend/service-worker.js` | Bumped cache to v21 |
+
+---
+
+#### 2026-01-11 - Invoice Modal "Invalid order ID" Error
+
+**Files Modified:**
+| File | Change |
+|------|--------|
+| `frontend/orders.html` | Added order ID validation before API call, filter for invalid IDs |
+
+**Issue:** Invoice modal showed "Invalid order ID" error when clicking Print on order cards.
+
+**Root Cause:** Order ID validation was happening server-side after modal opened, leading to confusing error display.
+
+**Fix:**
+1. Added client-side MongoDB ObjectId validation in `printOrder()` before making API call
+2. Added filter in `renderOrders()` to skip orders with invalid IDs
+3. Added debug logging in `loadOrders()` to identify orders with invalid IDs
+4. Shows user-friendly toast message if ID is invalid instead of opening broken modal
+
+---
+
+### Added
+
+#### 2026-01-11 - Invoice System (Multi-Firm Support)
+
+**Files Created:**
+| File | Purpose |
+|------|---------|
+| `backend/config/companies.js` | Multi-firm configuration with category mappings |
+| `backend/services/invoiceService.js` | Invoice generation service (PDF, splitting) |
+| `backend/routes/invoices.js` | Invoice API endpoints |
+
+**Files Modified:**
+| File | Change |
+|------|--------|
+| `backend/server.js` | Mounted `/api/invoices` routes |
+| `frontend/orders.html` | Added invoice modal with firm selection and PDF download |
+| `frontend/service-worker.js` | Bumped cache to v14 |
+| `package.json` | Added `pdfkit` dependency for PDF generation |
+| `CLAUDE.md` | Added invoice endpoints and multi-firm documentation |
+| `FEATURES.md` | Added Invoice System section (#9) |
+
+**Features:**
+- Multi-firm invoicing: Pratibha Marketing (default) and Vikas Frozen Foods
+- Auto-split order items by product category → firm mapping
+- Staff can override item assignments before generating
+- PDF generation using pdfkit library
+- Invoice number mirrors order number (ORD → INV)
+
+**API Endpoints:**
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/invoices/firms` | GET | List available firms |
+| `/api/invoices/:orderId/split` | GET | Auto-split items by firm |
+| `/api/invoices/:orderId/pdf` | POST | Generate PDF download |
+| `/api/invoices/:orderId/data` | POST | Get invoice JSON |
+
+---
+
 #### 2026-01-11 - Animation System & Orders Page Redesign
 
 **Files Created:**

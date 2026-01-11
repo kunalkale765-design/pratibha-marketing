@@ -197,6 +197,25 @@ frontend/
 |--------|----------|--------|-------------|
 | GET | /quantity-summary | Admin/Staff | Aggregate order quantities |
 
+### Invoices `/api/invoices`
+| Method | Endpoint | Access | Description |
+|--------|----------|--------|-------------|
+| GET | /firms | Admin/Staff | Get list of available firms |
+| GET | /:orderId/split | Admin/Staff | Get order items split by firm |
+| POST | /:orderId/pdf | Admin/Staff | Generate and save PDF |
+| POST | /:orderId/data | Admin/Staff | Get invoice data as JSON |
+| GET | / | Admin/Staff | List all invoices |
+| GET | /:invoiceNumber/download | Admin/Staff | Download saved PDF |
+| GET | /order/:orderId | Admin/Staff | Get invoices for order |
+| GET | /my-order/:orderId | Customer | Get own order's invoices |
+| GET | /my/:invoiceNumber/download | Customer | Download own invoice |
+
+### Reports `/api/reports`
+| Method | Endpoint | Access | Description |
+|--------|----------|--------|-------------|
+| GET | /ledger | Admin/Staff | Download ledger Excel (query: customerId, fromDate, toDate) |
+| GET | /ledger/preview | Admin/Staff | Preview ledger data as JSON |
+
 ### Health `/api/health`
 | Method | Endpoint | Access | Description |
 |--------|----------|--------|-------------|
@@ -232,6 +251,32 @@ unpaid → partial → paid
 
 ### Customer-Facing UI Rules
 - **Never show prices to customers** - Customer pages (order form, order history) must not display product prices, rates, or order totals. Only staff/admin can see pricing information.
+
+### Multi-Firm Invoicing
+Two firms are configured for invoice generation based on product categories:
+
+| Firm | Categories | Notes |
+|------|------------|-------|
+| Pratibha Marketing | All except Fruits/Frozen | Default firm |
+| Vikas Frozen Foods | Fruits, Frozen | For specific product categories |
+
+**Invoice Generation Flow:**
+1. Staff clicks Print on order card (swipe action)
+2. System auto-splits items by category → firm mapping
+3. Staff selects firm and items
+4. Staff generates invoice - saved to DB + filesystem
+5. PDF downloads with firm header and selected items
+
+**Invoice Persistence:**
+- Invoice model stores metadata (MongoDB)
+- PDFs stored in `backend/storage/invoices/`
+- Transaction-safe: DB record first → PDF → update path
+
+**Invoice Number Format:** `INV{YYMM}{0001}` (unique sequential)
+
+**Customer Access:** Customers can download invoices after staff generates them
+
+**Configuration:** `backend/config/companies.js` - Firm details and category mappings
 
 ## Key Patterns
 
@@ -278,21 +323,69 @@ unpaid → partial → paid
 - Inputs: Cream background, olive focus ring
 - Tables: Cream header row, hover highlight
 
-## Testing Checklist
+## Automated Testing
 
-### Auth
+### Running Tests
+
+```bash
+npm test              # Run all 450 tests
+npm run test:coverage # With coverage report
+npm test -- pricing   # Run specific test file
+```
+
+### Test Files
+
+| File | Tests | Coverage |
+|------|-------|----------|
+| `auth.test.js` | 14 | Login, register, logout, /me |
+| `authMiddleware.test.js` | 18 | JWT verification, role authorization |
+| `customers.test.js` | 18 | CRUD, pricing types, payments, magic links |
+| `orders.test.js` | 49 | CRUD, status machine, payments, idempotency |
+| `products.test.js` | 22 | CRUD, soft delete, unit validation |
+| `marketRates.test.js` | 20 | CRUD, trends, history |
+| `pricing.test.js` | 21 | Market/markup/contract calculations, immutability |
+| `credit.test.js` | 15 | Order create/update/cancel credit adjustments |
+| `invoices.test.js` | 12 | Firms, split by category, PDF generation |
+| `customerIsolation.test.js` | 15 | Cross-customer access prevention |
+| `security.test.js` | 27 | RBAC, privilege escalation, token security |
+| `integration.test.js` | 10 | End-to-end order lifecycle |
+| `edgeCases.test.js` | 49 | Pagination, validation, concurrent ops |
+| `magicLink.test.js` | 18 | Token generation, auth, revocation |
+| `csrf.test.js` | 18 | CSRF token validation |
+| `scheduler.test.js` | 13 | Market rate scheduler |
+| `supplier.test.js` | 8 | Quantity summary aggregation |
+
+### Test Helpers (`backend/tests/setup.js`)
+
+```javascript
+testUtils.createAdminUser()              // Create admin with token
+testUtils.createStaffUser()              // Create staff with token
+testUtils.createCustomerUser()           // Create customer user with linked customer
+testUtils.createTestCustomer(overrides)  // Create customer record
+testUtils.createContractCustomer(prices) // Customer with contract prices
+testUtils.createMarkupCustomer(percent)  // Customer with markup pricing
+testUtils.createTestProduct(overrides)   // Create product
+testUtils.createCategorizedProduct(cat)  // Product with category
+testUtils.createMarketRate(product, rate)// Set market rate
+testUtils.getCustomerCredit(customerId)  // Get current credit
+testUtils.createMagicLinkJWT(customerId) // Create magic link JWT
+```
+
+### Manual Testing Checklist
+
+#### Auth
 - [ ] Login with valid credentials → redirects based on role
 - [ ] Login with invalid credentials → shows error
 - [ ] Register new customer → creates User + Customer records
 - [ ] Logout → clears cookie, redirects to login
 
-### Orders
+#### Orders
 - [ ] Create order as customer → uses customer's pricing type
 - [ ] Create order as staff → can select customer
 - [ ] Update order status → updates timestamps
 - [ ] Update payment → recalculates paymentStatus
 
-### Pricing
+#### Pricing
 - [ ] Market pricing → uses current market rate
 - [ ] Markup pricing → applies percentage to market rate
 - [ ] Contract pricing → uses fixed price from customer record

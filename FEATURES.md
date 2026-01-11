@@ -791,6 +791,146 @@ transition: all 0.3s ease; /* Cards */
 
 ---
 
+## 9. Invoice System
+
+**Access:** Admin, Staff (generate), Customer (view/download own)
+
+**Purpose:** Generate PDF invoices from orders with multi-firm support, persistence, and customer access
+
+### Multi-Firm Configuration
+
+Two firms are supported for invoicing:
+
+| Firm | Address | Categories |
+|------|---------|------------|
+| **Pratibha Marketing** | Block No. 20, Fule Market, Nagpur 440018 | Default (all except Fruits/Frozen) |
+| **Vikas Frozen Foods** | Block No. 123, Fule Market, Nagpur 440018 | Fruits, Frozen |
+
+Contact: 9422104097, 7057773445, 7897896359
+
+### Invoice Generation Flow
+
+1. Staff clicks **Print** button (swipe action on order card)
+2. Invoice modal opens showing items **auto-split by firm**
+3. Staff selects firm and items to include
+4. Staff clicks **Generate Invoice**
+5. Invoice saved to database + PDF stored on filesystem
+6. PDF downloads automatically
+
+### Invoice Content
+
+| Section | Details |
+|---------|---------|
+| Header | Firm name, address, phone, email |
+| Invoice Info | Unique invoice number, date, order reference |
+| Customer | Name, address, phone |
+| Products Table | #, Product, Qty, Unit, Rate, Amount |
+| Footer | Total amount, thank you message |
+
+### Invoice Number Format
+- Unique sequential: `INV{YYMM}{0001}` (e.g., INV26010001)
+- Uses MongoDB counter for atomicity
+- Never duplicates across firms
+
+### Invoice Persistence
+
+| Storage | Purpose |
+|---------|---------|
+| MongoDB (Invoice model) | Metadata, customer info, items, totals |
+| Filesystem (`backend/storage/invoices/`) | PDF files |
+
+**Transaction Safety:** DB record created first → PDF generated → DB updated with path. If PDF fails, DB record is rolled back.
+
+### Customer Invoice Access
+
+Customers can view and download invoices for their orders (after staff generates them):
+
+1. Customer opens **My Orders** tab
+2. Clicks on an order to view details
+3. If invoice exists, **Download Invoice** button appears
+4. Click to download PDF
+
+### API Endpoints
+
+| Endpoint | Method | Access | Description |
+|----------|--------|--------|-------------|
+| `/api/invoices/firms` | GET | Staff/Admin | List available firms |
+| `/api/invoices/:orderId/split` | GET | Staff/Admin | Get auto-split by firm |
+| `/api/invoices/:orderId/pdf` | POST | Staff/Admin | Generate and save PDF |
+| `/api/invoices/:orderId/data` | POST | Staff/Admin | Get invoice JSON preview |
+| `/api/invoices` | GET | Staff/Admin | List all invoices |
+| `/api/invoices/:invoiceNumber/download` | GET | Staff/Admin | Download saved PDF |
+| `/api/invoices/order/:orderId` | GET | Staff/Admin | Get invoices for order |
+| `/api/invoices/my-order/:orderId` | GET | Customer | Get own order's invoices |
+| `/api/invoices/my/:invoiceNumber/download` | GET | Customer | Download own invoice |
+
+### Security
+
+- **Path Traversal Protection:** PDF paths sanitized before file access
+- **Customer Isolation:** Customers can only access their own orders' invoices
+- **Cancelled Order Blocking:** Cannot generate invoices for cancelled orders
+
+### Configuration
+
+Firm details in `backend/config/companies.js`:
+```javascript
+firms: [
+  { id: 'pratibha', name: 'Pratibha Marketing', isDefault: true, ... },
+  { id: 'vikas', name: 'Vikas Frozen Foods', categories: ['Fruits', 'Frozen'], ... }
+]
+```
+
+---
+
+## 10. Ledger Reports
+
+**Access:** Admin, Staff
+
+**Purpose:** Export invoice data as Excel for accounting/auditing
+
+### Features
+
+- Download customer ledger as Excel (.xlsx)
+- Filter by customer and date range
+- Preview data before download
+- Auto-calculates totals
+
+### Excel Columns
+
+| Column | Description |
+|--------|-------------|
+| Date | Invoice generation date |
+| Invoice No | Unique invoice number |
+| Customer | Customer name |
+| Firm | Billing firm name |
+| Amount (Rs.) | Invoice total |
+
+### Dashboard Integration
+
+Access via **Dashboard → Reports → Customer Ledger**
+
+Modal with filters:
+- Customer dropdown (optional)
+- From Date / To Date (optional)
+- Preview button (shows data)
+- Download button (generates Excel)
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/reports/ledger` | GET | Download Excel file |
+| `/api/reports/ledger/preview` | GET | Preview data as JSON |
+
+Query params: `customerId`, `fromDate`, `toDate`, `limit`
+
+### Safety Limits
+
+- Maximum 10,000 invoices per export (prevents memory exhaustion)
+- Returns error if exceeded: "Too many invoices to export. Please narrow your date range."
+
+---
+
 ## Future Features (Planned)
 
 ### 1. Email/SMS Notification System
