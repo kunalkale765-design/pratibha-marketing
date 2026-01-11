@@ -11,7 +11,7 @@ const productSchema = new mongoose.Schema({
   unit: {
     type: String,
     required: [true, 'Unit is required'],
-    enum: ['quintal', 'bag', 'kg', 'piece', 'ton'],
+    enum: ['quintal', 'bag', 'kg', 'piece', 'ton', 'bunch'],
     default: 'kg'
   },
   category: {

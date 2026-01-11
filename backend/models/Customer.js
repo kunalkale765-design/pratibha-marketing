@@ -10,8 +10,6 @@ const customerSchema = new mongoose.Schema({
   phone: {
     type: String,
     trim: true,
-    unique: true,
-    sparse: true, // Allows multiple null/empty values
     validate: {
       validator: function(v) {
         // Allow empty or valid 10-digit phone
@@ -140,6 +138,5 @@ const customerSchema = new mongoose.Schema({
 
 // Index for faster searches
 customerSchema.index({ name: 1 });
-// Note: phone index is created by unique: true, sparse: true on field definition
 
 module.exports = mongoose.model('Customer', customerSchema);

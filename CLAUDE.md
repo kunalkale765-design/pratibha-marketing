@@ -112,7 +112,7 @@ frontend/
 | Field | Type | Notes |
 |-------|------|-------|
 | name | String | Unique |
-| unit | Enum | `quintal`, `bag`, `kg`, `piece`, `ton` |
+| unit | Enum | `quintal`, `bag`, `kg`, `piece`, `ton`, `bunch` |
 | category | String | Free-form category (user-manageable) |
 | isActive | Boolean | Soft delete flag |
 
