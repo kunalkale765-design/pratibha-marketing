@@ -158,6 +158,22 @@
             color: var(--text-muted);
         }
 
+        /* Category Headers */
+        .category-header {
+            grid-column: 1 / -1;
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--dusty-olive);
+            padding: 0.75rem 0.5rem 0.5rem;
+            margin-top: 0.5rem;
+            border-bottom: 2px solid var(--cream-dark);
+        }
+
+        .category-header:first-child {
+            margin-top: 0;
+        }
+
         /* Form extras */
         .form-row {
             display: grid;
@@ -488,7 +504,7 @@
 
                 updateCategoryPills();
                 updateCategorySelect();
-                displayProducts(allProducts);
+                searchProducts();
             } catch (e) {
                 console.error('Failed to load products:', e);
                 showToast('Failed to load products', 'error');
@@ -529,21 +545,46 @@
                 return;
             }
 
-            container.innerHTML = products.map((p, idx) => `
-                <div class="product-card card-animated card-fade-in" style="animation-delay: ${idx * 0.05}s">
-                    <div class="product-info">
-                        <div class="product-name">${escapeHtml(p.name)}</div>
-                        <div class="product-meta">
-                            <span>${escapeHtml(p.category || 'Uncategorized')}</span>
-                            <span>${escapeHtml(p.unit)}</span>
+            // Group products by category
+            const grouped = {};
+            products.forEach(p => {
+                const cat = p.category || 'Uncategorized';
+                if (!grouped[cat]) grouped[cat] = [];
+                grouped[cat].push(p);
+            });
+
+            // Sort categories (Uncategorized at end)
+            const sortedCategories = Object.keys(grouped).sort((a, b) => {
+                if (a === 'Uncategorized') return 1;
+                if (b === 'Uncategorized') return -1;
+                return a.localeCompare(b);
+            });
+
+            let html = '';
+            let idx = 0;
+
+            sortedCategories.forEach(cat => {
+                html += `<div class="category-header">${escapeHtml(cat)}</div>`;
+                grouped[cat].forEach(p => {
+                    html += `
+                        <div class="product-card card-animated card-fade-in" style="animation-delay: ${idx * 0.05}s">
+                            <div class="product-info">
+                                <div class="product-name">${escapeHtml(p.name)}</div>
+                                <div class="product-meta">
+                                    <span>${escapeHtml(p.unit)}</span>
+                                </div>
+                            </div>
+                            <div class="product-actions">
+                                <button onclick="editProductById('${escapeHtml(p._id)}')" class="btn-icon">✎</button>
+                                <button onclick="deleteProduct('${escapeHtml(p._id)}')" class="btn-icon danger">✕</button>
+                            </div>
                         </div>
-                    </div>
-                    <div class="product-actions">
-                        <button onclick="editProductById('${escapeHtml(p._id)}')" class="btn-icon">✎</button>
-                        <button onclick="deleteProduct('${escapeHtml(p._id)}')" class="btn-icon danger">✕</button>
-                    </div>
-                </div>
-            `).join('');
+                    `;
+                    idx++;
+                });
+            });
+
+            container.innerHTML = html;
         }
 
         function searchProducts() {
@@ -583,7 +624,10 @@
 
         document.getElementById('productForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            await saveProduct();
+        });
 
+        async function saveProduct(_isRetry = false) {
             const id = document.getElementById('productId').value;
             const category = document.getElementById('productCategory').value;
             const data = {
@@ -596,12 +640,27 @@
                 const url = id ? `/api/products/${id}` : '/api/products';
                 const method = id ? 'PUT' : 'POST';
 
+                const headers = { 'Content-Type': 'application/json' };
+                const csrfToken = await Auth.ensureCsrfToken();
+                if (csrfToken) {
+                    headers['X-CSRF-Token'] = csrfToken;
+                }
+
                 const res = await fetch(url, {
                     method,
-                    headers: { 'Content-Type': 'application/json' },
+                    headers,
                     credentials: 'include',
                     body: JSON.stringify(data)
                 });
+
+                // Handle CSRF error with retry
+                if (res.status === 403 && !_isRetry) {
+                    const err = await res.json();
+                    if (err.message?.toLowerCase().includes('csrf')) {
+                        await Auth.refreshCsrfToken();
+                        return saveProduct(true);
+                    }
+                }
 
                 if (res.ok) {
                     showToast(id ? 'Product updated' : 'Product added', 'success');
@@ -619,7 +678,7 @@
                     showToast('Failed to save product. Please try again.', 'error');
                 }
             }
-        });
+        }
 
         async function deleteProduct(id, _isRetry = false) {
             if (!_isRetry && !confirm('Delete this product?')) return;
