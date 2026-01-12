@@ -928,7 +928,21 @@
             }).join('');
         }
 
+        // Sync current DOM input values to state before filtering/saving
+        function syncPricesToState() {
+            document.querySelectorAll('.contract-price-input').forEach(input => {
+                const productId = input.dataset.productId;
+                const price = parseFloat(input.value);
+                if (!isNaN(price) && price > 0) {
+                    currentContractPrices[productId] = price;
+                } else {
+                    delete currentContractPrices[productId];
+                }
+            });
+        }
+
         function filterContractProducts() {
+            syncPricesToState(); // Preserve prices before re-rendering
             const q = document.getElementById('productSearch').value.toLowerCase();
             const filtered = allProducts.filter(p => {
                 const matchesSearch = p.name.toLowerCase().includes(q);
@@ -939,6 +953,7 @@
         }
 
         function filterByContractCategory(category) {
+            syncPricesToState(); // Preserve prices before switching category
             selectedContractCategory = category;
 
             // Update active pill
@@ -961,16 +976,11 @@
             btn.classList.add('btn-loading');
             btn.disabled = true;
 
-            const inputs = document.querySelectorAll('.contract-price-input');
-            const contractPrices = {};
+            // Sync current visible inputs to state before saving
+            syncPricesToState();
 
-            inputs.forEach(input => {
-                const productId = input.dataset.productId;
-                const price = parseFloat(input.value);
-                if (!isNaN(price) && price > 0) {
-                    contractPrices[productId] = price;
-                }
-            });
+            // Use the complete state (includes prices from all categories)
+            const contractPrices = { ...currentContractPrices };
 
             try {
                 const headers = { 'Content-Type': 'application/json' };
