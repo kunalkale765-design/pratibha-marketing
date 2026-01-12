@@ -460,6 +460,7 @@ router.post('/', protect, validateOrder, async (req, res, next) => {
           for (const cp of newContractPrices) {
             freshCustomer.contractPrices.set(cp.productId, cp.rate);
           }
+          freshCustomer.markModified('contractPrices'); // Required for Mongoose to detect Map changes
           await freshCustomer.save();
         } else {
           // Customer's pricing type changed - don't save contract prices
@@ -631,6 +632,7 @@ router.put('/:id',
 
       order.products = updatedProducts;
       order.totalAmount = totalAmount;
+      order.markModified('products'); // Ensure array replacement is detected
     }
 
     // Update notes if provided
@@ -745,6 +747,7 @@ router.put('/:id/customer-edit',
 
     order.products = updatedProducts;
     order.totalAmount = totalAmount;
+    order.markModified('products'); // Ensure array replacement is detected
 
     await order.save();
 

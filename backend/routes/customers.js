@@ -176,6 +176,7 @@ router.put('/:id',
     // Handle contractPrices Map update properly
     if (req.body.contractPrices) {
       customer.contractPrices = new Map(Object.entries(req.body.contractPrices));
+      customer.markModified('contractPrices'); // Required for Mongoose to detect Map replacement
     }
 
     // Add audit field
