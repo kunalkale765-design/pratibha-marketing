@@ -6,7 +6,7 @@ const Product = require('../models/Product');
 let Sentry;
 try {
   Sentry = require('@sentry/node');
-} catch (e) {
+} catch {
   // Sentry not installed, monitoring disabled
 }
 

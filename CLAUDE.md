@@ -103,8 +103,6 @@ frontend/
 | pricingType | Enum | `market`, `markup`, `contract` |
 | markupPercentage | Number | 0-200% (for markup pricing) |
 | contractPrices | Map | ProductId → Price (for contract pricing) |
-| currentCredit | Number | Outstanding balance |
-| paymentHistory | Array | {amount, date, paymentMethod, notes} |
 | magicLinkToken | String | Unique token for passwordless auth (sparse) |
 | magicLinkCreatedAt | Date | When magic link was generated |
 
@@ -339,12 +337,11 @@ npm test -- pricing   # Run specific test file
 |------|-------|----------|
 | `auth.test.js` | 14 | Login, register, logout, /me |
 | `authMiddleware.test.js` | 18 | JWT verification, role authorization |
-| `customers.test.js` | 18 | CRUD, pricing types, payments, magic links |
+| `customers.test.js` | 15 | CRUD, pricing types, magic links |
 | `orders.test.js` | 49 | CRUD, status machine, payments, idempotency |
 | `products.test.js` | 22 | CRUD, soft delete, unit validation |
 | `marketRates.test.js` | 20 | CRUD, trends, history |
 | `pricing.test.js` | 21 | Market/markup/contract calculations, immutability |
-| `credit.test.js` | 15 | Order create/update/cancel credit adjustments |
 | `invoices.test.js` | 12 | Firms, split by category, PDF generation |
 | `customerIsolation.test.js` | 15 | Cross-customer access prevention |
 | `security.test.js` | 27 | RBAC, privilege escalation, token security |
@@ -367,7 +364,6 @@ testUtils.createMarkupCustomer(percent)  // Customer with markup pricing
 testUtils.createTestProduct(overrides)   // Create product
 testUtils.createCategorizedProduct(cat)  // Product with category
 testUtils.createMarketRate(product, rate)// Set market rate
-testUtils.getCustomerCredit(customerId)  // Get current credit
 testUtils.createMagicLinkJWT(customerId) // Create magic link JWT
 ```
 

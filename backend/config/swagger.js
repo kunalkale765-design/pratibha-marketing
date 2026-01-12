@@ -55,7 +55,6 @@ const options = {
             pricingType: { type: 'string', enum: ['market', 'markup', 'contract'], example: 'market' },
             markupPercentage: { type: 'number', example: 10 },
             contractPrices: { type: 'object', additionalProperties: { type: 'number' } },
-            currentCredit: { type: 'number', example: 5000 },
             isActive: { type: 'boolean', example: true },
             createdAt: { type: 'string', format: 'date-time' }
           }
@@ -65,7 +64,7 @@ const options = {
           properties: {
             _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
             name: { type: 'string', example: 'Wheat' },
-            unit: { type: 'string', enum: ['quintal', 'bag', 'kg', 'piece', 'ton'], example: 'quintal' },
+            unit: { type: 'string', enum: ['quintal', 'bag', 'kg', 'piece', 'ton', 'bunch'], example: 'quintal' },
             category: { type: 'string', example: 'Grains' },
             isActive: { type: 'boolean', example: true },
             createdAt: { type: 'string', format: 'date-time' }
@@ -407,36 +406,6 @@ swaggerSpec.paths = {
       }
     }
   },
-  '/customers/{id}/payment': {
-    post: {
-      tags: ['Customers'],
-      summary: 'Record a payment for customer',
-      security: [{ cookieAuth: [] }, { bearerAuth: [] }],
-      parameters: [
-        { name: 'id', in: 'path', required: true, schema: { type: 'string' }, description: 'Customer ID' }
-      ],
-      requestBody: {
-        required: true,
-        content: {
-          'application/json': {
-            schema: {
-              type: 'object',
-              required: ['amount', 'paymentMethod'],
-              properties: {
-                amount: { type: 'number', minimum: 0.01, example: 5000 },
-                paymentMethod: { type: 'string', enum: ['cash', 'upi', 'bank_transfer', 'cheque'], example: 'upi' },
-                notes: { type: 'string', example: 'Partial payment for order #123' }
-              }
-            }
-          }
-        }
-      },
-      responses: {
-        200: { description: 'Payment recorded' },
-        400: { description: 'Invalid payment data' }
-      }
-    }
-  },
   '/customers/{id}/magic-link': {
     post: {
       tags: ['Customers'],
@@ -705,7 +674,7 @@ swaggerSpec.paths = {
               required: ['name', 'unit'],
               properties: {
                 name: { type: 'string', example: 'Wheat' },
-                unit: { type: 'string', enum: ['quintal', 'bag', 'kg', 'piece', 'ton'], example: 'quintal' },
+                unit: { type: 'string', enum: ['quintal', 'bag', 'kg', 'piece', 'ton', 'bunch'], example: 'quintal' },
                 category: { type: 'string', example: 'Grains' }
               }
             }

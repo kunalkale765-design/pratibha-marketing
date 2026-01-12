@@ -76,10 +76,10 @@ export function showSuccess(message, duration = 3000) {
 }
 
 /**
- * Show an error toast (shortcut)
+ * Show an info toast for issues (soft notification instead of error)
  */
 export function showError(message, duration = 4000) {
-  showToast(message, 'error', duration);
+  showToast(message, 'info', duration);
 }
 
 /**
@@ -288,8 +288,8 @@ export async function copyToClipboard(text) {
     await navigator.clipboard.writeText(text);
     showSuccess('Copied to clipboard!');
     return true;
-  } catch (err) {
-    showError('Failed to copy');
+  } catch {
+    showToast('Could not copy to clipboard', 'info');
     return false;
   }
 }

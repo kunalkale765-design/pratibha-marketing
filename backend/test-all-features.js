@@ -58,7 +58,7 @@ async function test() {
 
     // Check format
     if (/^INV\d{6}\d{4}$/.test(invNum1)) {
-      pass(`Invoice number format correct: INV{YYMM}{0001}`);
+      pass('Invoice number format correct: INV{YYMM}{0001}');
     } else {
       fail(`Invalid format: ${invNum1}`);
     }

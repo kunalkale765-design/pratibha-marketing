@@ -62,13 +62,16 @@ const API = {
     },
 
     /**
-     * Make an API request
+     * Make an API request with automatic retry for network failures
      * @param {string} endpoint - API endpoint (e.g., '/api/products')
      * @param {Object} options - Fetch options
      * @param {boolean} _isRetry - Internal flag to prevent infinite retry loops
+     * @param {number} _retryCount - Internal counter for network retries
      * @returns {Promise<{success: boolean, data?: any, error?: string, status?: number}>}
      */
-    async request(endpoint, options = {}, _isRetry = false) {
+    async request(endpoint, options = {}, _isRetry = false, _retryCount = 0) {
+        const MAX_RETRIES = 2;
+        const RETRY_DELAY = 1000; // 1 second
         // Default options
         const defaultOptions = {
             credentials: 'include',
@@ -157,6 +160,28 @@ const API = {
                 return { success: false, error: 'Too many requests. Please try again later.', status: 429 };
             }
 
+            if (response.status === 408) {
+                return { success: false, error: 'Request timed out. Please try again.', status: 408 };
+            }
+
+            if (response.status === 500) {
+                return { success: false, error: data?.message || 'Server error. Please try again later.', status: 500 };
+            }
+
+            if (response.status === 502 || response.status === 503 || response.status === 504) {
+                return { success: false, error: 'Service temporarily unavailable. Please try again later.', status: response.status };
+            }
+
+            if (response.status === 422) {
+                // Unprocessable entity - validation errors
+                return {
+                    success: false,
+                    error: data?.message || 'Invalid data provided. Please check your input.',
+                    errors: data?.errors,
+                    status: 422
+                };
+            }
+
             // Generic error
             const errorMessage = data?.message || data?.error || 'Something went wrong';
             return { success: false, error: errorMessage, status: response.status, data };
@@ -164,6 +189,7 @@ const API = {
         } catch (error) {
             console.error('API request failed:', error);
 
+            // Don't retry if offline
             if (!navigator.onLine) {
                 return {
                     success: false,
@@ -172,9 +198,38 @@ const API = {
                 };
             }
 
+            // Don't retry aborted requests
+            if (error.name === 'AbortError') {
+                return {
+                    success: false,
+                    error: 'Request was cancelled.',
+                    networkError: true
+                };
+            }
+
+            // Auto-retry for network errors (up to MAX_RETRIES times)
+            if (_retryCount < MAX_RETRIES) {
+                console.log(`Network error, retrying (${_retryCount + 1}/${MAX_RETRIES})...`);
+                await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * (_retryCount + 1)));
+                return this.request(endpoint, options, _isRetry, _retryCount + 1);
+            }
+
+            // All retries exhausted - return error silently for GET requests
+            // For state-changing requests, we need to inform the user
+            const isGet = !options.method || options.method.toUpperCase() === 'GET';
+            if (isGet) {
+                return {
+                    success: false,
+                    error: '',
+                    networkError: true,
+                    silent: true
+                };
+            }
+
             return {
                 success: false,
-                error: 'Network error. Please check your connection and try again.'
+                error: 'Connection issue. Please try again.',
+                networkError: true
             };
         }
     },
@@ -299,9 +354,9 @@ window.addEventListener('online', () => {
 
 window.addEventListener('offline', () => {
     console.log('Connection lost');
-    // Optionally show a notification
-    if (typeof showError === 'function') {
-        showError('No internet connection');
+    // Show a soft notification (not an error)
+    if (typeof showToast === 'function') {
+        showToast('No internet connection', 'info');
     }
 });
 

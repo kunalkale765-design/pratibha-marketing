@@ -47,28 +47,6 @@ const customerSchema = new mongoose.Schema({
     of: Number,
     default: new Map()
   },
-  creditLimit: {
-    type: Number,
-    default: 0,
-    min: [0, 'Credit limit cannot be negative']
-  },
-  currentCredit: {
-    type: Number,
-    default: 0,
-    min: [0, 'Current credit cannot be negative']
-  },
-  paymentHistory: [{
-    amount: Number,
-    date: {
-      type: Date,
-      default: Date.now
-    },
-    paymentMethod: {
-      type: String,
-      enum: ['cash', 'online', 'cheque', 'credit']
-    },
-    notes: String
-  }],
   isActive: {
     type: Boolean,
     default: true

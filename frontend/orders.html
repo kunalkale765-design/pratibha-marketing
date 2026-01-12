@@ -765,8 +765,8 @@
                     marketRates[pid] = r.rate;
                 });
             } catch (e) {
+                // Silently fail - market rates are supplementary data
                 console.error('Failed to load market rates:', e);
-                showToast('Failed to load market rates. Prices may be outdated.', 'error');
             }
         }
 
@@ -778,7 +778,7 @@
                 }
                 const data = await res.json();
                 if (!data.success) {
-                    throw new Error(data.message || 'Failed to load orders');
+                    throw new Error(data.message || 'Orders temporarily unavailable');
                 }
                 orders = data.data || [];
                 // Debug: Log any orders with missing or invalid IDs
@@ -789,8 +789,21 @@
                 renderOrders();
             } catch (e) {
                 console.error('Failed to load orders:', e);
-                showToast('Failed to load orders', 'error');
-                // Don't clear orders on error - keep showing stale data
+                // Show retry UI if no orders loaded yet
+                if (!orders || orders.length === 0) {
+                    const container = document.getElementById('ordersList');
+                    const errorMsg = !navigator.onLine ? 'No internet connection' : 'Orders not available';
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <p>${errorMsg}</p>
+                            <button onclick="loadOrders()"
+                                style="margin-top: 1rem; padding: 0.5rem 1rem; background: var(--dusty-olive); color: white; border: none; border-radius: 8px; cursor: pointer;">
+                                Try Again
+                            </button>
+                        </div>
+                    `;
+                }
+                // If we have stale data, just log the error silently
             }
         }
 
@@ -972,7 +985,7 @@
             const isValidMongoId = /^[a-f\d]{24}$/i.test(orderId);
             if (!orderId || !isValidMongoId) {
                 console.error('Invalid order ID:', orderId);
-                showToast('Invalid order ID. Please refresh the page.', 'error');
+                showToast('Order data updating. Please refresh.', 'info');
                 return;
             }
 
@@ -989,7 +1002,7 @@
                 const res = await fetch(`/api/invoices/${orderId}/split`, { credentials: 'include' });
                 if (!res.ok) {
                     const errData = await res.json().catch(() => ({}));
-                    throw new Error(errData.message || 'Failed to load invoice data');
+                    throw new Error(errData.message || 'Invoice data temporarily unavailable');
                 }
                 const data = await res.json();
                 invoiceData = data.data;
@@ -1003,7 +1016,7 @@
                 console.error('Print order error:', error);
                 document.getElementById('invoiceModalBody').innerHTML = `
                     <div class="invoice-no-items">
-                        <p>Failed to load invoice data</p>
+                        <p>Invoice data not available</p>
                         <p style="font-size: 0.75rem; margin-top: 0.5rem;">${escapeHtml(error.message)}</p>
                     </div>
                 `;
@@ -1041,7 +1054,7 @@
 
             // Auto-select first firm and all items if none selected
             if (!selectedFirmId) {
-                selectedFirmId = allFirms.length > 0 ? allFirms[0].id : (invoiceData.firms[0]?.firmId || 'pratibha');
+                selectedFirmId = allFirms.length > 0 ? allFirms[0].id : (invoiceData?.firms?.[0]?.firmId || 'pratibha');
                 selectedProductIds = new Set(allItems.map(i => i.productId));
             }
 
@@ -1051,7 +1064,7 @@
                 .reduce((sum, i) => sum + (i.amount || 0), 0);
 
             // Build firm selector
-            const firmsToShow = allFirms.length > 0 ? allFirms : invoiceData.firms.map(f => ({ id: f.firmId, name: f.firmName }));
+            const firmsToShow = allFirms.length > 0 ? allFirms : (invoiceData?.firms || []).map(f => ({ id: f.firmId, name: f.firmName }));
 
             let html = `
                 <div class="invoice-firm-selector">
@@ -1076,9 +1089,9 @@
                                 onchange="toggleInvoiceItem(null, '${escapeHtml(item.productId)}')">
                             <div class="invoice-item-details">
                                 <div class="invoice-item-name">${escapeHtml(item.productName)}</div>
-                                <div class="invoice-item-meta">${item.quantity} ${escapeHtml(item.unit)} × ₹${item.rate.toLocaleString('en-IN')}</div>
+                                <div class="invoice-item-meta">${item.quantity || 0} ${escapeHtml(item.unit || '')} × ₹${(item.rate || 0).toLocaleString('en-IN')}</div>
                             </div>
-                            <div class="invoice-item-amount">₹${item.amount.toLocaleString('en-IN')}</div>
+                            <div class="invoice-item-amount">₹${(item.amount || 0).toLocaleString('en-IN')}</div>
                         </div>
                     `).join('')}
                 </div>
@@ -1108,8 +1121,8 @@
         }
 
         async function generateInvoice() {
+            // Button should already be disabled if no items selected
             if (!invoiceData || !selectedFirmId || selectedProductIds.size === 0) {
-                showToast('Please select items to invoice', 'error');
                 return;
             }
 
@@ -1136,7 +1149,7 @@
 
                 if (!res.ok) {
                     const errData = await res.json().catch(() => ({}));
-                    throw new Error(errData.message || 'Failed to generate invoice');
+                    throw new Error(errData.message || 'Invoice generation temporarily unavailable');
                 }
 
                 // Download the PDF
@@ -1154,7 +1167,7 @@
                 closeInvoiceModal();
             } catch (error) {
                 console.error('Generate invoice error:', error);
-                showToast(error.message || 'Failed to generate invoice', 'error');
+                showToast(error.message || 'Could not generate invoice', 'info');
             } finally {
                 btn.classList.remove('btn-loading');
                 btn.disabled = false;
@@ -1169,8 +1182,8 @@
         }
 
         function printFromModal() {
+            // Silently return if no order - button shouldn't be clickable without an order
             if (!currentOrderId) {
-                showToast('No order selected', 'error');
                 return;
             }
             // Save the ID before closeModal clears it
@@ -1180,9 +1193,8 @@
         }
 
         async function deleteOrder(orderId) {
-            // Admin check
+            // Admin check - button should be hidden for non-admins anyway
             if (currentUser?.role !== 'admin') {
-                showToast('Only admins can delete orders', 'error');
                 return;
             }
 
@@ -1217,20 +1229,39 @@
                     }
                     showToast('Order cancelled', 'success');
                 } else {
-                    const errData = await res.json().catch(() => ({ message: 'Failed to cancel order' }));
-                    showToast(errData.message || 'Failed to cancel order', 'error');
+                    const errData = await res.json().catch(() => ({ message: 'Could not cancel. Try again.' }));
+                    showToast(errData.message || 'Could not cancel', 'info');
                 }
             } catch (e) {
                 console.error('Delete order error:', e);
-                showToast('Failed to delete order', 'error');
+                showToast('Could not delete order', 'info');
             }
         }
 
         async function viewOrder(id) {
             try {
                 const res = await fetch(`/api/orders/${id}`, { credentials: 'include' });
-                const data = await res.json();
+
+                // Handle non-JSON responses
+                let data;
+                try {
+                    data = await res.json();
+                } catch (parseError) {
+                    console.error('Failed to parse order response:', parseError);
+                    showToast('Server issue. Please refresh.', 'info');
+                    return;
+                }
+
+                if (!res.ok) {
+                    showToast(data?.message || 'Could not load order', 'info');
+                    return;
+                }
+
                 const order = data.data;
+                if (!order || !order.products) {
+                    showToast('Order data updating. Refresh page.', 'info');
+                    return;
+                }
 
                 currentOrderId = id;
                 currentOrder = order;
@@ -1326,7 +1357,7 @@
                 document.getElementById('modalBody').innerHTML = body;
                 document.getElementById('orderModal').classList.add('show');
             } catch (e) {
-                showToast('Failed to load order', 'error');
+                showToast('Could not load order', 'info');
             }
         }
 
@@ -1354,7 +1385,8 @@
 
             // Update amount display (round to 2 decimal places for consistency)
             const amount = Math.round(current * qty * 100) / 100;
-            document.getElementById(`amount-${idx}`).textContent = `₹${amount.toLocaleString('en-IN')}`;
+            const amountEl = document.getElementById(`amount-${idx}`);
+            if (amountEl) amountEl.textContent = `₹${amount.toLocaleString('en-IN')}`;
 
             // Update total
             updateOrderTotal();
@@ -1362,6 +1394,7 @@
 
         function handlePriceChange(idx) {
             const input = document.getElementById(`price-${idx}`);
+            if (!input) return;
             const original = parseFloat(input.dataset.original);
             const current = parseFloat(input.value) || 0;
 
@@ -1377,7 +1410,7 @@
         }
 
         function updateOrderTotal() {
-            if (!currentOrder) return;
+            if (!currentOrder || !currentOrder.products) return;
 
             let total = 0;
             currentOrder.products.forEach((p, idx) => {
@@ -1390,12 +1423,14 @@
             total = Math.round(total * 100) / 100;
             const balance = Math.round((total - (currentOrder.paidAmount || 0)) * 100) / 100;
 
-            document.getElementById('orderTotal').textContent = `₹${total.toLocaleString('en-IN')}`;
-            document.getElementById('orderBalance').textContent = `₹${balance.toLocaleString('en-IN')}`;
+            const totalEl = document.getElementById('orderTotal');
+            const balanceEl = document.getElementById('orderBalance');
+            if (totalEl) totalEl.textContent = `₹${total.toLocaleString('en-IN')}`;
+            if (balanceEl) balanceEl.textContent = `₹${balance.toLocaleString('en-IN')}`;
         }
 
         async function savePrices() {
-            if (!currentOrderId || !currentOrder || Object.keys(priceChanges).length === 0) return;
+            if (!currentOrderId || !currentOrder || !currentOrder.products || Object.keys(priceChanges).length === 0) return;
 
             // Prevent concurrent saves
             if (isSaving) {
@@ -1452,14 +1487,14 @@
                                 body: JSON.stringify(payload)
                             });
                         } else {
-                            showToast('Session expired. Please refresh the page.', 'error');
+                            showToast('Please refresh the page.', 'info');
                             isSaving = false;
                             btn.classList.remove('btn-loading');
                             btn.disabled = false;
                             return;
                         }
                     } else {
-                        showToast(errData.message || 'Access denied', 'error');
+                        showToast(errData.message || 'Access temporarily unavailable', 'info');
                         isSaving = false;
                         btn.classList.remove('btn-loading');
                         btn.disabled = false;
@@ -1486,15 +1521,15 @@
                     } catch {
                         errData = { message: `Server error (${res.status})` };
                     }
-                    showToast(errData.message || 'Failed to update', 'error');
+                    showToast(errData.message || 'Could not update', 'info');
                     btn.disabled = false;
                 }
             } catch (e) {
                 console.error('Save prices error:', e);
                 if (!navigator.onLine) {
-                    showToast('No internet connection', 'error');
+                    showToast('No internet connection', 'info');
                 } else {
-                    showToast('Failed to save prices. Please try again.', 'error');
+                    showToast('Could not save. Try again.', 'info');
                 }
                 btn.disabled = false;
             } finally {

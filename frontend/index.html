@@ -888,9 +888,16 @@
                 loadAnalytics(ordersList);
             } catch (error) {
                 console.error('Error loading dashboard stats:', error);
-                document.getElementById('totalSale').textContent = 'Error';
-                document.getElementById('totalProfit').textContent = 'Error';
-                document.getElementById('procurementList').innerHTML = '<div class="empty-state">Failed to load data. Please refresh.</div>';
+                document.getElementById('totalSale').textContent = '—';
+                document.getElementById('totalProfit').textContent = '—';
+                document.getElementById('procurementList').innerHTML = `
+                    <div class="empty-state">
+                        <p>Data not available</p>
+                        <button onclick="loadDashboardStats()" class="btn-retry" style="margin-top: 1rem; padding: 0.5rem 1rem; background: var(--dusty-olive); color: white; border: none; border-radius: 8px; cursor: pointer;">
+                            Try Again
+                        </button>
+                    </div>
+                `;
             }
         }
 
@@ -1186,7 +1193,7 @@
 
             if (failures.length > 0) {
                 const failedNames = failures.map(f => f.productName).join(', ');
-                alert(`Failed to save rates for: ${failedNames}\n\nPlease try again.`);
+                showToast(`${failures.length} rate(s) not saved. Try again.`, 'info');
                 if (Object.keys(changedRates).length > 0) {
                     saveRatesBtn.classList.add('show');
                 } else {
@@ -1455,7 +1462,7 @@
 
                 if (!res.ok) {
                     const error = await res.json();
-                    throw new Error(error.message || 'Failed to download ledger');
+                    throw new Error(error.message || 'Ledger temporarily unavailable');
                 }
 
                 const blob = await res.blob();
@@ -1480,7 +1487,7 @@
                 closeLedgerModal();
             } catch (e) {
                 console.error('Download ledger error:', e);
-                showToast(e.message || 'Failed to download ledger', 'error');
+                showToast(e.message || 'Could not download', 'info');
             }
         }
 

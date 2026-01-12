@@ -508,7 +508,17 @@
                 searchProducts();
             } catch (e) {
                 console.error('Failed to load products:', e);
-                showToast('Failed to load products', 'error');
+                const container = document.getElementById('productsList');
+                const errorMsg = !navigator.onLine ? 'No internet connection' : 'Products not available';
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <p>${errorMsg}</p>
+                        <button onclick="loadProducts()"
+                            style="margin-top: 1rem; padding: 0.5rem 1rem; background: var(--dusty-olive); color: white; border: none; border-radius: 8px; cursor: pointer;">
+                            Try Again
+                        </button>
+                    </div>
+                `;
             }
         }
 
@@ -631,9 +641,25 @@
         async function saveProduct(_isRetry = false) {
             const id = document.getElementById('productId').value;
             const category = document.getElementById('productCategory').value;
+            const name = document.getElementById('productName').value.trim();
+            const unit = document.getElementById('productUnit').value;
+
+            // Client-side validation
+            if (!name) {
+                showToast('Please enter product name', 'info');
+                document.getElementById('productName').focus();
+                return;
+            }
+
+            if (!unit) {
+                showToast('Please select a unit', 'info');
+                document.getElementById('productUnit').focus();
+                return;
+            }
+
             const data = {
-                name: document.getElementById('productName').value,
-                unit: document.getElementById('productUnit').value
+                name: name,
+                unit: unit
             };
             if (category) data.category = category;
 
@@ -669,14 +695,14 @@
                     loadProducts();
                 } else {
                     const err = await res.json();
-                    showToast(err.message || 'Failed to save', 'error');
+                    showToast(err.message || 'Could not save', 'info');
                 }
             } catch (e) {
                 console.error('Save product error:', e);
                 if (!navigator.onLine) {
-                    showToast('No internet connection', 'error');
+                    showToast('No internet connection', 'info');
                 } else {
-                    showToast('Failed to save product. Please try again.', 'error');
+                    showToast('Could not save. Try again.', 'info');
                 }
             }
         }
@@ -711,14 +737,14 @@
                     loadProducts();
                 } else {
                     const err = await res.json();
-                    showToast(err.message || 'Failed to delete', 'error');
+                    showToast(err.message || 'Could not delete', 'info');
                 }
             } catch (e) {
                 console.error('Delete product error:', e);
                 if (!navigator.onLine) {
-                    showToast('No internet connection', 'error');
+                    showToast('No internet connection', 'info');
                 } else {
-                    showToast('Failed to delete product. Please try again.', 'error');
+                    showToast('Could not delete. Try again.', 'info');
                 }
             }
         }
@@ -761,12 +787,14 @@
             const name = input.value.trim();
 
             if (!name) {
-                showToast('Enter category name', 'error');
+                // Focus the input to guide user
+                input.focus();
                 return;
             }
 
             if (allCategories.includes(name)) {
-                showToast('Category already exists', 'error');
+                showToast('Category already exists', 'info');
+                input.select();
                 return;
             }
 
@@ -783,7 +811,7 @@
         function deleteCategory(name) {
             const count = allProducts.filter(p => p.category === name).length;
             if (count > 0) {
-                showToast('Cannot delete category with products', 'error');
+                showToast(`Move or delete ${count} product(s) first`, 'info');
                 return;
             }
 

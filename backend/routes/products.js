@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { body, validationResult } = require('express-validator');
+const { body, param, validationResult } = require('express-validator');
 const Product = require('../models/Product');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -55,8 +55,16 @@ router.get('/', protect, async (req, res, next) => {
 // @route   GET /api/products/:id
 // @desc    Get single product
 // @access  Private (All authenticated users)
-router.get('/:id', protect, async (req, res, next) => {
+router.get('/:id',
+  protect,
+  param('id').isMongoId().withMessage('Invalid product ID'),
+  async (req, res, next) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
     const product = await Product.findById(req.params.id).select('-__v');
 
     if (!product) {
@@ -100,7 +108,12 @@ router.post('/', protect, authorize('admin', 'staff'), validateProduct, async (r
 // @route   PUT /api/products/:id
 // @desc    Update product
 // @access  Private (Admin, Staff)
-router.put('/:id', protect, authorize('admin', 'staff'), validateProduct, async (req, res, next) => {
+router.put('/:id',
+  protect,
+  authorize('admin', 'staff'),
+  param('id').isMongoId().withMessage('Invalid product ID'),
+  ...validateProduct,
+  async (req, res, next) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -133,8 +146,17 @@ router.put('/:id', protect, authorize('admin', 'staff'), validateProduct, async 
 // @route   DELETE /api/products/:id
 // @desc    Delete product (soft delete)
 // @access  Private (Admin, Staff)
-router.delete('/:id', protect, authorize('admin', 'staff'), async (req, res, next) => {
+router.delete('/:id',
+  protect,
+  authorize('admin', 'staff'),
+  param('id').isMongoId().withMessage('Invalid product ID'),
+  async (req, res, next) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
     const product = await Product.findByIdAndUpdate(
       req.params.id,
       { isActive: false },

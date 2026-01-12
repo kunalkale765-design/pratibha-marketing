@@ -967,12 +967,12 @@
                         // Remove token from URL for cleaner bookmarking
                         window.history.replaceState({}, '', window.location.pathname);
                     } else {
-                        showToast(data.message || 'Invalid magic link', 'error');
+                        showToast(data.message || 'Link expired. Please request a new one.', 'info');
                         window.location.href = '/login.html';
                         return;
                     }
                 } catch (e) {
-                    showToast('Failed to authenticate', 'error');
+                    showToast('Authentication issue. Please refresh.', 'info');
                     window.location.href = '/login.html';
                     return;
                 }
@@ -998,7 +998,7 @@
                         : { _id: currentUser.customer, pricingType: 'market' };
                     renderProducts();
                 } else {
-                    document.getElementById('productList').innerHTML = '<div class="empty-state">Account not linked. Contact support.</div>';
+                    document.getElementById('productList').innerHTML = '<div class="empty-state">Account setup in progress. Please check back later.</div>';
                 }
             }
         }
@@ -1013,28 +1013,35 @@
 
                 if (productsRes.ok) {
                     const data = await productsRes.json();
-                    products = data.data.filter(p => p.isActive !== false);
+                    products = (data?.data || []).filter(p => p.isActive !== false);
                 }
 
                 if (ratesRes.ok) {
                     const data = await ratesRes.json();
-                    data.data.forEach(rate => {
+                    (data?.data || []).forEach(rate => {
                         const pid = typeof rate.product === 'object' ? rate.product._id : rate.product;
-                        marketRates[pid] = rate.rate;
+                        if (pid) marketRates[pid] = rate.rate;
                     });
                 }
 
                 if (customersRes.ok) {
                     const data = await customersRes.json();
-                    customers = data.data.filter(c => c.isActive !== false);
+                    customers = (data?.data || []).filter(c => c.isActive !== false);
                 }
             } catch (e) {
                 console.error('Failed to load data:', e);
-                // Provide more specific error message
-                if (!navigator.onLine) {
-                    showToast('No internet connection. Please check your network.', 'error');
-                } else {
-                    showToast('Failed to load products. Please refresh the page.', 'error');
+                // Show retry UI instead of just a toast
+                const productList = document.getElementById('productList');
+                if (productList) {
+                    productList.innerHTML = `
+                        <div class="empty-state">
+                            <p>Products not available</p>
+                            <button onclick="loadData().then(() => { if (selectedCustomer) renderProducts(); })"
+                                style="margin-top: 1rem; padding: 0.5rem 1rem; background: var(--dusty-olive); color: white; border: none; border-radius: 8px; cursor: pointer;">
+                                Try Again
+                            </button>
+                        </div>
+                    `;
                 }
             }
         }
@@ -1101,12 +1108,14 @@
                 container.appendChild(btn);
             });
 
-            container.querySelector('[data-cat="all"]').onclick = () => filterByCategory('all');
+            const allBtn = container.querySelector('[data-cat="all"]');
+            if (allBtn) allBtn.onclick = () => filterByCategory('all');
         }
 
         function filterByCategory(cat) {
             document.querySelectorAll('.cat-pill').forEach(t => t.classList.remove('active'));
-            document.querySelector(`.cat-pill[data-cat="${cat}"]`).classList.add('active');
+            const activeBtn = document.querySelector(`.cat-pill[data-cat="${cat}"]`);
+            if (activeBtn) activeBtn.classList.add('active');
 
             document.querySelectorAll('.product-item').forEach(item => {
                 item.style.display = (cat === 'all' || item.dataset.category === cat) ? '' : 'none';
@@ -1140,8 +1149,10 @@
 
                 prods.forEach(p => {
                     const price = getPrice(p);
+                    // Use step="1" for piece items to enforce whole numbers
+                    const step = p.unit === 'piece' ? '1' : '0.01';
                     html += `
-                        <div class="product-item" data-id="${p._id}" data-category="${cat}" data-price="${price}">
+                        <div class="product-item" data-id="${p._id}" data-category="${cat}" data-price="${price}" data-unit="${escapeHtml(p.unit)}">
                             <div class="product-info">
                                 <div class="product-name">${escapeHtml(p.name)}</div>
                                 <div class="product-meta">${escapeHtml(p.unit)}</div>
@@ -1149,7 +1160,7 @@
                             <div class="qty-controls">
                                 <button class="qty-btn" onclick="changeQty('${p._id}', -1)">−</button>
                                 <input type="number" class="qty-input" id="qty-${p._id}"
-                                    value="0" min="0" inputmode="numeric"
+                                    value="0" min="0" step="${step}" inputmode="numeric"
                                     onfocus="clearZero(this)" onblur="restoreZero(this)"
                                     onchange="updateFromInput('${p._id}')">
                                 <button class="qty-btn" onclick="changeQty('${p._id}', 1)">+</button>
@@ -1239,14 +1250,31 @@
             if (!selectedCustomer) return;
 
             const orderProducts = [];
+            const pieceErrors = [];
+
             document.querySelectorAll('.product-item').forEach(item => {
                 const id = item.dataset.id;
-                const qty = parseInt(document.getElementById('qty-' + id)?.value) || 0;
+                const input = document.getElementById('qty-' + id);
+                const rawValue = parseFloat(input?.value) || 0;
+                const qty = rawValue;
                 const price = parseFloat(item.dataset.price) || 0;
+                const unit = item.dataset.unit;
+                const name = item.querySelector('.product-name')?.textContent || 'Unknown';
+
                 if (qty > 0) {
+                    // Validate piece quantities are whole numbers
+                    if (unit === 'piece' && !Number.isInteger(qty)) {
+                        pieceErrors.push(name);
+                    }
                     orderProducts.push({ product: id, quantity: qty, rate: price });
                 }
             });
+
+            // Show info if piece items have decimal quantities
+            if (pieceErrors.length > 0) {
+                showToast(`${pieceErrors.join(', ')}: use whole numbers`, 'info');
+                return;
+            }
 
             if (!orderProducts.length) return;
 
@@ -1291,12 +1319,13 @@
                 }
 
                 if (res.ok) {
-                    showToast(`Order placed! #${data.data.orderNumber}`, 'success');
+                    const orderNum = data?.data?.orderNumber || 'New';
+                    showToast(`Order placed! #${orderNum}`, 'success');
 
                     // Show warning if contract pricing fallback was used
                     if (data.warning) {
                         setTimeout(() => {
-                            showToast(data.warning, 'warning');
+                            showToast(data.warning, 'info');
                         }, 1500);
                     }
 
@@ -1316,14 +1345,14 @@
                     });
                     updateSummary();
                 } else {
-                    showToast(data.message || 'Failed to place order', 'error');
+                    showToast(data.message || 'Could not place order', 'info');
                 }
             } catch (e) {
                 console.error('Order placement error:', e);
                 if (!navigator.onLine) {
-                    showToast('No internet connection', 'error');
+                    showToast('No internet connection', 'info');
                 } else {
-                    showToast('Failed to place order. Please try again.', 'error');
+                    showToast('Could not place order. Try again.', 'info');
                 }
             } finally {
                 btn.disabled = false;
@@ -1379,16 +1408,19 @@
                     myOrders = data.data || [];
                     renderOrdersList();
                 } else {
-                    container.innerHTML = `<div class="empty-state">${escapeHtml(data.message || 'Failed to load orders')}</div>`;
+                    container.innerHTML = `<div class="empty-state">${escapeHtml(data.message || 'Orders not available')}</div>`;
                 }
             } catch (e) {
                 console.error('Load orders error:', e);
-                if (!navigator.onLine) {
-                    showToast('No internet connection', 'error');
-                } else {
-                    showToast('Failed to load orders', 'error');
-                }
-                container.innerHTML = '<div class="empty-state">Failed to load orders. Please try again.</div>';
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <p>Orders not available</p>
+                        <button onclick="loadMyOrders()"
+                            style="margin-top: 1rem; padding: 0.5rem 1rem; background: var(--dusty-olive); color: white; border: none; border-radius: 8px; cursor: pointer;">
+                            Try Again
+                        </button>
+                    </div>
+                `;
             }
         }
 
@@ -1464,9 +1496,9 @@
 
                 const orderData = await orderRes.json();
 
-                if (orderRes.ok) {
+                if (orderRes.ok && orderData.data) {
                     currentOrder = orderData.data;
-                    editedProducts = JSON.parse(JSON.stringify(currentOrder.products));
+                    editedProducts = JSON.parse(JSON.stringify(currentOrder.products || []));
 
                     // Load invoices (don't fail if invoice endpoint errors)
                     try {
@@ -1480,11 +1512,11 @@
                     document.getElementById('orderModal').classList.add('show');
                     document.body.style.overflow = 'hidden';
                 } else {
-                    showToast(orderData.message || 'Failed to load order', 'error');
+                    showToast(orderData.message || 'Could not load order', 'info');
                 }
             } catch (e) {
                 console.error('Load order detail error:', e);
-                showToast('Failed to load order details', 'error');
+                showToast('Could not load details', 'info');
             }
         }
 
@@ -1637,8 +1669,18 @@
                 });
 
                 if (!res.ok) {
-                    const error = await res.json();
-                    throw new Error(error.message || 'Failed to download invoice');
+                    // Try to parse error message from JSON, fallback to status text
+                    let errorMessage = 'Invoice not ready yet';
+                    try {
+                        const error = await res.json();
+                        errorMessage = error.message || errorMessage;
+                    } catch {
+                        // Response might not be JSON
+                        errorMessage = res.status === 404 ? 'Invoice not ready yet' :
+                                      res.status === 403 ? 'Invoice access pending' :
+                                      'Invoice temporarily unavailable';
+                    }
+                    throw new Error(errorMessage);
                 }
 
                 const blob = await res.blob();
@@ -1654,7 +1696,7 @@
                 showToast('Invoice downloaded!', 'success');
             } catch (e) {
                 console.error('Download invoice error:', e);
-                showToast(e.message || 'Failed to download invoice', 'error');
+                showToast(e.message || 'Could not download', 'info');
             }
         }
 
@@ -1669,7 +1711,7 @@
                     }));
 
                 if (!products.length) {
-                    showToast('Order must have at least one product', 'error');
+                    showToast('Add at least one product', 'info');
                     return;
                 }
 
@@ -1716,14 +1758,14 @@
                     closeOrderModal();
                     loadMyOrders(); // Refresh list
                 } else {
-                    showToast(data.message || 'Failed to update order', 'error');
+                    showToast(data.message || 'Could not update', 'info');
                 }
             } catch (e) {
                 console.error('Order edit error:', e);
                 if (!navigator.onLine) {
-                    showToast('No internet connection', 'error');
+                    showToast('No internet connection', 'info');
                 } else {
-                    showToast('Failed to update order. Please try again.', 'error');
+                    showToast('Could not update. Try again.', 'info');
                 }
             } finally {
                 const saveBtn = document.querySelector('#orderModalFooter .btn-primary');

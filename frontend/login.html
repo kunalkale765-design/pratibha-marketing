@@ -144,11 +144,11 @@
             color: var(--text-muted);
         }
 
-        /* Error message (page-specific styling) */
-        .error-message {
-            background: var(--error-bg);
-            border: 1px solid rgba(154, 101, 101, 0.3);
-            color: var(--error);
+        /* Notice message (page-specific styling) */
+        .notice-message {
+            background: rgba(184, 154, 90, 0.12);
+            border: 1px solid rgba(184, 154, 90, 0.3);
+            color: #8a7340;
             padding: 0.875rem 1rem;
             border-radius: var(--radius-md);
             font-size: var(--text-base);
@@ -156,7 +156,7 @@
             display: none;
         }
 
-        .error-message.show {
+        .notice-message.show {
             display: block;
         }
 
@@ -277,7 +277,7 @@
                     <p>Sign in to your account</p>
                 </div>
 
-                <div id="errorMessage" class="error-message"></div>
+                <div id="noticeMessage" class="notice-message"></div>
 
                 <form id="loginForm">
                     <div class="form-group">
@@ -325,7 +325,7 @@
         // Elements
         const loginForm = document.getElementById('loginForm');
         const loginBtn = document.getElementById('loginBtn');
-        const errorMessage = document.getElementById('errorMessage');
+        const noticeMessage = document.getElementById('noticeMessage');
         const passwordToggle = document.getElementById('passwordToggle');
 
         // Password visibility toggle
@@ -360,13 +360,13 @@
             const password = document.getElementById('password').value;
 
             if (!email || !password) {
-                showError('Please fill in all fields');
+                showNotice('Please enter username and password');
                 return;
             }
 
             loginBtn.disabled = true;
             loginBtn.classList.add('btn-loading');
-            hideError();
+            hideNotice();
 
             try {
                 const headers = { 'Content-Type': 'application/json' };
@@ -407,7 +407,7 @@
                             }
                             return;
                         }
-                        showError(retryData.message || 'Login failed. Please try again.');
+                        showNotice(retryData.message || 'Please check your credentials');
                         return;
                     }
                 }
@@ -420,16 +420,16 @@
                         window.location.href = '/index.html';
                     }
                 } else {
-                    showError(data.message || 'Login failed. Please check your credentials.');
+                    showNotice(data.message || 'Please check your credentials');
                 }
             } catch (error) {
                 console.error('Login error:', error);
                 if (!navigator.onLine) {
-                    showError('No internet connection. Please check your network.');
+                    showNotice('No internet connection');
                 } else if (error.name === 'TypeError' || error.message.includes('fetch')) {
-                    showError('Cannot connect to server. Please try again later.');
+                    showNotice('Connection issue. Please try again.');
                 } else {
-                    showError('An unexpected error occurred. Please try again.');
+                    showNotice('Something went wrong. Try again.');
                 }
             } finally {
                 loginBtn.disabled = false;
@@ -437,13 +437,13 @@
             }
         });
 
-        function showError(message) {
-            errorMessage.textContent = message;
-            errorMessage.classList.add('show');
+        function showNotice(message) {
+            noticeMessage.textContent = message;
+            noticeMessage.classList.add('show');
         }
 
-        function hideError() {
-            errorMessage.classList.remove('show');
+        function hideNotice() {
+            noticeMessage.classList.remove('show');
         }
     </script>
 </body>

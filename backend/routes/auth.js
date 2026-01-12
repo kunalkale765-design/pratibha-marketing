@@ -182,7 +182,7 @@ router.post('/login', [
       maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
     });
 
-    // Only return essential customer data (exclude payment/credit info)
+    // Only return essential customer data (exclude sensitive info)
     const safeCustomer = user.customer ? {
       _id: user.customer._id,
       name: user.customer.name,
@@ -248,7 +248,7 @@ router.get('/me', async (req, res, next) => {
           message: 'Invalid session'
         });
       }
-      // Only return essential customer data (exclude payment/credit info)
+      // Only return essential customer data (exclude sensitive info)
       return res.json({
         success: true,
         user: {
@@ -276,7 +276,7 @@ router.get('/me', async (req, res, next) => {
       });
     }
 
-    // Only return essential user/customer data (exclude payment/credit info)
+    // Only return essential user/customer data (exclude sensitive info)
     const safeCustomer = user.customer ? {
       _id: user.customer._id,
       name: user.customer.name,
@@ -342,7 +342,7 @@ router.get('/magic/:token', async (req, res, next) => {
     }
 
     // Find if there's a user account linked to this customer
-    let user = await User.findOne({ customer: customer._id, isActive: true });
+    const user = await User.findOne({ customer: customer._id, isActive: true });
 
     // If no user exists, create a virtual session (customer-only access)
     if (!user) {
@@ -361,7 +361,7 @@ router.get('/magic/:token', async (req, res, next) => {
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
       });
 
-      // Only return essential customer data (exclude payment/credit info)
+      // Only return essential customer data (exclude sensitive info)
       return res.json({
         success: true,
         user: {
@@ -389,7 +389,7 @@ router.get('/magic/:token', async (req, res, next) => {
       maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
     });
 
-    // Only return essential customer data (exclude payment/credit info)
+    // Only return essential customer data (exclude sensitive info)
     res.json({
       success: true,
       user: {

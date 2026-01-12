@@ -138,37 +138,6 @@ describe('Integration Tests', () => {
       expect(finalRes.body.data.paymentStatus).toBe('paid');
     });
 
-    it('should update customer credit when order is created', async () => {
-      // Get initial customer credit
-      const initialCustomer = await request(app)
-        .get(`/api/customers/${customer._id}`)
-        .set('Cookie', `token=${adminToken}`);
-
-      const initialCredit = initialCustomer.body.data.currentCredit || 0;
-
-      // Create order
-      const orderRes = await request(app)
-        .post('/api/orders')
-        .set('Cookie', `token=${adminToken}`)
-        .send({
-          customer: customer._id,
-          products: [{
-            product: product._id,
-            quantity: 10,
-            priceAtTime: 50
-          }]
-        });
-
-      expect(orderRes.status).toBe(201);
-
-      // Check customer credit changed (implementation may vary)
-      const updatedCustomer = await request(app)
-        .get(`/api/customers/${customer._id}`)
-        .set('Cookie', `token=${adminToken}`);
-
-      // Credit should increase by order amount (or be unchanged if not implemented)
-      expect(updatedCustomer.body.data.currentCredit).toBeGreaterThanOrEqual(initialCredit);
-    });
   });
 
   describe('Customer Registration and Order Flow', () => {
@@ -333,7 +302,7 @@ describe('Integration Tests', () => {
   });
 
   describe('Order Cancellation Workflow', () => {
-    it('should handle order cancellation and credit adjustment', async () => {
+    it('should handle order cancellation', async () => {
       const admin = await testUtils.createAdminUser();
       const customer = await testUtils.createTestCustomer();
       const product = await testUtils.createTestProduct();

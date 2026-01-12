@@ -211,61 +211,6 @@ describe('Customer Endpoints', () => {
     });
   });
 
-  describe('POST /api/customers/:id/payment', () => {
-    let testCustomer;
-
-    beforeEach(async () => {
-      testCustomer = await testUtils.createTestCustomer({
-        name: 'Payment Test Customer',
-        currentCredit: 1000
-      });
-    });
-
-    it('should record a payment', async () => {
-      const res = await request(app)
-        .post(`/api/customers/${testCustomer._id}/payment`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({
-          amount: 500,
-          paymentMethod: 'cash',
-          notes: 'Partial payment'
-        });
-
-      expect(res.statusCode).toBe(200);
-      expect(res.body.success).toBe(true);
-
-      // Verify credit was reduced
-      const updated = await Customer.findById(testCustomer._id);
-      expect(updated.currentCredit).toBe(500);
-      expect(updated.paymentHistory.length).toBe(1);
-      expect(updated.paymentHistory[0].amount).toBe(500);
-    });
-
-    it('should reject payment with invalid method', async () => {
-      const res = await request(app)
-        .post(`/api/customers/${testCustomer._id}/payment`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({
-          amount: 500,
-          paymentMethod: 'bitcoin' // Invalid
-        });
-
-      expect(res.statusCode).toBe(400);
-    });
-
-    it('should reject negative payment amount', async () => {
-      const res = await request(app)
-        .post(`/api/customers/${testCustomer._id}/payment`)
-        .set('Authorization', `Bearer ${staffToken}`)
-        .send({
-          amount: -100,
-          paymentMethod: 'cash'
-        });
-
-      expect(res.statusCode).toBe(400);
-    });
-  });
-
   describe('Magic Link Endpoints', () => {
     let testCustomer;
 

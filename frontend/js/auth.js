@@ -90,7 +90,7 @@ const Auth = {
      * @param {Object} user
      */
     setUser(user) {
-        // Only store essential data - exclude sensitive info like payment/credit
+        // Only store essential data - exclude sensitive info like sensitive fields
         const safeUser = {
             id: user.id,
             name: user.name,

@@ -116,10 +116,10 @@
             display: none;
         }
 
-        .message.error {
-            background: var(--error-bg);
-            border: 1px solid rgba(154, 101, 101, 0.3);
-            color: var(--error);
+        .message.notice {
+            background: rgba(184, 154, 90, 0.12);
+            border: 1px solid rgba(184, 154, 90, 0.3);
+            color: #8a7340;
         }
 
         .message.success {
@@ -311,7 +311,7 @@
                     <p>Join Pratibha Marketing</p>
                 </div>
 
-                <div id="errorMessage" class="message error"></div>
+                <div id="noticeMessage" class="message notice"></div>
                 <div id="successMessage" class="message success"></div>
 
                 <form id="signupForm">
@@ -406,7 +406,7 @@
         // Elements
         const signupForm = document.getElementById('signupForm');
         const signupBtn = document.getElementById('signupBtn');
-        const errorMessage = document.getElementById('errorMessage');
+        const noticeMessage = document.getElementById('noticeMessage');
         const successMessage = document.getElementById('successMessage');
         const password = document.getElementById('password');
 
@@ -456,43 +456,43 @@
 
             // Validation
             if (!name || !email || !passwordVal || !confirmPassword) {
-                showError('Please fill in all required fields');
+                showNotice('Please complete all required fields');
                 return;
             }
 
             if (passwordVal.length < 6) {
-                showError('Password must be at least 6 characters');
+                showNotice('Password needs at least 6 characters');
                 return;
             }
 
             if (!/[A-Z]/.test(passwordVal)) {
-                showError('Password must contain at least one uppercase letter');
+                showNotice('Add an uppercase letter to password');
                 return;
             }
 
             if (!/[a-z]/.test(passwordVal)) {
-                showError('Password must contain at least one lowercase letter');
+                showNotice('Add a lowercase letter to password');
                 return;
             }
 
             if (!/[0-9]/.test(passwordVal)) {
-                showError('Password must contain at least one number');
+                showNotice('Add a number to password');
                 return;
             }
 
             if (passwordVal !== confirmPassword) {
-                showError('Passwords do not match');
+                showNotice('Passwords don\'t match');
                 return;
             }
 
             if (phone && !/^[0-9]{10}$/.test(phone)) {
-                showError('Phone number must be exactly 10 digits');
+                showNotice('Phone should be 10 digits');
                 return;
             }
 
             signupBtn.disabled = true;
             signupBtn.textContent = 'Creating account...';
-            hideMessages();
+            hideAllMessages();
 
             try {
                 const userData = { name, email, password: passwordVal, role: 'customer' };
@@ -540,9 +540,9 @@
                             return;
                         }
                         if (retryData.errors && retryData.errors.length > 0) {
-                            showError(retryData.errors.map(e => e.msg).join(', '));
+                            showNotice(retryData.errors.map(e => e.msg).join(', '));
                         } else {
-                            showError(retryData.message || 'Registration failed. Please try again.');
+                            showNotice(retryData.message || 'Could not create account. Try again.');
                         }
                         return;
                     }
@@ -560,19 +560,19 @@
                     }, 1500);
                 } else {
                     if (data.errors && data.errors.length > 0) {
-                        showError(data.errors.map(e => e.msg).join(', '));
+                        showNotice(data.errors.map(e => e.msg).join(', '));
                     } else {
-                        showError(data.message || 'Registration failed. Please try again.');
+                        showNotice(data.message || 'Could not create account. Try again.');
                     }
                 }
             } catch (error) {
                 console.error('Signup error:', error);
                 if (!navigator.onLine) {
-                    showError('No internet connection. Please check your network.');
+                    showNotice('No internet connection');
                 } else if (error.name === 'TypeError' || error.message.includes('fetch')) {
-                    showError('Cannot connect to server. Please try again later.');
+                    showNotice('Connection issue. Please try again.');
                 } else {
-                    showError('An unexpected error occurred. Please try again.');
+                    showNotice('Something went wrong. Try again.');
                 }
             } finally {
                 signupBtn.disabled = false;
@@ -580,20 +580,20 @@
             }
         });
 
-        function showError(message) {
-            errorMessage.textContent = message;
-            errorMessage.classList.add('show');
+        function showNotice(message) {
+            noticeMessage.textContent = message;
+            noticeMessage.classList.add('show');
             successMessage.classList.remove('show');
         }
 
         function showSuccess(message) {
             successMessage.textContent = message;
             successMessage.classList.add('show');
-            errorMessage.classList.remove('show');
+            noticeMessage.classList.remove('show');
         }
 
-        function hideMessages() {
-            errorMessage.classList.remove('show');
+        function hideAllMessages() {
+            noticeMessage.classList.remove('show');
             successMessage.classList.remove('show');
         }
     </script>

@@ -5,9 +5,26 @@
  * - Service Worker registration
  * - Logout functionality
  * - Modal escape key handling
+ * - Global error handling
  */
 
 import { setupModalCloseOnEscape } from './ui.js';
+
+/* ===================
+   GLOBAL ERROR HANDLERS
+   =================== */
+
+// Catch uncaught errors silently (prevent browser error dialogs)
+window.onerror = function(message, source, lineno, colno, _error) {
+  console.error('Uncaught error:', message, 'at', source, lineno, colno);
+  return true; // Prevents the browser's default error handling
+};
+
+// Catch unhandled promise rejections silently
+window.addEventListener('unhandledrejection', function(event) {
+  console.error('Unhandled promise rejection:', event.reason);
+  event.preventDefault(); // Prevents the browser's default handling
+});
 
 /* ===================
    SERVICE WORKER

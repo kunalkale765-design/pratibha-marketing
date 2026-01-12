@@ -210,7 +210,6 @@ async function generateInvoicePDF(invoiceData) {
 
       tableHeaders.forEach((header, i) => {
         const align = i >= 2 ? 'right' : 'left';
-        const xOffset = i >= 2 ? colWidths[i] - 10 : 5;
         doc.text(header, colPositions[i] + (align === 'right' ? 0 : 5), tableTop + 8, {
           width: colWidths[i] - 10,
           align: align

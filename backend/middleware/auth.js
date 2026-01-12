@@ -40,6 +40,18 @@ const protect = async (req, res, next) => {
           message: 'Invalid session. Please use a new magic link.'
         });
       }
+
+      // Validate magic link TTL (30 days from creation)
+      const MAGIC_LINK_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+      if (customer.magicLinkCreatedAt) {
+        const linkAge = Date.now() - new Date(customer.magicLinkCreatedAt).getTime();
+        if (linkAge > MAGIC_LINK_TTL_MS) {
+          return res.status(401).json({
+            success: false,
+            message: 'Magic link has expired. Please request a new one.'
+          });
+        }
+      }
       // Create a virtual user object for magic link sessions
       req.user = {
         _id: null,
@@ -88,7 +100,7 @@ const protect = async (req, res, next) => {
     console.error('Auth middleware error:', error);
     return res.status(500).json({
       success: false,
-      message: 'Server error during authentication'
+      message: 'Authentication unavailable. Please try again.'
     });
   }
 };

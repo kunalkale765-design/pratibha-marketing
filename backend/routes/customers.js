@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
-const { body, validationResult } = require('express-validator');
+const { body, param, validationResult } = require('express-validator');
 const Customer = require('../models/Customer');
 const User = require('../models/User');
 const { protect, authorize } = require('../middleware/auth');
@@ -21,8 +21,7 @@ const magicLinkLimiter = rateLimit({
 const validateCustomer = [
   body('name').trim().notEmpty().withMessage('Name is required'),
   body('phone').optional({ checkFalsy: true }).matches(/^[0-9]{10}$/).withMessage('Phone must be 10 digits'),
-  body('whatsapp').optional({ checkFalsy: true }).matches(/^[0-9]{10}$/).withMessage('WhatsApp must be 10 digits'),
-  body('creditLimit').optional().isFloat({ min: 0 }).withMessage('Credit limit must be positive')
+  body('whatsapp').optional({ checkFalsy: true }).matches(/^[0-9]{10}$/).withMessage('WhatsApp must be 10 digits')
 ];
 
 // @route   GET /api/customers
@@ -82,8 +81,17 @@ router.get('/', protect, authorize('admin', 'staff'), async (req, res, next) => 
 // @route   GET /api/customers/:id
 // @desc    Get single customer
 // @access  Private (Admin, Staff)
-router.get('/:id', protect, authorize('admin', 'staff'), async (req, res, next) => {
+router.get('/:id',
+  protect,
+  authorize('admin', 'staff'),
+  param('id').isMongoId().withMessage('Invalid customer ID'),
+  async (req, res, next) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
     const customer = await Customer.findById(req.params.id).select('-__v');
 
     if (!customer) {
@@ -133,7 +141,12 @@ router.post('/', protect, authorize('admin', 'staff'), validateCustomer, async (
 // @route   PUT /api/customers/:id
 // @desc    Update customer
 // @access  Private (Admin, Staff)
-router.put('/:id', protect, authorize('admin', 'staff'), validateCustomer, async (req, res, next) => {
+router.put('/:id',
+  protect,
+  authorize('admin', 'staff'),
+  param('id').isMongoId().withMessage('Invalid customer ID'),
+  ...validateCustomer,
+  async (req, res, next) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -195,8 +208,17 @@ router.put('/:id', protect, authorize('admin', 'staff'), validateCustomer, async
 // @route   DELETE /api/customers/:id
 // @desc    Delete customer (soft delete)
 // @access  Private (Admin, Staff)
-router.delete('/:id', protect, authorize('admin', 'staff'), async (req, res, next) => {
+router.delete('/:id',
+  protect,
+  authorize('admin', 'staff'),
+  param('id').isMongoId().withMessage('Invalid customer ID'),
+  async (req, res, next) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
     const customer = await Customer.findByIdAndUpdate(
       req.params.id,
       {
@@ -225,56 +247,21 @@ router.delete('/:id', protect, authorize('admin', 'staff'), async (req, res, nex
   }
 });
 
-// @route   POST /api/customers/:id/payment
-// @desc    Add payment to customer
-// @access  Private (Admin, Staff)
-router.post('/:id/payment', protect, authorize('admin', 'staff'), [
-  body('amount').isFloat({ min: 0.01 }).withMessage('Amount must be greater than 0'),
-  body('paymentMethod').isIn(['cash', 'online', 'cheque', 'credit']).withMessage('Invalid payment method')
-], async (req, res, next) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        errors: errors.array()
-      });
-    }
-
-    const customer = await Customer.findById(req.params.id);
-
-    if (!customer) {
-      res.status(404);
-      throw new Error('Customer not found');
-    }
-
-    customer.paymentHistory.push({
-      amount: req.body.amount,
-      paymentMethod: req.body.paymentMethod,
-      notes: req.body.notes
-    });
-
-    // Update current credit if payment method is credit
-    if (req.body.paymentMethod !== 'credit') {
-      customer.currentCredit = Math.max(0, customer.currentCredit - req.body.amount);
-    }
-
-    await customer.save();
-
-    res.json({
-      success: true,
-      data: customer
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
 // @route   POST /api/customers/:id/magic-link
 // @desc    Generate magic link for customer
 // @access  Private (Admin, Staff)
-router.post('/:id/magic-link', magicLinkLimiter, protect, authorize('admin', 'staff'), async (req, res, next) => {
+router.post('/:id/magic-link',
+  magicLinkLimiter,
+  protect,
+  authorize('admin', 'staff'),
+  param('id').isMongoId().withMessage('Invalid customer ID'),
+  async (req, res, next) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
     const customer = await Customer.findById(req.params.id);
 
     if (!customer) {
@@ -316,8 +303,17 @@ router.post('/:id/magic-link', magicLinkLimiter, protect, authorize('admin', 'st
 // @route   DELETE /api/customers/:id/magic-link
 // @desc    Revoke magic link for customer
 // @access  Private (Admin, Staff)
-router.delete('/:id/magic-link', protect, authorize('admin', 'staff'), async (req, res, next) => {
+router.delete('/:id/magic-link',
+  protect,
+  authorize('admin', 'staff'),
+  param('id').isMongoId().withMessage('Invalid customer ID'),
+  async (req, res, next) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
     const customer = await Customer.findById(req.params.id);
 
     if (!customer) {

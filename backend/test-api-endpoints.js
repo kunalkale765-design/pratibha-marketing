@@ -187,7 +187,7 @@ async function test() {
     const listRes = await httpRequest('GET', '/api/invoices', null, authCookie);
 
     if (listRes.status === 200 && listRes.data.success) {
-      pass(`Invoice list endpoint working`);
+      pass('Invoice list endpoint working');
       info(`  Total invoices: ${listRes.data.pagination?.total || listRes.data.data?.length || 0}`);
     } else if (listRes.status === 401) {
       info('Invoice list requires auth (expected)');

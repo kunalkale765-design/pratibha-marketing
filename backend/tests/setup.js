@@ -237,20 +237,13 @@ const testUtils = {
     });
   },
 
-  // Get customer's current credit
-  async getCustomerCredit(customerId) {
-    await ensureDbConnected();
-    const customer = await Customer.findById(customerId);
-    return customer ? customer.currentCredit : 0;
-  },
-
   // Refresh customer from database
   async refreshCustomer(customerId) {
     await ensureDbConnected();
     return Customer.findById(customerId);
   },
 
-  // Create order via API (for full flow tests including credit updates)
+  // Create order via API (for full flow tests)
   async createOrderViaAPI(app, token, customerId, products) {
     const request = require('supertest');
     return request(app)

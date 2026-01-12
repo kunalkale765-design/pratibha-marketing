@@ -418,11 +418,11 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Phone</label>
-                        <input id="customerPhone" type="tel" class="form-input input-animated" placeholder="10 digits">
+                        <input id="customerPhone" type="tel" class="form-input input-animated" placeholder="10 digits" pattern="[0-9]{10}" maxlength="10" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                     </div>
                     <div class="form-group">
                         <label class="form-label">WhatsApp</label>
-                        <input id="customerWhatsapp" type="tel" class="form-input input-animated">
+                        <input id="customerWhatsapp" type="tel" class="form-input input-animated" placeholder="10 digits" pattern="[0-9]{10}" maxlength="10" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Address</label>
@@ -517,7 +517,7 @@
                 allProducts = data.data || [];
             } catch (e) {
                 console.error('Failed to load products:', e);
-                showToast('Failed to load products for contract pricing.', 'error');
+                showToast('Products not available. Try again.', 'info');
             }
         }
 
@@ -529,7 +529,17 @@
                 displayCustomers(allCustomers);
             } catch (e) {
                 console.error('Failed to load customers:', e);
-                showToast('Failed to load customers', 'error');
+                const container = document.getElementById('customersList');
+                const errorMsg = !navigator.onLine ? 'No internet connection' : 'Customers not available';
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <p>${errorMsg}</p>
+                        <button onclick="loadCustomers()"
+                            style="margin-top: 1rem; padding: 0.5rem 1rem; background: var(--dusty-olive); color: white; border: none; border-radius: 8px; cursor: pointer;">
+                            Try Again
+                        </button>
+                    </div>
+                `;
             }
         }
 
@@ -565,7 +575,6 @@
                     <div class="customer-details">
                         ${c.phone ? `<span>${escapeHtml(c.phone)}</span>` : ''}
                         ${c.address ? `<span>${escapeHtml(c.address)}</span>` : ''}
-                        ${c.currentCredit > 0 ? `<span style="color: var(--error); font-weight: 500;">Outstanding: ${formatCurrency(c.currentCredit)}</span>` : ''}
                     </div>
                     <div class="customer-actions">
                         <button onclick="shareMagicLink('${escapeHtml(c._id)}')" class="btn-action link" title="Share order link">Link</button>
@@ -623,19 +632,52 @@
             e.preventDefault();
 
             const btn = document.getElementById('saveCustomerBtn');
-            btn.classList.add('btn-loading');
-            btn.disabled = true;
-
             const id = document.getElementById('customerId').value;
             const pricingType = document.getElementById('customerPricingType').value;
 
+            // Client-side validation
+            const name = document.getElementById('customerName').value.trim();
+            const phone = document.getElementById('customerPhone').value.trim();
+            const whatsapp = document.getElementById('customerWhatsapp').value.trim();
+
+            if (!name) {
+                showToast('Please enter customer name', 'info');
+                document.getElementById('customerName').focus();
+                return;
+            }
+
+            // Validate phone number format (if provided)
+            if (phone && !/^[0-9]{10}$/.test(phone)) {
+                showToast('Phone should be 10 digits', 'info');
+                document.getElementById('customerPhone').focus();
+                return;
+            }
+
+            // Validate WhatsApp number format (if provided)
+            if (whatsapp && !/^[0-9]{10}$/.test(whatsapp)) {
+                showToast('WhatsApp should be 10 digits', 'info');
+                document.getElementById('customerWhatsapp').focus();
+                return;
+            }
+
+            // Validate markup percentage
+            const markupValue = parseFloat(document.getElementById('customerMarkup').value) || 0;
+            if (pricingType === 'markup' && (markupValue < 0 || markupValue > 200)) {
+                showToast('Markup should be 0-200%', 'info');
+                document.getElementById('customerMarkup').focus();
+                return;
+            }
+
+            btn.classList.add('btn-loading');
+            btn.disabled = true;
+
             const data = {
-                name: document.getElementById('customerName').value,
-                phone: document.getElementById('customerPhone').value,
-                whatsapp: document.getElementById('customerWhatsapp').value,
-                address: document.getElementById('customerAddress').value,
+                name: name,
+                phone: phone,
+                whatsapp: whatsapp,
+                address: document.getElementById('customerAddress').value.trim(),
                 pricingType: pricingType,
-                markupPercentage: pricingType === 'markup' ? parseFloat(document.getElementById('customerMarkup').value) || 0 : 0
+                markupPercentage: pricingType === 'markup' ? markupValue : 0
             };
 
             try {
@@ -670,8 +712,8 @@
                             });
                         }
                     } else {
-                        const msg = err.errors?.[0]?.msg || err.message || 'Failed to save';
-                        showToast(msg, 'error');
+                        const msg = err.errors?.[0]?.msg || err.message || 'Could not save. Try again.';
+                        showToast(msg, 'info');
                         return;
                     }
                 }
@@ -687,15 +729,15 @@
                     loadCustomers();
                 } else {
                     const err = await res.json();
-                    const msg = err.errors?.[0]?.msg || err.message || 'Failed to save';
-                    showToast(msg, 'error');
+                    const msg = err.errors?.[0]?.msg || err.message || 'Could not save. Try again.';
+                    showToast(msg, 'info');
                 }
             } catch (e) {
                 console.error('Save customer error:', e);
                 if (!navigator.onLine) {
-                    showToast('No internet connection', 'error');
+                    showToast('No internet connection', 'info');
                 } else {
-                    showToast('Failed to save customer. Please try again.', 'error');
+                    showToast('Could not save. Please try again.', 'info');
                 }
             } finally {
                 btn.classList.remove('btn-loading');
@@ -733,14 +775,14 @@
                     loadCustomers();
                 } else {
                     const err = await res.json();
-                    showToast(err.message || 'Failed to delete', 'error');
+                    showToast(err.message || 'Could not delete', 'info');
                 }
             } catch (e) {
                 console.error('Delete customer error:', e);
                 if (!navigator.onLine) {
-                    showToast('No internet connection', 'error');
+                    showToast('No internet connection', 'info');
                 } else {
-                    showToast('Failed to delete customer. Please try again.', 'error');
+                    showToast('Could not delete. Please try again.', 'info');
                 }
             }
         }
@@ -754,7 +796,7 @@
         async function shareMagicLink(customerId, _isRetry = false) {
             const customer = allCustomers.find(c => c._id === customerId);
             if (!customer) {
-                showToast('Customer not found', 'error');
+                showToast('Customer data updating. Please refresh.', 'info');
                 return;
             }
 
@@ -808,14 +850,14 @@
                         }
                     }
                 } else {
-                    showToast(data.message || 'Failed to generate link', 'error');
+                    showToast(data.message || 'Could not generate link', 'info');
                 }
             } catch (e) {
                 console.error('Magic link error:', e);
                 if (!navigator.onLine) {
-                    showToast('No internet connection', 'error');
+                    showToast('No internet connection', 'info');
                 } else {
-                    showToast('Failed to generate link. Please try again.', 'error');
+                    showToast('Could not generate link. Try again.', 'info');
                 }
             }
         }
@@ -824,7 +866,7 @@
         async function openContractPrices(customerId) {
             const customer = allCustomers.find(c => c._id === customerId);
             if (!customer) {
-                showToast('Customer not found', 'error');
+                showToast('Customer data updating. Please refresh.', 'info');
                 return;
             }
 
@@ -911,7 +953,7 @@
             const customerId = document.getElementById('contractCustomerId').value;
             const customer = allCustomers.find(c => c._id === customerId);
             if (!customer) {
-                showToast('Customer not found', 'error');
+                showToast('Customer data updating. Please refresh.', 'info');
                 return;
             }
 
@@ -978,14 +1020,14 @@
                     loadCustomers();
                 } else {
                     const err = await res.json();
-                    showToast(err.errors?.[0]?.msg || err.message || 'Failed to save', 'error');
+                    showToast(err.errors?.[0]?.msg || err.message || 'Could not save', 'info');
                 }
             } catch (e) {
                 console.error('Save contract prices error:', e);
                 if (!navigator.onLine) {
-                    showToast('No internet connection', 'error');
+                    showToast('No internet connection', 'info');
                 } else {
-                    showToast('Failed to save prices. Please try again.', 'error');
+                    showToast('Could not save prices. Try again.', 'info');
                 }
             } finally {
                 btn.classList.remove('btn-loading');

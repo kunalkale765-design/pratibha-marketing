@@ -8,40 +8,91 @@ const notFound = (req, res, next) => {
 };
 
 // Global error handler
-const errorHandler = (err, req, res, next) => {
-  // Set status code
-  const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
-  res.status(statusCode);
+const errorHandler = (err, req, res, _next) => {
+  // Ensure we have a valid error object
+  if (!err) {
+    err = new Error('Unknown error occurred');
+  }
 
-  // Prepare error response
+  // Set status code - default to 500 if not explicitly set
+  let statusCode = res.statusCode && res.statusCode >= 400 ? res.statusCode : 500;
+
+  // Prepare error response with consistent structure
   const errorResponse = {
-    message: err.message,
+    success: false,
+    message: err.message || 'Something went wrong. Please try again.',
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
   };
 
   // Handle specific Mongoose errors
   if (err.name === 'ValidationError') {
-    errorResponse.message = Object.values(err.errors)
-      .map(e => e.message)
+    const messages = Object.values(err.errors || {})
+      .map(e => e.message || 'Please check your input')
       .join(', ');
-    res.status(400);
+    errorResponse.message = messages || 'Please check your input';
+    statusCode = 400;
   }
 
   if (err.name === 'CastError') {
-    errorResponse.message = 'Invalid ID format';
-    res.status(400);
+    errorResponse.message = err.path === '_id' ? 'Item not found' : `Please check ${err.path || 'your input'}`;
+    statusCode = 400;
   }
 
   if (err.code === 11000) {
-    const field = Object.keys(err.keyPattern)[0];
-    errorResponse.message = `${field} already exists`;
-    res.status(400);
+    const field = err.keyPattern ? Object.keys(err.keyPattern)[0] : 'field';
+    const value = err.keyValue ? Object.values(err.keyValue)[0] : '';
+    errorResponse.message = value
+      ? `A record with this ${field} "${value}" already exists`
+      : `This ${field} already exists`;
+    statusCode = 400;
   }
 
-  // Always log errors - essential for debugging in any environment
-  console.error(`[${process.env.NODE_ENV || 'unknown'}] Error:`, err.message);
-  if (process.env.NODE_ENV === 'development') {
-    console.error('Stack:', err.stack);
+  // Handle MongoDB connection errors
+  if (err.name === 'MongoNetworkError' || err.name === 'MongoTimeoutError') {
+    errorResponse.message = 'Service temporarily unavailable. Please try again.';
+    statusCode = 503;
+  }
+
+  // Handle JWT errors not caught by auth middleware
+  if (err.name === 'JsonWebTokenError') {
+    errorResponse.message = 'Please log in again';
+    statusCode = 401;
+  }
+
+  if (err.name === 'TokenExpiredError') {
+    errorResponse.message = 'Session expired. Please log in again.';
+    statusCode = 401;
+  }
+
+  // Handle syntax errors in request body
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    errorResponse.message = 'Please check your input and try again';
+    statusCode = 400;
+  }
+
+  // Handle file system errors
+  if (err.code === 'ENOENT') {
+    errorResponse.message = 'Requested item not found';
+    statusCode = 404;
+  }
+
+  if (err.code === 'EACCES' || err.code === 'EPERM') {
+    errorResponse.message = 'Access not available. Please try again.';
+    statusCode = 500;
+  }
+
+  // Apply the status code
+  res.status(statusCode);
+
+  // Log errors - but skip expected client errors (4xx) in test mode to reduce noise
+  const isTestMode = process.env.NODE_ENV === 'test';
+  const isClientError = statusCode >= 400 && statusCode < 500;
+
+  if (!isTestMode || !isClientError) {
+    console.error(`[${process.env.NODE_ENV || 'unknown'}] Error (${statusCode}):`, err.message);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Stack:', err.stack);
+    }
   }
 
   res.json(errorResponse);

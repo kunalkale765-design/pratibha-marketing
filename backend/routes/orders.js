@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { body, validationResult } = require('express-validator');
+const { body, param, validationResult } = require('express-validator');
 const Order = require('../models/Order');
 const Customer = require('../models/Customer');
 const Product = require('../models/Product');
@@ -237,8 +237,16 @@ router.get('/', protect, async (req, res, next) => {
 // @route   GET /api/orders/:id
 // @desc    Get single order
 // @access  Private
-router.get('/:id', protect, async (req, res, next) => {
+router.get('/:id',
+  protect,
+  param('id').isMongoId().withMessage('Invalid order ID'),
+  async (req, res, next) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
     const order = await Order.findById(req.params.id)
       .populate('customer')
       .populate('products.product')
@@ -481,16 +489,6 @@ router.post('/', protect, validateOrder, async (req, res, next) => {
 
     const order = await Order.create(orderData);
 
-    // Update customer credit for unpaid orders (atomic operation to prevent race conditions)
-    try {
-      await Customer.findByIdAndUpdate(order.customer, {
-        $inc: { currentCredit: totalAmount }
-      });
-    } catch (creditError) {
-      // Log but don't fail the order - credit can be reconciled later
-      console.error('Failed to update customer credit after order creation:', creditError.message);
-    }
-
     // Populate and return
     const populatedOrder = await Order.findById(order._id)
       .populate('customer', 'name phone')
@@ -524,17 +522,23 @@ router.post('/', protect, validateOrder, async (req, res, next) => {
 // @route   PUT /api/orders/:id
 // @desc    Update order prices only (products and quantities cannot be changed)
 // @access  Private (Admin, Staff)
-router.put('/:id', protect, authorize('admin', 'staff'), async (req, res, next) => {
+router.put('/:id',
+  protect,
+  authorize('admin', 'staff'),
+  param('id').isMongoId().withMessage('Invalid order ID'),
+  async (req, res, next) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
     const order = await Order.findById(req.params.id);
 
     if (!order) {
       res.status(404);
       throw new Error('Order not found');
     }
-
-    // Fetch customer to check pricing type
-    const customer = await Customer.findById(order.customer);
 
     // Update product prices only - quantities and products cannot be changed
     if (req.body.products && Array.isArray(req.body.products)) {
@@ -625,29 +629,8 @@ router.put('/:id', protect, authorize('admin', 'staff'), async (req, res, next) 
         });
       }
 
-      // Calculate credit adjustment if total changed
-      const oldTotal = order.totalAmount || 0;
-      const totalDifference = totalAmount - oldTotal;
-
       order.products = updatedProducts;
       order.totalAmount = totalAmount;
-
-      // Adjust customer credit if total amount changed and order is not cancelled (atomic operation)
-      if (totalDifference !== 0 && order.status !== 'cancelled') {
-        try {
-          // Increase total = increase credit, decrease total = decrease credit
-          // But only adjust for unpaid portion
-          const oldUnpaid = oldTotal - (order.paidAmount || 0);
-          const newUnpaid = totalAmount - (order.paidAmount || 0);
-          const creditAdjustment = newUnpaid - oldUnpaid;
-          // Use aggregation pipeline for atomic update with Math.max(0, ...)
-          await Customer.findByIdAndUpdate(order.customer, [
-            { $set: { currentCredit: { $max: [0, { $add: ['$currentCredit', creditAdjustment] }] } } }
-          ]);
-        } catch (creditError) {
-          console.error('Failed to adjust customer credit after price update:', creditError.message);
-        }
-      }
     }
 
     // Update notes if provided
@@ -673,8 +656,16 @@ router.put('/:id', protect, authorize('admin', 'staff'), async (req, res, next) 
 // @route   PUT /api/orders/:id/customer-edit
 // @desc    Update order products/quantities (customer can edit their own pending orders)
 // @access  Private (Customers can edit own pending orders, Admin/Staff can edit any pending order)
-router.put('/:id/customer-edit', protect, async (req, res, next) => {
+router.put('/:id/customer-edit',
+  protect,
+  param('id').isMongoId().withMessage('Invalid order ID'),
+  async (req, res, next) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
     const order = await Order.findById(req.params.id).populate('customer');
 
     if (!order) {
@@ -787,6 +778,7 @@ const VALID_STATUS_TRANSITIONS = {
 // @desc    Update order status (enforces valid state transitions)
 // @access  Private (Admin, Staff)
 router.put('/:id/status', protect, authorize('admin', 'staff'), [
+  param('id').isMongoId().withMessage('Invalid order ID'),
   body('status').isIn(['pending', 'confirmed', 'processing', 'packed', 'shipped', 'delivered', 'cancelled'])
     .withMessage('Invalid status'),
   body('assignedWorker')
@@ -885,6 +877,7 @@ router.put('/:id/status', protect, authorize('admin', 'staff'), [
 // @desc    Update order payment
 // @access  Private (Admin, Staff)
 router.put('/:id/payment', protect, authorize('admin', 'staff'), [
+  param('id').isMongoId().withMessage('Invalid order ID'),
   body('paidAmount').isFloat({ min: 0 }).withMessage('Paid amount must be positive')
 ], async (req, res, next) => {
   try {
@@ -904,45 +897,33 @@ router.put('/:id/payment', protect, authorize('admin', 'staff'), [
     }
 
     // Validate payment amount does not exceed order total
-    const newPaidAmount = req.body.paidAmount;
-    if (newPaidAmount > order.totalAmount) {
+    // Round to 2 decimal places to avoid floating point comparison issues
+    const newPaidAmount = Math.round(req.body.paidAmount * 100) / 100;
+    const orderTotal = Math.round(order.totalAmount * 100) / 100;
+
+    // Use integer comparison to avoid floating point precision issues
+    if (Math.round(newPaidAmount * 100) > Math.round(orderTotal * 100)) {
       return res.status(400).json({
         success: false,
-        message: `Payment amount (₹${newPaidAmount}) cannot exceed order total (₹${order.totalAmount})`
+        message: `Payment amount (₹${newPaidAmount.toFixed(2)}) cannot exceed order total (₹${orderTotal.toFixed(2)})`
       });
     }
 
-    // Calculate credit adjustment (difference between old and new paid amount)
-    const oldPaidAmount = order.paidAmount || 0;
-    const creditAdjustment = newPaidAmount - oldPaidAmount;
-
     order.paidAmount = newPaidAmount;
 
-    // Update payment status
-    if (order.paidAmount >= order.totalAmount) {
+    // Update payment status using integer comparison for precision
+    const paidCents = Math.round(order.paidAmount * 100);
+    const totalCents = Math.round(order.totalAmount * 100);
+
+    if (paidCents >= totalCents) {
       order.paymentStatus = 'paid';
-    } else if (order.paidAmount > 0) {
+    } else if (paidCents > 0) {
       order.paymentStatus = 'partial';
     } else {
       order.paymentStatus = 'unpaid';
     }
 
     await order.save();
-
-    // Update customer credit (reduce by payment amount) - atomic operation
-    if (creditAdjustment !== 0 && order.status !== 'cancelled') {
-      try {
-        // Positive adjustment = more paid = reduce credit
-        // Negative adjustment = less paid = increase credit
-        // Use aggregation pipeline for atomic update with Math.max(0, ...)
-        await Customer.findByIdAndUpdate(order.customer, [
-          { $set: { currentCredit: { $max: [0, { $add: ['$currentCredit', -creditAdjustment] }] } } }
-        ]);
-      } catch (creditError) {
-        console.error('Failed to update customer credit after payment:', creditError.message);
-        // Continue - payment was recorded, credit can be reconciled manually
-      }
-    }
 
     res.json({
       success: true,
@@ -956,8 +937,17 @@ router.put('/:id/payment', protect, authorize('admin', 'staff'), [
 // @route   DELETE /api/orders/:id
 // @desc    Cancel order
 // @access  Private (Admin, Staff)
-router.delete('/:id', protect, authorize('admin', 'staff'), async (req, res, next) => {
+router.delete('/:id',
+  protect,
+  authorize('admin', 'staff'),
+  param('id').isMongoId().withMessage('Invalid order ID'),
+  async (req, res, next) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
     const order = await Order.findById(req.params.id);
 
     if (!order) {
@@ -973,27 +963,11 @@ router.delete('/:id', protect, authorize('admin', 'staff'), async (req, res, nex
       });
     }
 
-    // Calculate unpaid amount to restore to customer credit
-    const unpaidAmount = order.totalAmount - (order.paidAmount || 0);
-
     // Update order status
     order.status = 'cancelled';
     order.cancelledBy = req.user._id;
     order.cancelledAt = new Date();
     await order.save();
-
-    // Restore customer credit for unpaid portion - atomic operation
-    if (unpaidAmount > 0) {
-      try {
-        // Use aggregation pipeline for atomic update with Math.max(0, ...)
-        await Customer.findByIdAndUpdate(order.customer, [
-          { $set: { currentCredit: { $max: [0, { $add: ['$currentCredit', -unpaidAmount] }] } } }
-        ]);
-      } catch (creditError) {
-        console.error('Failed to restore customer credit on order cancellation:', creditError.message);
-        // Continue - order is cancelled, credit can be reconciled manually
-      }
-    }
 
     res.json({
       success: true,

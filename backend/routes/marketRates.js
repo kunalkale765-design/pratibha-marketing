@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { body, query, validationResult } = require('express-validator');
+const { body, param, query, validationResult } = require('express-validator');
 const MarketRate = require('../models/MarketRate');
 const Product = require('../models/Product');
 const { protect, authorize } = require('../middleware/auth');
@@ -194,8 +194,16 @@ router.get('/history-summary', protect, authorize('admin', 'staff'), [
 // @route   GET /api/market-rates/history/:productId
 // @desc    Get rate history for a product
 // @access  Private (All authenticated users)
-router.get('/history/:productId', protect, async (req, res, next) => {
+router.get('/history/:productId',
+  protect,
+  param('productId').isMongoId().withMessage('Invalid product ID'),
+  async (req, res, next) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
     const { limit: rawLimit } = req.query;
     // Validate and cap limit to prevent DoS (min 1, max 500, default 30)
     const limit = Math.min(Math.max(parseInt(rawLimit) || 30, 1), 500);
@@ -241,8 +249,16 @@ router.post('/reset-all', protect, authorize('admin'), async (req, res, next) =>
 // @route   GET /api/market-rates/:id
 // @desc    Get single market rate
 // @access  Private (All authenticated users)
-router.get('/:id', protect, async (req, res, next) => {
+router.get('/:id',
+  protect,
+  param('id').isMongoId().withMessage('Invalid market rate ID'),
+  async (req, res, next) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
     const rate = await MarketRate.findById(req.params.id)
       .populate('product', 'name unit')
       .select('-__v');
@@ -311,7 +327,12 @@ router.post('/', protect, authorize('admin', 'staff'), validateMarketRate, async
 // @route   PUT /api/market-rates/:id
 // @desc    Update market rate
 // @access  Private (Admin, Staff)
-router.put('/:id', protect, authorize('admin', 'staff'), validateMarketRate, async (req, res, next) => {
+router.put('/:id',
+  protect,
+  authorize('admin', 'staff'),
+  param('id').isMongoId().withMessage('Invalid market rate ID'),
+  ...validateMarketRate,
+  async (req, res, next) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -344,8 +365,17 @@ router.put('/:id', protect, authorize('admin', 'staff'), validateMarketRate, asy
 // @route   DELETE /api/market-rates/:id
 // @desc    Delete market rate
 // @access  Private (Admin only)
-router.delete('/:id', protect, authorize('admin'), async (req, res, next) => {
+router.delete('/:id',
+  protect,
+  authorize('admin'),
+  param('id').isMongoId().withMessage('Invalid market rate ID'),
+  async (req, res, next) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
     const marketRate = await MarketRate.findByIdAndDelete(req.params.id);
 
     if (!marketRate) {

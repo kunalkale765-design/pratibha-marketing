@@ -19,26 +19,40 @@ router.get('/quantity-summary', protect, authorize('admin', 'staff'), async (req
     const quantityMap = new Map();
 
     orders.forEach(order => {
+      // Skip orders without customer reference
+      if (!order.customer) return;
+
       order.products.forEach(item => {
         // Skip if product was deleted
         if (!item.product) return;
-        const productId = item.product._id.toString();
-        const productName = item.productName || item.product.name;
-        const unit = item.unit || item.product.unit;
+
+        // Safely get product ID
+        const productId = item.product._id ? item.product._id.toString() : null;
+        if (!productId) return;
+
+        const productName = item.productName || item.product?.name || 'Unknown Product';
+        const unit = item.unit || item.product?.unit || 'unit';
+
+        // Safely get customer ID
+        const customerId = typeof order.customer === 'object'
+          ? order.customer._id?.toString()
+          : order.customer?.toString();
+
+        if (!customerId) return;
 
         if (quantityMap.has(productId)) {
           const existing = quantityMap.get(productId);
-          existing.totalQuantity += item.quantity;
+          existing.totalQuantity += item.quantity || 0;
           existing.orderCount += 1;
-          existing.customers.add(order.customer.toString());
+          existing.customers.add(customerId);
         } else {
           quantityMap.set(productId, {
             productId,
             productName,
             unit,
-            totalQuantity: item.quantity,
+            totalQuantity: item.quantity || 0,
             orderCount: 1,
-            customers: new Set([order.customer.toString()])
+            customers: new Set([customerId])
           });
         }
       });
@@ -57,18 +71,21 @@ router.get('/quantity-summary', protect, authorize('admin', 'staff'), async (req
       }
     ]);
 
-    // Combine data
+    // Combine data with safe null checks
     const summary = Array.from(quantityMap.values()).map(item => {
-      const rateInfo = latestRates.find(r => r._id.toString() === item.productId);
+      const rateInfo = latestRates.find(r => r._id?.toString() === item.productId);
+      const latestRate = rateInfo?.latestRate;
+      const rate = latestRate?.rate;
+
       return {
         productName: item.productName,
         totalQuantity: item.totalQuantity,
         unit: item.unit,
         orderCount: item.orderCount,
         customerCount: item.customers.size,
-        marketRate: rateInfo ? rateInfo.latestRate.rate : null,
-        trend: rateInfo ? rateInfo.latestRate.trend : null,
-        estimatedValue: rateInfo ? (item.totalQuantity * rateInfo.latestRate.rate).toFixed(2) : null
+        marketRate: rate ?? null,
+        trend: latestRate?.trend ?? null,
+        estimatedValue: rate != null ? (item.totalQuantity * rate).toFixed(2) : null
       };
     });
 
@@ -131,11 +148,14 @@ router.get('/daily-requirements', protect, authorize('admin', 'staff'), async (r
 
     todayOrders.forEach(order => {
       order.products.forEach(item => {
-        const key = item.productName || item.product.name;
+        // Safely get product name with fallback
+        const key = item.productName || item.product?.name || 'Unknown Product';
+        const qty = item.quantity || 0;
+
         if (requirements.has(key)) {
-          requirements.set(key, requirements.get(key) + item.quantity);
+          requirements.set(key, requirements.get(key) + qty);
         } else {
-          requirements.set(key, item.quantity);
+          requirements.set(key, qty);
         }
       });
     });

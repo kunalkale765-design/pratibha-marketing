@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const fs = require('fs').promises;
-const { body, param, query, validationResult } = require('express-validator');
+const { body, param, validationResult } = require('express-validator');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const Invoice = require('../models/Invoice');
@@ -456,12 +456,20 @@ router.get('/',
   authorize('admin', 'staff'),
   async (req, res, next) => {
     try {
-      const { firmId, orderNumber, page = 1, limit = 20 } = req.query;
+      const { firmId, orderNumber, page: rawPage = 1, limit: rawLimit = 20 } = req.query;
+
+      // Validate and cap pagination parameters
+      const limit = Math.min(Math.max(parseInt(rawLimit) || 20, 1), 100);
+      const page = Math.max(parseInt(rawPage) || 1, 1);
 
       // Build query
       const query = {};
       if (firmId) query['firm.id'] = firmId;
-      if (orderNumber) query.orderNumber = new RegExp(orderNumber, 'i');
+      if (orderNumber) {
+        // Escape regex special characters to prevent ReDoS attacks
+        const escapedOrderNumber = orderNumber.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        query.orderNumber = new RegExp(escapedOrderNumber, 'i');
+      }
 
       // Get total count
       const total = await Invoice.countDocuments(query);
@@ -470,7 +478,7 @@ router.get('/',
       const invoices = await Invoice.find(query)
         .sort({ generatedAt: -1 })
         .skip((page - 1) * limit)
-        .limit(parseInt(limit))
+        .limit(limit)
         .select('-pdfPath')
         .populate('generatedBy', 'name');
 
@@ -478,8 +486,8 @@ router.get('/',
         success: true,
         data: invoices,
         pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
+          page,
+          limit,
           total,
           pages: Math.ceil(total / limit)
         }
@@ -655,7 +663,7 @@ router.get('/my-order/:orderId',
 
       // Check if user is customer - verify they own this order
       if (req.user.role === 'customer') {
-        if (!req.user.customer || order.customer.toString() !== req.user.customer.toString()) {
+        if (!req.user.customer || !order.customer || order.customer.toString() !== req.user.customer.toString()) {
           res.status(403);
           throw new Error('You can only view invoices for your own orders');
         }
@@ -713,7 +721,10 @@ router.get('/my/:invoiceNumber/download',
 
       // Check if user is customer - verify they own this order
       if (req.user.role === 'customer') {
-        if (!req.user.customer || invoice.order.customer.toString() !== req.user.customer.toString()) {
+        const userCustomerId = req.user.customer?.toString?.() || req.user.customer;
+        const orderCustomerId = invoice.order?.customer?.toString?.() || invoice.order?.customer;
+
+        if (!userCustomerId || !orderCustomerId || userCustomerId !== orderCustomerId) {
           res.status(403);
           throw new Error('You can only download invoices for your own orders');
         }
