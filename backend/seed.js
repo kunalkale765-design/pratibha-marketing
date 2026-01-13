@@ -121,6 +121,17 @@ const seedDatabase = async () => {
     const admin = await User.create(adminUser);
     console.log(`[OK] Admin user created (Email: ${admin.email})\n`);
 
+    // Create Kunal's admin account (permanent)
+    console.log('Creating Kunal admin account...');
+    await User.create({
+      name: 'Kunal',
+      email: 'kunal@pm.in',
+      password: 'Kunal786',
+      role: 'admin',
+      isActive: true
+    });
+    console.log(`[OK] Kunal admin created (Email: kunal@pm.in)\n`);
+
     // Create sample user accounts for some customers
     console.log('Creating customer user accounts...');
     for (let i = 0; i < 2; i++) {
