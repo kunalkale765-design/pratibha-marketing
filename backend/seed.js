@@ -97,7 +97,32 @@ const seedDatabase = async () => {
 
     console.log('\n[*] Starting database seeding...\n');
 
-    // Clear existing data (optional - comment out if you want to keep existing data)
+    // SAFETY CHECK: Prevent accidental deletion of production data
+    const existingOrders = await Order.countDocuments();
+    const existingCustomers = await Customer.countDocuments();
+
+    if (existingOrders > 5 || existingCustomers > 5) {
+      console.log('╔═══════════════════════════════════════════════════════════╗');
+      console.log('║  ⚠️  WARNING: PRODUCTION DATA DETECTED!                    ║');
+      console.log('╠═══════════════════════════════════════════════════════════╣');
+      console.log(`║  Orders: ${existingOrders.toString().padEnd(5)} | Customers: ${existingCustomers.toString().padEnd(20)}║`);
+      console.log('║                                                           ║');
+      console.log('║  This will DELETE ALL your data!                          ║');
+      console.log('║                                                           ║');
+      console.log('║  To proceed, run with --force flag:                       ║');
+      console.log('║  node backend/seed.js --force                             ║');
+      console.log('╚═══════════════════════════════════════════════════════════╝');
+
+      if (!process.argv.includes('--force')) {
+        console.log('\n❌ Seed cancelled. Your data is safe.\n');
+        await mongoose.disconnect();
+        process.exit(0);
+      }
+
+      console.log('\n⚠️  --force flag detected. Proceeding with data deletion...\n');
+    }
+
+    // Clear existing data
     console.log('Clearing existing data...');
     await Product.deleteMany({});
     await Customer.deleteMany({});

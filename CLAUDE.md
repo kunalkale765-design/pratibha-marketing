@@ -10,11 +10,24 @@ npm run dev          # Start server with nodemon (hot reload)
 npm start            # Start production server
 
 # Database
-node backend/seed.js # Seed database with sample data
+node backend/seed.js # Seed database with sample data (DANGEROUS - see warning below)
 
 # Deployment
 ./deploy.sh          # Deploy to Digital Ocean (requires SSH access)
 ```
+
+## ⚠️ CRITICAL: Database Seed Script Warning
+
+**NEVER run `node backend/seed.js` without explicit user permission!**
+
+The seed script DELETES ALL DATA including:
+- Customers and their contract prices
+- Orders
+- Users
+- Market rates
+
+The script has a safety check that requires `--force` flag if real data is detected,
+but ALWAYS ask the user before running it. Real business data cannot be recovered!
 
 Server runs on `http://localhost:5000` by default.
 
