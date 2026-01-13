@@ -373,6 +373,25 @@ router.post('/', protect, validateOrder, async (req, res, next) => {
       }
     }
 
+    // SECURITY: Contract customers can only order products with contract prices configured
+    if (req.user.role === 'customer' && customer.pricingType === 'contract') {
+      const contractProductIds = customer.contractPrices
+        ? [...customer.contractPrices.keys()]
+        : [];
+
+      const requestedProductIds = req.body.products.map(p => p.product.toString());
+      const unauthorizedProducts = requestedProductIds.filter(
+        pid => !contractProductIds.includes(pid)
+      );
+
+      if (unauthorizedProducts.length > 0) {
+        return res.status(403).json({
+          success: false,
+          message: 'Some products are not available for your account. Please contact us for pricing.'
+        });
+      }
+    }
+
     // Pre-fetch all products and market rates to avoid race conditions
     // This ensures consistent pricing across all products in one order
     const productIds = req.body.products.map(item => item.product);
@@ -713,6 +732,33 @@ router.put('/:id/customer-edit',
     if (!customer) {
       res.status(404);
       throw new Error('Customer not found');
+    }
+
+    // SECURITY: Contract customers can only include products that are either:
+    // 1. Already in the order (staff may have added non-contracted products), OR
+    // 2. Have contract prices configured
+    if (req.user.role === 'customer' && customer.pricingType === 'contract') {
+      const contractProductIds = customer.contractPrices
+        ? [...customer.contractPrices.keys()]
+        : [];
+      const existingProductIds = order.products.map(p =>
+        typeof p.product === 'object' ? p.product._id.toString() : p.product.toString()
+      );
+      const allowedProductIds = new Set([...contractProductIds, ...existingProductIds]);
+
+      const requestedProductIds = req.body.products.map(p =>
+        typeof p.product === 'object' ? p.product._id.toString() : p.product.toString()
+      );
+      const unauthorizedProducts = requestedProductIds.filter(
+        pid => !allowedProductIds.has(pid)
+      );
+
+      if (unauthorizedProducts.length > 0) {
+        return res.status(403).json({
+          success: false,
+          message: 'Some products are not available for your account.'
+        });
+      }
     }
 
     // Update products with recalculated prices

@@ -1094,9 +1094,41 @@
             return marketRates[product._id] || 0;
         }
 
-        function buildCategoryPills() {
-            const categories = [...new Set(products.map(p => p.category || 'Other'))];
+        // Filter products for contract customers (only show products with contract prices)
+        function getFilteredProducts() {
+            // Staff/admin always see all products
+            if (isStaff) {
+                return products;
+            }
+
+            // Non-contract customers see all products
+            if (!selectedCustomer || selectedCustomer.pricingType !== 'contract') {
+                return products;
+            }
+
+            // Contract customers: filter to only products with contract prices
+            const contractPrices = selectedCustomer.contractPrices || {};
+            const contractProductIds = Object.keys(contractPrices);
+
+            // If no contract prices configured, return empty array
+            if (contractProductIds.length === 0) {
+                return [];
+            }
+
+            return products.filter(p => contractProductIds.includes(p._id));
+        }
+
+        function buildCategoryPills(displayProducts = products) {
+            const categories = [...new Set(displayProducts.map(p => p.category || 'Other'))];
             const container = document.getElementById('categoryPills');
+
+            // Hide pills if no products or only one category
+            if (displayProducts.length === 0 || categories.length <= 1) {
+                container.style.display = 'none';
+                return;
+            }
+
+            container.style.display = 'flex';
             container.innerHTML = '<button class="cat-pill active" data-cat="all">All</button>';
 
             categories.forEach(cat => {
@@ -1129,15 +1161,27 @@
         function renderProducts() {
             const container = document.getElementById('productList');
 
-            if (!products.length) {
-                container.innerHTML = '<div class="empty-state">No products available</div>';
+            // Get filtered products based on customer type
+            const displayProducts = getFilteredProducts();
+
+            if (!displayProducts.length) {
+                // Different message for contract customers with no products configured
+                const isContractWithNoProducts = selectedCustomer &&
+                    selectedCustomer.pricingType === 'contract' &&
+                    products.length > 0;
+
+                const message = isContractWithNoProducts
+                    ? 'No products configured for your account. Please contact us to set up pricing.'
+                    : 'No products available';
+
+                container.innerHTML = `<div class="empty-state">${message}</div>`;
                 return;
             }
 
-            buildCategoryPills();
+            buildCategoryPills(displayProducts);
 
             const grouped = {};
-            products.forEach(p => {
+            displayProducts.forEach(p => {
                 const cat = p.category || 'Other';
                 if (!grouped[cat]) grouped[cat] = [];
                 grouped[cat].push(p);
