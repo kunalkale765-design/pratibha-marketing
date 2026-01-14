@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
@@ -183,10 +184,14 @@ router.post('/login', [
     });
 
     // Only return essential customer data (exclude sensitive info)
+    // For contract customers, include contractPrices so frontend can filter products
     const safeCustomer = user.customer ? {
       _id: user.customer._id,
       name: user.customer.name,
-      pricingType: user.customer.pricingType
+      pricingType: user.customer.pricingType,
+      ...(user.customer.pricingType === 'contract' && user.customer.contractPrices
+        ? { contractPrices: Object.fromEntries(user.customer.contractPrices) }
+        : {})
     } : null;
 
     res.json({
@@ -249,6 +254,7 @@ router.get('/me', async (req, res, next) => {
         });
       }
       // Only return essential customer data (exclude sensitive info)
+      // For contract customers, include contractPrices so frontend can filter products
       return res.json({
         success: true,
         user: {
@@ -259,7 +265,10 @@ router.get('/me', async (req, res, next) => {
           customer: {
             _id: customer._id,
             name: customer.name,
-            pricingType: customer.pricingType
+            pricingType: customer.pricingType,
+            ...(customer.pricingType === 'contract' && customer.contractPrices
+              ? { contractPrices: Object.fromEntries(customer.contractPrices) }
+              : {})
           },
           isMagicLink: true
         }
@@ -277,10 +286,14 @@ router.get('/me', async (req, res, next) => {
     }
 
     // Only return essential user/customer data (exclude sensitive info)
+    // For contract customers, include contractPrices so frontend can filter products
     const safeCustomer = user.customer ? {
       _id: user.customer._id,
       name: user.customer.name,
-      pricingType: user.customer.pricingType
+      pricingType: user.customer.pricingType,
+      ...(user.customer.pricingType === 'contract' && user.customer.contractPrices
+        ? { contractPrices: Object.fromEntries(user.customer.contractPrices) }
+        : {})
     } : null;
 
     res.json({
@@ -312,34 +325,23 @@ router.get('/magic/:token', async (req, res, next) => {
       });
     }
 
-    // Find customer with this token
+    // Hash the incoming token to compare with stored hash
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    // Find customer with this hashed token
     const customer = await Customer.findOne({
-      magicLinkToken: token,
+      magicLinkToken: hashedToken,
       isActive: true
     });
 
     if (!customer) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid or expired magic link'
+        message: 'Invalid magic link'
       });
     }
 
-    // Check if magic link is expired (configurable, default 30 days)
-    const MAGIC_LINK_EXPIRY_DAYS = parseInt(process.env.MAGIC_LINK_EXPIRY_DAYS) || 30;
-    if (customer.magicLinkCreatedAt) {
-      const expiryTime = new Date(customer.magicLinkCreatedAt.getTime() + (MAGIC_LINK_EXPIRY_DAYS * 24 * 60 * 60 * 1000));
-      if (new Date() > expiryTime) {
-        // Clear expired token
-        customer.magicLinkToken = undefined;
-        customer.magicLinkCreatedAt = undefined;
-        await customer.save();
-        return res.status(401).json({
-          success: false,
-          message: 'Magic link has expired. Please request a new one.'
-        });
-      }
-    }
+    // Magic links never expire - they remain valid until explicitly revoked
 
     // Find if there's a user account linked to this customer
     const user = await User.findOne({ customer: customer._id, isActive: true });
@@ -362,6 +364,7 @@ router.get('/magic/:token', async (req, res, next) => {
       });
 
       // Only return essential customer data (exclude sensitive info)
+      // For contract customers, include contractPrices so frontend can filter products
       return res.json({
         success: true,
         user: {
@@ -372,7 +375,10 @@ router.get('/magic/:token', async (req, res, next) => {
           customer: {
             _id: customer._id,
             name: customer.name,
-            pricingType: customer.pricingType
+            pricingType: customer.pricingType,
+            ...(customer.pricingType === 'contract' && customer.contractPrices
+              ? { contractPrices: Object.fromEntries(customer.contractPrices) }
+              : {})
           }
         },
         message: 'Magic link authenticated'
@@ -390,6 +396,7 @@ router.get('/magic/:token', async (req, res, next) => {
     });
 
     // Only return essential customer data (exclude sensitive info)
+    // For contract customers, include contractPrices so frontend can filter products
     res.json({
       success: true,
       user: {
@@ -400,7 +407,10 @@ router.get('/magic/:token', async (req, res, next) => {
         customer: {
           _id: customer._id,
           name: customer.name,
-          pricingType: customer.pricingType
+          pricingType: customer.pricingType,
+          ...(customer.pricingType === 'contract' && customer.contractPrices
+            ? { contractPrices: Object.fromEntries(customer.contractPrices) }
+            : {})
         }
       },
       message: 'Magic link authenticated'
