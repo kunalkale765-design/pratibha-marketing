@@ -285,6 +285,7 @@
             const container = document.getElementById('ordersList');
             const search = document.getElementById('searchInput').value.toLowerCase();
             const isAdmin = currentUser?.role === 'admin';
+            const isStaff = currentUser?.role === 'admin' || currentUser?.role === 'staff';
 
             // Filter out orders without valid _id first
             let filtered = orders.filter(o => o._id && /^[a-f\d]{24}$/i.test(o._id));
@@ -316,12 +317,13 @@
                         <div class="order-avatar">${getInitials(o.customer?.name)}</div>
                         <div class="order-info">
                             <div class="order-customer">${escapeHtml(o.customer?.name || 'Unknown')}</div>
+                            ${o.notes ? `<div class="order-notes">${escapeHtml(o.notes)}</div>` : ''}
                             <div class="order-number">Order #${escapeHtml(o.orderNumber)}</div>
                         </div>
                         <div class="order-amount-pill">₹${(o.totalAmount || 0).toLocaleString('en-IN')}</div>
                     </div>
                     <div class="swipe-actions">
-                        <button class="swipe-action edit" onclick="event.stopPropagation(); printOrder('${escapeHtml(o._id)}')">Print</button>
+                        ${isStaff ? `<button class="swipe-action edit" onclick="event.stopPropagation(); printOrder('${escapeHtml(o._id)}')">Print</button>` : ''}
                         ${isAdmin ? `<button class="swipe-action delete" onclick="event.stopPropagation(); deleteOrder('${escapeHtml(o._id)}')">Delete</button>` : ''}
                     </div>
                 </div>
@@ -382,8 +384,18 @@
             });
         }
 
+        // Debounce utility to prevent excessive function calls
+        function debounce(fn, delay) {
+            let timeoutId;
+            return function(...args) {
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => fn.apply(this, args), delay);
+            };
+        }
+
         function setupSearch() {
-            document.getElementById('searchInput').addEventListener('input', renderOrders);
+            const debouncedRender = debounce(renderOrders, 200);
+            document.getElementById('searchInput').addEventListener('input', debouncedRender);
         }
 
         // NOTE: setupSwipeHandlers() was removed - swipe handling is now done via
@@ -395,6 +407,12 @@
         let selectedProductIds = new Set();
 
         async function printOrder(orderId) {
+            // Only staff/admin can print invoices
+            if (currentUser?.role === 'customer') {
+                showToast('Invoice printing is not available', 'info');
+                return;
+            }
+
             // Close swipe
             document.querySelectorAll('.swipe-item.swiped, .swipe-item.swiped-single').forEach(item => {
                 item.classList.remove('swiped', 'swiped-single');
@@ -658,6 +676,12 @@
         }
 
         async function viewOrder(id) {
+            // Prevent opening new order while saving is in progress
+            if (isSaving) {
+                showToast('Please wait, saving in progress...', 'info');
+                return;
+            }
+
             try {
                 const res = await fetch(`/api/orders/${id}`, { credentials: 'include' });
 
@@ -716,7 +740,8 @@
                         <div class="info-label">Products</div>
                         ${order.products.map((p, idx) => {
                             const productId = typeof p.product === 'object' ? p.product._id : p.product;
-                            const purchasePrice = marketRates[productId] || p.rate;
+                            const purchasePrice = marketRates[productId] || p.rate || null;
+                            const purchaseDisplay = purchasePrice ? `₹${purchasePrice.toLocaleString('en-IN')}` : 'N/A';
                             return `
                             <div class="product-item" data-idx="${idx}">
                                 <div class="product-top">
@@ -728,7 +753,7 @@
                                 <div class="prices-container">
                                     <div class="price-box">
                                         <div class="price-label">Purchase</div>
-                                        <div class="price-value">₹${purchasePrice}</div>
+                                        <div class="price-value">${purchaseDisplay}</div>
                                     </div>
                                     <div class="price-box">
                                         <div class="price-label">Selling${p.isContractPrice ? ' <span class="contract-badge">Fixed</span>' : ''}</div>
@@ -863,12 +888,19 @@
             btn.classList.add('btn-loading');
 
             try {
-                // Build updated products array
-                const updatedProducts = currentOrder.products.map((p, idx) => ({
-                    product: typeof p.product === 'object' ? p.product._id : p.product,
-                    quantity: p.quantity,
-                    priceAtTime: priceChanges[idx] !== undefined ? priceChanges[idx] : p.rate
-                }));
+                // Build updated products array, ensuring no zero rates are sent
+                const updatedProducts = currentOrder.products.map((p, idx) => {
+                    let price = priceChanges[idx] !== undefined ? priceChanges[idx] : p.rate;
+                    // Safety check: never send rate <= 0, use original rate instead
+                    if (!price || price <= 0) {
+                        price = p.rate;
+                    }
+                    return {
+                        product: typeof p.product === 'object' ? p.product._id : p.product,
+                        quantity: p.quantity,
+                        priceAtTime: price
+                    };
+                });
 
                 const headers = { 'Content-Type': 'application/json' };
                 const csrfToken = await Auth.ensureCsrfToken();
@@ -905,8 +937,27 @@
                                 credentials: 'include',
                                 body: JSON.stringify(payload)
                             });
+
+                            // If retry also fails with CSRF, tell user to refresh
+                            if (res.status === 403) {
+                                let retryErr;
+                                try {
+                                    retryErr = await res.json();
+                                } catch {
+                                    retryErr = { message: '' };
+                                }
+                                if (retryErr.message?.toLowerCase().includes('csrf')) {
+                                    showToast('Session expired. Please refresh the page.', 'info');
+                                } else {
+                                    showToast(retryErr.message || 'Access denied', 'info');
+                                }
+                                isSaving = false;
+                                btn.classList.remove('btn-loading');
+                                btn.disabled = false;
+                                return;
+                            }
                         } else {
-                            showToast('Please refresh the page.', 'info');
+                            showToast('Session expired. Please refresh the page.', 'info');
                             isSaving = false;
                             btn.classList.remove('btn-loading');
                             btn.disabled = false;

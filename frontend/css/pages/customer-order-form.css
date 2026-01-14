@@ -221,6 +221,28 @@ body {
     text-transform: uppercase;
 }
 
+/* Order Notes Input */
+.order-notes-input {
+    flex: 1;
+    min-width: 0;
+    padding: 0.75rem 1rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    margin: 0 0.75rem;
+}
+
+.order-notes-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.order-notes-input:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.2);
+}
+
 .btn-order {
     background: var(--dusty-olive);
     color: white;
@@ -231,6 +253,7 @@ body {
     font-weight: 600;
     cursor: pointer;
     min-height: 52px;
+    flex-shrink: 0;
 }
 
 .btn-order:disabled {

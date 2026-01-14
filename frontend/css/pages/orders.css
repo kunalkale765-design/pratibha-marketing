@@ -117,6 +117,16 @@ body {
     margin-top: 0.125rem;
 }
 
+.order-notes {
+    font-size: 0.8125rem;
+    color: var(--dusty-olive);
+    margin-top: 0.125rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-style: italic;
+}
+
 /* Amount Pill */
 .order-amount-pill {
     background: rgba(196, 167, 125, 0.15);
