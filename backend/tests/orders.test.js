@@ -366,20 +366,86 @@ describe('Order Endpoints', () => {
       expect(res.body.message).toContain('Cannot add or remove products');
     });
 
-    it('should reject quantity changes (only prices can be updated)', async () => {
+    it('should allow staff to update quantities', async () => {
       const res = await request(app)
         .put(`/api/orders/${testOrder._id}`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
           products: [{
             product: testProduct._id,
-            quantity: 999,  // Different from original
+            quantity: 5,  // Changed from original 10
+            rate: 100
+          }]
+        });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.data.products[0].quantity).toBe(5);
+      expect(res.body.data.totalAmount).toBe(500); // 5 * 100
+    });
+
+    it('should remove product when quantity is 0', async () => {
+      // Create order with 2 products
+      const product2 = await testUtils.createTestProduct({ name: 'Test Product 2' });
+      const order = await Order.create({
+        customer: testCustomer._id,
+        products: [
+          { product: testProduct._id, productName: 'Test Product', quantity: 10, unit: 'kg', rate: 100, amount: 1000 },
+          { product: product2._id, productName: 'Test Product 2', quantity: 5, unit: 'kg', rate: 50, amount: 250 }
+        ],
+        totalAmount: 1250
+      });
+
+      const res = await request(app)
+        .put(`/api/orders/${order._id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          products: [
+            { product: testProduct._id, quantity: 0, rate: 100 },  // Remove this one
+            { product: product2._id, quantity: 5, rate: 50 }
+          ]
+        });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.data.products.length).toBe(1);
+      expect(res.body.data.products[0].productName).toBe('Test Product 2');
+      expect(res.body.data.totalAmount).toBe(250);
+    });
+
+    it('should reject quantity below minimum for kg unit', async () => {
+      const res = await request(app)
+        .put(`/api/orders/${testOrder._id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          products: [{
+            product: testProduct._id,
+            quantity: 0.1,  // Below 0.2 minimum for kg
             rate: 100
           }]
         });
 
       expect(res.statusCode).toBe(400);
-      expect(res.body.message).toContain('cannot be changed');
+      expect(res.body.message).toContain('Minimum quantity');
+    });
+
+    it('should track quantity changes in audit log', async () => {
+      await request(app)
+        .put(`/api/orders/${testOrder._id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          products: [{
+            product: testProduct._id,
+            quantity: 5,
+            rate: 150  // Change both price and quantity
+          }]
+        });
+
+      const updatedOrder = await Order.findById(testOrder._id);
+      expect(updatedOrder.priceAuditLog.length).toBe(1);
+      expect(updatedOrder.priceAuditLog[0].oldQuantity).toBe(10);
+      expect(updatedOrder.priceAuditLog[0].newQuantity).toBe(5);
+      expect(updatedOrder.priceAuditLog[0].oldRate).toBe(100);
+      expect(updatedOrder.priceAuditLog[0].newRate).toBe(150);
+      expect(updatedOrder.priceAuditLog[0].reason).toContain('Price and quantity');
     });
 
     it('should use priceAtTime if provided', async () => {

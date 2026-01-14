@@ -596,11 +596,29 @@ router.put('/:id',
           });
         }
 
-        if (item.quantity !== original.quantity) {
-          return res.status(400).json({
-            success: false,
-            message: `Quantity for product "${original.productName}" cannot be changed. Only prices can be updated.`
-          });
+        // Validate quantity if provided (staff can now change quantities)
+        if (item.quantity !== undefined && item.quantity !== original.quantity) {
+          // Negative quantities not allowed
+          if (item.quantity < 0) {
+            return res.status(400).json({
+              success: false,
+              message: `Quantity for "${original.productName}" cannot be negative.`
+            });
+          }
+
+          // Validate minimum quantity by unit type (allow 0 to remove)
+          if (item.quantity > 0) {
+            const unit = (original.unit || '').toLowerCase();
+            const pieceBased = ['quintal', 'bag', 'piece', 'ton', 'bunch', 'box'].includes(unit);
+            const minQty = pieceBased ? 1 : 0.2;
+
+            if (item.quantity < minQty) {
+              return res.status(400).json({
+                success: false,
+                message: `Minimum quantity for "${original.productName}" is ${minQty} ${original.unit}`
+              });
+            }
+          }
         }
 
         // For contract customers: prevent modification of contract prices
@@ -613,14 +631,36 @@ router.put('/:id',
         }
       }
 
-      // All validations passed - update prices only
+      // All validations passed - update prices and/or quantities
       let totalAmount = 0;
       const updatedProducts = [];
-      const priceChanges = []; // Track changes for audit log
+      const auditChanges = []; // Track changes for audit log
 
       for (const item of req.body.products) {
         const productId = item.product.toString();
         const original = originalProductMap.get(productId);
+
+        // Get quantity from request (or use original for backward compatibility)
+        const quantity = item.quantity !== undefined ? item.quantity : original.quantity;
+
+        // Handle product removal (quantity = 0)
+        if (quantity === 0) {
+          auditChanges.push({
+            changedAt: new Date(),
+            changedBy: req.user._id,
+            changedByName: req.user.name,
+            productId: item.product,
+            productName: original.productName,
+            oldRate: original.rate,
+            newRate: original.rate,
+            oldQuantity: original.quantity,
+            newQuantity: 0,
+            oldTotal: original.quantity * original.rate,
+            newTotal: 0,
+            reason: 'Product removed by staff'
+          });
+          continue; // Skip this product, don't add to updatedProducts
+        }
 
         // Use original rate for contract prices, otherwise use provided rate
         let rate;
@@ -637,12 +677,24 @@ router.put('/:id',
           });
         }
 
-        const amount = original.quantity * rate;
+        const amount = quantity * rate;
         totalAmount += amount;
 
-        // Track price changes for audit log
-        if (rate !== original.rate) {
-          priceChanges.push({
+        // Track changes for audit log (price and/or quantity)
+        const priceChanged = rate !== original.rate;
+        const quantityChanged = quantity !== original.quantity;
+
+        if (priceChanged || quantityChanged) {
+          let reason = '';
+          if (priceChanged && quantityChanged) {
+            reason = 'Price and quantity updated by staff';
+          } else if (priceChanged) {
+            reason = 'Price updated by staff';
+          } else {
+            reason = 'Quantity updated by staff';
+          }
+
+          auditChanges.push({
             changedAt: new Date(),
             changedBy: req.user._id,
             changedByName: req.user.name,
@@ -650,16 +702,18 @@ router.put('/:id',
             productName: original.productName,
             oldRate: original.rate,
             newRate: rate,
+            oldQuantity: original.quantity,
+            newQuantity: quantity,
             oldTotal: original.quantity * original.rate,
             newTotal: amount,
-            reason: 'Price updated by staff'
+            reason: reason
           });
         }
 
         updatedProducts.push({
           product: item.product,
           productName: original.productName,
-          quantity: original.quantity,
+          quantity: quantity,
           unit: original.unit,
           rate: rate,
           amount: amount,
@@ -671,12 +725,12 @@ router.put('/:id',
       order.totalAmount = totalAmount;
       order.markModified('products'); // Ensure array replacement is detected
 
-      // Add price changes to audit log
-      if (priceChanges.length > 0) {
+      // Add changes to audit log
+      if (auditChanges.length > 0) {
         if (!order.priceAuditLog) {
           order.priceAuditLog = [];
         }
-        order.priceAuditLog.push(...priceChanges);
+        order.priceAuditLog.push(...auditChanges);
       }
     }
 

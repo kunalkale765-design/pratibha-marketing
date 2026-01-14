@@ -109,6 +109,8 @@ const orderSchema = new mongoose.Schema({
     productName: String,
     oldRate: Number,
     newRate: Number,
+    oldQuantity: Number,
+    newQuantity: Number,
     oldTotal: Number,
     newTotal: Number,
     reason: String

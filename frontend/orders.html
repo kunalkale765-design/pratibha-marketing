@@ -139,6 +139,7 @@
         let currentOrder = null;
         let currentUser = null;
         let priceChanges = {};
+        let quantityChanges = {};
         let isSaving = false; // Prevent concurrent saves
 
         // Track if global listeners have been initialized (prevents memory leak)
@@ -709,6 +710,7 @@
                 currentOrderId = id;
                 currentOrder = order;
                 priceChanges = {};
+                quantityChanges = {};
                 document.getElementById('modalTitle').textContent = `#${order.orderNumber}`;
                 document.getElementById('savePricesBtn').disabled = true;
 
@@ -747,7 +749,24 @@
                                 <div class="product-top">
                                     <div>
                                         <div class="product-name">${escapeHtml(p.productName)}</div>
-                                        <div class="product-qty">${p.quantity} ${escapeHtml(p.unit)}</div>
+                                        ${isStaff ? `
+                                            <div class="qty-controls-inline">
+                                                <button class="qty-btn-sm" onclick="changeQuantity(${idx}, -1)" type="button">−</button>
+                                                <input type="number" class="qty-input-sm input-animated"
+                                                    id="quantity-${idx}"
+                                                    data-idx="${idx}"
+                                                    data-original="${p.quantity}"
+                                                    data-unit="${escapeHtml(p.unit)}"
+                                                    value="${p.quantity}"
+                                                    min="0" step="0.01"
+                                                    onfocus="clearZero(this)"
+                                                    onblur="restoreValue(this)"
+                                                    onchange="handleQuantityChange(${idx})"
+                                                    oninput="handleQuantityInput(${idx})">
+                                                <button class="qty-btn-sm" onclick="changeQuantity(${idx}, 1)" type="button">+</button>
+                                                <span class="qty-unit">${escapeHtml(p.unit)}</span>
+                                            </div>
+                                        ` : `<div class="product-qty">${p.quantity} ${escapeHtml(p.unit)}</div>`}
                                     </div>
                                 </div>
                                 <div class="prices-container">
@@ -821,9 +840,11 @@
 
         function handlePriceInput(idx) {
             const input = document.getElementById(`price-${idx}`);
+            const qtyInput = document.getElementById(`quantity-${idx}`);
             const original = parseFloat(input.dataset.original);
             const current = parseFloat(input.value) || 0;
-            const qty = parseFloat(input.dataset.qty);
+            // Use quantity from input if exists, otherwise from data attribute
+            const qty = qtyInput ? (parseFloat(qtyInput.value) || 0) : parseFloat(input.dataset.qty);
 
             input.classList.toggle('changed', current !== original);
 
@@ -848,9 +869,95 @@
                 delete priceChanges[idx];
             }
 
-            // Enable/disable save button
-            const hasChanges = Object.keys(priceChanges).length > 0;
+            // Enable/disable save button (check BOTH price and quantity changes)
+            const hasChanges = Object.keys(priceChanges).length > 0 || Object.keys(quantityChanges).length > 0;
             document.getElementById('savePricesBtn').disabled = !hasChanges;
+        }
+
+        // Quantity change handlers
+        function changeQuantity(idx, delta) {
+            const input = document.getElementById(`quantity-${idx}`);
+            if (!input) return;
+
+            const unit = (input.dataset.unit || '').toLowerCase();
+            const current = parseFloat(input.value) || 0;
+            let newValue = current + delta;
+
+            // Determine minimum based on unit type
+            const pieceBased = ['quintal', 'bag', 'piece', 'ton', 'bunch', 'box'].includes(unit);
+            const minQty = pieceBased ? 1 : 0.2;
+
+            // Snap to 0 if going below minimum (allows removal)
+            if (newValue < minQty && newValue > 0) {
+                newValue = 0;
+            }
+
+            // Don't go below 0
+            if (newValue < 0) {
+                newValue = 0;
+            }
+
+            input.value = newValue;
+            handleQuantityChange(idx);
+            handleQuantityInput(idx);
+        }
+
+        function handleQuantityInput(idx) {
+            const qtyInput = document.getElementById(`quantity-${idx}`);
+            const priceInput = document.getElementById(`price-${idx}`);
+            if (!qtyInput) return;
+
+            const originalQty = parseFloat(qtyInput.dataset.original);
+            const currentQty = parseFloat(qtyInput.value) || 0;
+
+            // Visual feedback for changed quantity
+            qtyInput.classList.remove('changed', 'removed');
+            if (currentQty === 0) {
+                qtyInput.classList.add('removed');
+            } else if (currentQty !== originalQty) {
+                qtyInput.classList.add('changed');
+            }
+
+            // Get current rate (may be modified)
+            const rate = priceInput ? (parseFloat(priceInput.value) || 0) : (currentOrder?.products[idx]?.rate || 0);
+
+            // Recalculate amount
+            const amount = Math.round(currentQty * rate * 100) / 100;
+            const amountEl = document.getElementById(`amount-${idx}`);
+            if (amountEl) amountEl.textContent = `₹${amount.toLocaleString('en-IN')}`;
+
+            // Update total
+            updateOrderTotal();
+        }
+
+        function handleQuantityChange(idx) {
+            const input = document.getElementById(`quantity-${idx}`);
+            if (!input) return;
+
+            const original = parseFloat(input.dataset.original);
+            const current = parseFloat(input.value) || 0;
+            const unit = (input.dataset.unit || '').toLowerCase();
+
+            // Validate minimum quantity
+            const pieceBased = ['quintal', 'bag', 'piece', 'ton', 'bunch', 'box'].includes(unit);
+            const minQty = pieceBased ? 1 : 0.2;
+
+            if (current > 0 && current < minQty) {
+                showToast(`Minimum quantity: ${minQty} ${input.dataset.unit}`, 'info');
+                input.value = original;
+                delete quantityChanges[idx];
+            } else if (current !== original) {
+                quantityChanges[idx] = current;
+            } else {
+                delete quantityChanges[idx];
+            }
+
+            // Enable/disable save button (check BOTH price and quantity changes)
+            const hasChanges = Object.keys(priceChanges).length > 0 || Object.keys(quantityChanges).length > 0;
+            document.getElementById('savePricesBtn').disabled = !hasChanges;
+
+            // Trigger amount recalculation
+            handleQuantityInput(idx);
         }
 
         function updateOrderTotal() {
@@ -858,9 +965,11 @@
 
             let total = 0;
             currentOrder.products.forEach((p, idx) => {
-                const input = document.getElementById(`price-${idx}`);
-                const rate = input ? (parseFloat(input.value) || 0) : p.rate;
-                total += rate * p.quantity;
+                const priceInput = document.getElementById(`price-${idx}`);
+                const qtyInput = document.getElementById(`quantity-${idx}`);
+                const rate = priceInput ? (parseFloat(priceInput.value) || 0) : p.rate;
+                const quantity = qtyInput ? (parseFloat(qtyInput.value) || 0) : p.quantity;
+                total += rate * quantity;
             });
 
             // Round to 2 decimal places for consistency with backend
@@ -873,8 +982,23 @@
             if (balanceEl) balanceEl.textContent = `₹${balance.toLocaleString('en-IN')}`;
         }
 
+        // Check if invoices exist for an order
+        async function checkInvoicesExist(orderId) {
+            try {
+                const res = await fetch(`/api/invoices/order/${orderId}`, { credentials: 'include' });
+                if (!res.ok) return false;
+                const data = await res.json();
+                return data.data && data.data.length > 0;
+            } catch (e) {
+                console.error('Failed to check invoices:', e);
+                return false;
+            }
+        }
+
         async function savePrices() {
-            if (!currentOrderId || !currentOrder || !currentOrder.products || Object.keys(priceChanges).length === 0) return;
+            // Check for BOTH price and quantity changes
+            const hasChanges = Object.keys(priceChanges).length > 0 || Object.keys(quantityChanges).length > 0;
+            if (!currentOrderId || !currentOrder || !currentOrder.products || !hasChanges) return;
 
             // Prevent concurrent saves
             if (isSaving) {
@@ -887,20 +1011,45 @@
             btn.disabled = true;
             btn.classList.add('btn-loading');
 
+            // Check if invoices exist
+            let hasInvoices = false;
             try {
-                // Build updated products array, ensuring no zero rates are sent
-                const updatedProducts = currentOrder.products.map((p, idx) => {
-                    let price = priceChanges[idx] !== undefined ? priceChanges[idx] : p.rate;
-                    // Safety check: never send rate <= 0, use original rate instead
-                    if (!price || price <= 0) {
-                        price = p.rate;
+                hasInvoices = await checkInvoicesExist(currentOrderId);
+                if (hasInvoices) {
+                    const proceed = confirm(
+                        'Invoices exist for this order. Changes will not update existing invoices.\n\n' +
+                        'You may need to regenerate invoices after saving. Continue?'
+                    );
+                    if (!proceed) {
+                        isSaving = false;
+                        btn.classList.remove('btn-loading');
+                        btn.disabled = false;
+                        return;
                     }
-                    return {
-                        product: typeof p.product === 'object' ? p.product._id : p.product,
-                        quantity: p.quantity,
-                        priceAtTime: price
-                    };
-                });
+                }
+            } catch (e) {
+                console.error('Invoice check failed:', e);
+                // Continue anyway - don't block save
+            }
+
+            try {
+                // Build updated products array with quantities
+                const updatedProducts = currentOrder.products
+                    .map((p, idx) => {
+                        let price = priceChanges[idx] !== undefined ? priceChanges[idx] : p.rate;
+                        let quantity = quantityChanges[idx] !== undefined ? quantityChanges[idx] : p.quantity;
+
+                        // Safety checks
+                        if (!price || price <= 0) price = p.rate;
+                        if (quantity < 0) quantity = p.quantity;
+
+                        return {
+                            product: typeof p.product === 'object' ? p.product._id : p.product,
+                            quantity: quantity,
+                            priceAtTime: price
+                        };
+                    })
+                    .filter(item => item.quantity > 0); // Remove items with quantity = 0
 
                 const headers = { 'Content-Type': 'application/json' };
                 const csrfToken = await Auth.ensureCsrfToken();
@@ -973,13 +1122,26 @@
                 }
 
                 if (res.ok) {
-                    showToast('Prices saved', 'success');
+                    showToast('Changes saved', 'success');
                     priceChanges = {};
+                    quantityChanges = {};
                     btn.classList.remove('btn-loading');
                     btn.classList.add('btn-success');
                     setTimeout(() => btn.classList.remove('btn-success'), 1500);
                     btn.disabled = true;
                     loadOrders();
+
+                    // Prompt to regenerate invoice if needed
+                    if (hasInvoices) {
+                        setTimeout(() => {
+                            if (confirm('Order updated. Regenerate invoice with new quantities?')) {
+                                const orderIdToEdit = orderId; // Capture before modal closes
+                                closeModal();
+                                setTimeout(() => printOrder(orderIdToEdit), 300);
+                            }
+                        }, 500);
+                    }
+
                     // Refresh the modal if still viewing same order
                     if (currentOrderId === orderId) {
                         viewOrder(orderId);
@@ -995,7 +1157,7 @@
                     btn.disabled = false;
                 }
             } catch (e) {
-                console.error('Save prices error:', e);
+                console.error('Save changes error:', e);
                 if (!navigator.onLine) {
                     showToast('No internet connection', 'info');
                 } else {
@@ -1009,16 +1171,18 @@
         }
 
         function closeModal() {
-            // Warn about unsaved changes
-            if (Object.keys(priceChanges).length > 0) {
-                if (!confirm('You have unsaved price changes. Discard them?')) {
+            // Warn about unsaved changes (price OR quantity)
+            const hasChanges = Object.keys(priceChanges).length > 0 || Object.keys(quantityChanges).length > 0;
+            if (hasChanges) {
+                if (!confirm('You have unsaved changes. Discard them?')) {
                     return;
                 }
             }
             document.getElementById('orderModal').classList.remove('show');
             currentOrderId = null;
             currentOrder = null;
-            priceChanges = {}; // Clear price changes on modal close
+            priceChanges = {};
+            quantityChanges = {};
         }
         // Expose to window for onclick handlers
         window.closeModal = closeModal;
@@ -1027,6 +1191,9 @@
         window.restoreValue = restoreValue;
         window.handlePriceChange = handlePriceChange;
         window.handlePriceInput = handlePriceInput;
+        window.handleQuantityChange = handleQuantityChange;
+        window.handleQuantityInput = handleQuantityInput;
+        window.changeQuantity = changeQuantity;
         window.savePrices = savePrices;
         window.deleteOrder = deleteOrder;
         window.printOrder = printOrder;
