@@ -10,6 +10,7 @@ const customerSchema = new mongoose.Schema({
   phone: {
     type: String,
     trim: true,
+    index: false, // No unique index - multiple customers can have empty/same phone
     validate: {
       validator: function(v) {
         // Allow empty or valid 10-digit phone
