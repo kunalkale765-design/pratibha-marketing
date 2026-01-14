@@ -879,13 +879,11 @@
             const input = document.getElementById(`quantity-${idx}`);
             if (!input) return;
 
-            const unit = (input.dataset.unit || '').toLowerCase();
             const current = parseFloat(input.value) || 0;
             let newValue = current + delta;
 
-            // Determine minimum based on unit type
-            const pieceBased = ['quintal', 'bag', 'piece', 'ton', 'bunch', 'box'].includes(unit);
-            const minQty = pieceBased ? 1 : 0.2;
+            // Minimum quantity for all units
+            const minQty = 0.2;
 
             // Snap to 0 if going below minimum (allows removal)
             if (newValue < minQty && newValue > 0) {
@@ -936,11 +934,9 @@
 
             const original = parseFloat(input.dataset.original);
             const current = parseFloat(input.value) || 0;
-            const unit = (input.dataset.unit || '').toLowerCase();
 
             // Validate minimum quantity
-            const pieceBased = ['quintal', 'bag', 'piece', 'ton', 'bunch', 'box'].includes(unit);
-            const minQty = pieceBased ? 1 : 0.2;
+            const minQty = 0.2;
 
             if (current > 0 && current < minQty) {
                 showToast(`Minimum quantity: ${minQty} ${input.dataset.unit}`, 'info');

@@ -606,18 +606,12 @@ router.put('/:id',
             });
           }
 
-          // Validate minimum quantity by unit type (allow 0 to remove)
-          if (item.quantity > 0) {
-            const unit = (original.unit || '').toLowerCase();
-            const pieceBased = ['quintal', 'bag', 'piece', 'ton', 'bunch', 'box'].includes(unit);
-            const minQty = pieceBased ? 1 : 0.2;
-
-            if (item.quantity < minQty) {
-              return res.status(400).json({
-                success: false,
-                message: `Minimum quantity for "${original.productName}" is ${minQty} ${original.unit}`
-              });
-            }
+          // Validate minimum quantity (allow 0 to remove)
+          if (item.quantity > 0 && item.quantity < 0.2) {
+            return res.status(400).json({
+              success: false,
+              message: `Minimum quantity for "${original.productName}" is 0.2 ${original.unit}`
+            });
           }
         }
 
@@ -850,8 +844,8 @@ router.put('/:id/customer-edit',
           throw new Error(`Product ${item.product} not found`);
         }
 
-        if (!item.quantity || item.quantity <= 0) {
-          throw new Error('Quantity must be greater than 0');
+        if (!item.quantity || item.quantity < 0.2) {
+          throw new Error(`Minimum quantity for "${product.name}" is 0.2 ${product.unit}`);
         }
 
         // Recalculate rate based on customer's pricing type (never trust client prices)
