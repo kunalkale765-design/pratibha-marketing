@@ -185,12 +185,16 @@ router.post('/login', [
 
     // Only return essential customer data (exclude sensitive info)
     // For contract customers, include contractPrices so frontend can filter products
+    // For markup customers, include markupPercentage so frontend can calculate prices
     const safeCustomer = user.customer ? {
       _id: user.customer._id,
       name: user.customer.name,
       pricingType: user.customer.pricingType,
       ...(user.customer.pricingType === 'contract' && user.customer.contractPrices
         ? { contractPrices: Object.fromEntries(user.customer.contractPrices) }
+        : {}),
+      ...(user.customer.pricingType === 'markup'
+        ? { markupPercentage: user.customer.markupPercentage || 0 }
         : {})
     } : null;
 
@@ -255,6 +259,7 @@ router.get('/me', async (req, res, next) => {
       }
       // Only return essential customer data (exclude sensitive info)
       // For contract customers, include contractPrices so frontend can filter products
+      // For markup customers, include markupPercentage so frontend can calculate prices
       return res.json({
         success: true,
         user: {
@@ -268,6 +273,9 @@ router.get('/me', async (req, res, next) => {
             pricingType: customer.pricingType,
             ...(customer.pricingType === 'contract' && customer.contractPrices
               ? { contractPrices: Object.fromEntries(customer.contractPrices) }
+              : {}),
+            ...(customer.pricingType === 'markup'
+              ? { markupPercentage: customer.markupPercentage || 0 }
               : {})
           },
           isMagicLink: true
@@ -287,12 +295,16 @@ router.get('/me', async (req, res, next) => {
 
     // Only return essential user/customer data (exclude sensitive info)
     // For contract customers, include contractPrices so frontend can filter products
+    // For markup customers, include markupPercentage so frontend can calculate prices
     const safeCustomer = user.customer ? {
       _id: user.customer._id,
       name: user.customer.name,
       pricingType: user.customer.pricingType,
       ...(user.customer.pricingType === 'contract' && user.customer.contractPrices
         ? { contractPrices: Object.fromEntries(user.customer.contractPrices) }
+        : {}),
+      ...(user.customer.pricingType === 'markup'
+        ? { markupPercentage: user.customer.markupPercentage || 0 }
         : {})
     } : null;
 
@@ -365,6 +377,7 @@ router.get('/magic/:token', async (req, res, next) => {
 
       // Only return essential customer data (exclude sensitive info)
       // For contract customers, include contractPrices so frontend can filter products
+      // For markup customers, include markupPercentage so frontend can calculate prices
       return res.json({
         success: true,
         user: {
@@ -378,6 +391,9 @@ router.get('/magic/:token', async (req, res, next) => {
             pricingType: customer.pricingType,
             ...(customer.pricingType === 'contract' && customer.contractPrices
               ? { contractPrices: Object.fromEntries(customer.contractPrices) }
+              : {}),
+            ...(customer.pricingType === 'markup'
+              ? { markupPercentage: customer.markupPercentage || 0 }
               : {})
           }
         },
@@ -397,6 +413,7 @@ router.get('/magic/:token', async (req, res, next) => {
 
     // Only return essential customer data (exclude sensitive info)
     // For contract customers, include contractPrices so frontend can filter products
+    // For markup customers, include markupPercentage so frontend can calculate prices
     res.json({
       success: true,
       user: {
@@ -410,6 +427,9 @@ router.get('/magic/:token', async (req, res, next) => {
           pricingType: customer.pricingType,
           ...(customer.pricingType === 'contract' && customer.contractPrices
             ? { contractPrices: Object.fromEntries(customer.contractPrices) }
+            : {}),
+          ...(customer.pricingType === 'markup'
+            ? { markupPercentage: customer.markupPercentage || 0 }
             : {})
         }
       },
