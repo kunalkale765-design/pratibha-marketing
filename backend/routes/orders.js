@@ -137,11 +137,12 @@ const validateOrder = [
     .isFloat({ min: 0.01, max: 1000000 })
     .withMessage('Quantity must be between 0.01 and 1,000,000'),
   // Rate is optional - will be calculated based on customer pricing type if not provided
+  // Min rate: 0.01 to prevent accidental free orders
   // Max rate: 10,000,000 (reasonable upper limit), max 2 decimal precision enforced in business logic
   body('products.*.rate')
     .optional()
-    .isFloat({ min: 0, max: 10000000 })
-    .withMessage('Rate must be between 0 and 10,000,000'),
+    .isFloat({ min: 0.01, max: 10000000 })
+    .withMessage('Rate must be between ₹0.01 and ₹1,00,00,000'),
   // Delivery address validation
   body('deliveryAddress')
     .optional()
@@ -615,6 +616,7 @@ router.put('/:id',
       // All validations passed - update prices only
       let totalAmount = 0;
       const updatedProducts = [];
+      const priceChanges = []; // Track changes for audit log
 
       for (const item of req.body.products) {
         const productId = item.product.toString();
@@ -638,6 +640,22 @@ router.put('/:id',
         const amount = original.quantity * rate;
         totalAmount += amount;
 
+        // Track price changes for audit log
+        if (rate !== original.rate) {
+          priceChanges.push({
+            changedAt: new Date(),
+            changedBy: req.user._id,
+            changedByName: req.user.name,
+            productId: item.product,
+            productName: original.productName,
+            oldRate: original.rate,
+            newRate: rate,
+            oldTotal: original.quantity * original.rate,
+            newTotal: amount,
+            reason: 'Price updated by staff'
+          });
+        }
+
         updatedProducts.push({
           product: item.product,
           productName: original.productName,
@@ -652,6 +670,14 @@ router.put('/:id',
       order.products = updatedProducts;
       order.totalAmount = totalAmount;
       order.markModified('products'); // Ensure array replacement is detected
+
+      // Add price changes to audit log
+      if (priceChanges.length > 0) {
+        if (!order.priceAuditLog) {
+          order.priceAuditLog = [];
+        }
+        order.priceAuditLog.push(...priceChanges);
+      }
     }
 
     // Update notes if provided

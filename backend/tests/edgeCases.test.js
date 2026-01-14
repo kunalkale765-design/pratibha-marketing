@@ -729,7 +729,7 @@ describe('Edge Cases and Error Handling', () => {
       expect(res.status).toBe(201);
     });
 
-    it('should allow rate of 0', async () => {
+    it('should reject rate of 0 (min is 0.01)', async () => {
       const res = await request(app)
         .post('/api/orders')
         .set('Cookie', `token=${adminToken}`)
@@ -738,8 +738,8 @@ describe('Edge Cases and Error Handling', () => {
           products: [{ product: product._id, quantity: 10, rate: 0 }]
         });
 
-      // Rate 0 should use market rate instead
-      expect(res.status).toBe(201);
+      // Rate 0 is now rejected - min rate is 0.01 to prevent accidental free orders
+      expect(res.status).toBe(400);
     });
 
     it('should reject negative rate', async () => {

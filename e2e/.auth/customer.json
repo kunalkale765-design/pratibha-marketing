@@ -1,0 +1,35 @@
+{
+  "cookies": [
+    {
+      "name": "csrf_token",
+      "value": "8bce5b4f1d8e422a675f7e3194893434fd8956d47721315d672c9c6e0b2033f7",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1771005924.595016,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "token",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5NjdkMTc2MjczNDYwMjlkNmNkMjI0YiIsImlhdCI6MTc2ODQxMzkyNiwiZXhwIjoxNzcxMDA1OTI2fQ.M_mWUslGQHebkPa2Odq-65ZdAOVfwK2usNJsQLDJFO8",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1771005926.002235,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Strict"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "http://localhost:3000",
+      "localStorage": [
+        {
+          "name": "user",
+          "value": "{\"id\":\"6967d17627346029d6cd224b\",\"name\":\"E2E Test Customer\",\"email\":\"e2e-test-customer\",\"role\":\"customer\",\"customer\":{\"_id\":\"6967d17627346029d6cd2249\",\"name\":\"E2E Test Customer\",\"pricingType\":\"market\"}}"
+        }
+      ]
+    }
+  ]
+}

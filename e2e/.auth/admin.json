@@ -1,0 +1,35 @@
+{
+  "cookies": [
+    {
+      "name": "csrf_token",
+      "value": "4388755d750fb97672f40c2cbb994546f6692206fb5f1fbdde36ce145c1d2039",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1771005909.091277,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "token",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5NjEzOWRiZmM3ZjRhMWFmZWVlM2ZlNCIsImlhdCI6MTc2ODQxMzkxMCwiZXhwIjoxNzcxMDA1OTEwfQ.Q90eUWfKVBePi617kwNEYXHwTxMwrlhDZNT-6OF_Vos",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1771005910.940806,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Strict"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "http://localhost:3000",
+      "localStorage": [
+        {
+          "name": "user",
+          "value": "{\"id\":\"696139dbfc7f4a1afeee3fe4\",\"name\":\"Kunal\",\"email\":\"kunal@pm.in\",\"role\":\"admin\",\"customer\":null,\"isMagicLink\":false}"
+        }
+      ]
+    }
+  ]
+}

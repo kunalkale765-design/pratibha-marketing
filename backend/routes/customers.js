@@ -278,22 +278,24 @@ router.post('/:id/magic-link',
     // Generate a secure random token (32 bytes = 64 hex chars)
     const token = crypto.randomBytes(32).toString('hex');
 
-    customer.magicLinkToken = token;
+    // Hash the token before storing (security: if DB is leaked, tokens are useless)
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    customer.magicLinkToken = hashedToken;  // Store hash, not plain token
     customer.magicLinkCreatedAt = new Date();
     await customer.save();
 
-    // Build the magic link URL
+    // Build the magic link URL with PLAIN token (only time it exists)
     const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
     const magicLink = `${baseUrl}/customer-order-form.html?token=${token}`;
 
     // Return only the magic link, not the raw token (security best practice)
-    const expiryDays = parseInt(process.env.MAGIC_LINK_EXPIRY_DAYS) || 30;
     res.json({
       success: true,
       data: {
         link: magicLink,
         createdAt: customer.magicLinkCreatedAt,
-        expiresIn: `${expiryDays} days`
+        expiresIn: 'Never (until revoked)'
       }
     });
   } catch (error) {

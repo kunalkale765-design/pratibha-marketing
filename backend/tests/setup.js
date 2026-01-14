@@ -261,11 +261,15 @@ const testUtils = {
     const crypto = require('crypto');
     const token = crypto.randomBytes(32).toString('hex');
 
+    // Hash the token before storing (matches production behavior)
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
     await Customer.findByIdAndUpdate(customerId, {
-      magicLinkToken: token,
+      magicLinkToken: hashedToken,
       magicLinkCreatedAt: new Date()
     });
 
+    // Return plain token for use in tests
     return token;
   },
 

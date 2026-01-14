@@ -3,64 +3,17 @@
  * Handles login state, token management, and auth redirects
  */
 
+// Import CSRF functions from shared module (single source of truth)
+import { getCsrfToken, refreshCsrfToken, ensureCsrfToken } from './csrf.js';
+
 const Auth = {
     // Storage keys
     USER_KEY: 'user',
 
-    // Track if we're currently refreshing the CSRF token
-    _csrfRefreshPromise: null,
-
-    /**
-     * Get CSRF token from cookie
-     * @returns {string|null}
-     */
-    getCsrfToken() {
-        const match = document.cookie.match(/csrf_token=([^;]+)/);
-        return match ? match[1] : null;
-    },
-
-    /**
-     * Fetch a fresh CSRF token from the server
-     * @returns {Promise<string|null>}
-     */
-    async refreshCsrfToken() {
-        if (this._csrfRefreshPromise) {
-            return this._csrfRefreshPromise;
-        }
-
-        this._csrfRefreshPromise = (async () => {
-            try {
-                const response = await fetch('/api/csrf-token', {
-                    credentials: 'include'
-                });
-                if (response.ok) {
-                    const data = await response.json();
-                    return data.csrfToken || this.getCsrfToken();
-                }
-            } catch (error) {
-                console.error('Failed to refresh CSRF token:', error);
-            }
-            return null;
-        })();
-
-        try {
-            return await this._csrfRefreshPromise;
-        } finally {
-            this._csrfRefreshPromise = null;
-        }
-    },
-
-    /**
-     * Ensure CSRF token is available, fetching if necessary
-     * @returns {Promise<string|null>}
-     */
-    async ensureCsrfToken() {
-        let token = this.getCsrfToken();
-        if (!token) {
-            token = await this.refreshCsrfToken();
-        }
-        return token;
-    },
+    // Re-export CSRF functions for backwards compatibility
+    getCsrfToken,
+    refreshCsrfToken,
+    ensureCsrfToken,
 
     /**
      * Check if user is logged in
@@ -91,6 +44,7 @@ const Auth = {
      */
     setUser(user) {
         // Only store essential data - exclude sensitive info like sensitive fields
+        // For contract customers, include contractPrices so frontend can filter products
         const safeUser = {
             id: user.id,
             name: user.name,
@@ -99,7 +53,10 @@ const Auth = {
             customer: user.customer ? {
                 _id: user.customer._id,
                 name: user.customer.name,
-                pricingType: user.customer.pricingType
+                pricingType: user.customer.pricingType,
+                ...(user.customer.pricingType === 'contract' && user.customer.contractPrices
+                    ? { contractPrices: user.customer.contractPrices }
+                    : {})
             } : null,
             isMagicLink: user.isMagicLink || false
         };
@@ -293,7 +250,12 @@ const Auth = {
     }
 };
 
-// Export for use in other modules
+// Make Auth globally available for browser use
+if (typeof window !== 'undefined') {
+    window.Auth = Auth;
+}
+
+// Export for use in other modules (Node.js)
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = Auth;
 }

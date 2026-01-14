@@ -24,236 +24,8 @@
     <link rel="stylesheet" href="/css/animations/inputs.css">
     <link rel="stylesheet" href="/css/animations/buttons.css">
 
-    <!-- Page-specific styles (only what's unique to this page) -->
-    <style>
-        /* Login page layout - diagonal background */
-        body {
-            display: flex;
-            position: relative;
-            overflow: hidden;
-        }
-
-        body::before {
-            content: '';
-            position: absolute;
-            top: -20%;
-            right: -10%;
-            width: 60%;
-            height: 140%;
-            background: linear-gradient(135deg, var(--dusty-olive) 0%, var(--dusty-olive-dark) 100%);
-            transform: skewX(-12deg);
-            z-index: 0;
-        }
-
-        body::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
-            pointer-events: none;
-            z-index: 1;
-        }
-
-        .login-container {
-            display: flex;
-            width: 100%;
-            min-height: 100vh;
-            position: relative;
-            z-index: 2;
-        }
-
-        /* Brand side (left) */
-        .brand-side {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            padding: 4rem;
-            color: var(--gunmetal);
-            animation: slideInLeft 0.6s ease;
-        }
-
-        .brand-logo {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 3rem;
-        }
-
-        .logo-text {
-            font-family: var(--font-heading);
-            font-size: 2rem;
-            font-weight: 600;
-            letter-spacing: -0.02em;
-        }
-
-        .logo-text span {
-            color: var(--dusty-olive);
-            font-weight: 400;
-        }
-
-        .brand-tagline {
-            font-family: var(--font-heading);
-            font-size: 2.5rem;
-            font-weight: 600;
-            line-height: 1.3;
-            margin-bottom: 1.5rem;
-            max-width: 400px;
-        }
-
-        .brand-description {
-            font-size: 1.0625rem;
-            color: var(--text-secondary);
-            line-height: 1.7;
-            max-width: 380px;
-        }
-
-        /* Form side (right) */
-        .form-side {
-            width: 480px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem;
-        }
-
-        .login-card {
-            width: 100%;
-            max-width: 400px;
-            background: var(--warm-white);
-            border-radius: 20px;
-            padding: 3rem;
-            box-shadow: 0 20px 60px rgba(46, 53, 50, 0.15);
-            border: 1px solid var(--pale-slate-light);
-            animation: slideInRight 0.6s ease;
-        }
-
-        .login-header {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-
-        .login-header h1 {
-            font-family: var(--font-heading);
-            font-size: 1.75rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-
-        .login-header p {
-            color: var(--text-muted);
-        }
-
-        /* Notice message (page-specific styling) */
-        .notice-message {
-            background: rgba(184, 154, 90, 0.12);
-            border: 1px solid rgba(184, 154, 90, 0.3);
-            color: #8a7340;
-            padding: 0.875rem 1rem;
-            border-radius: var(--radius-md);
-            font-size: var(--text-base);
-            margin-bottom: 1.5rem;
-            display: none;
-        }
-
-        .notice-message.show {
-            display: block;
-        }
-
-        /* Divider with text */
-        .divider-text {
-            display: flex;
-            align-items: center;
-            margin: 1.5rem 0;
-            color: var(--text-muted);
-            font-size: var(--text-sm);
-        }
-
-        .divider-text::before,
-        .divider-text::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: var(--pale-slate);
-        }
-
-        .divider-text span {
-            padding: 0 1rem;
-        }
-
-        .signup-link {
-            text-align: center;
-            color: var(--text-secondary);
-        }
-
-        .signup-link a {
-            color: var(--dusty-olive-dark);
-            font-weight: 600;
-        }
-
-        /* Animations */
-        @keyframes slideInRight {
-            from { opacity: 0; transform: translateX(30px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-
-        @keyframes slideInLeft {
-            from { opacity: 0; transform: translateX(-30px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-
-        /* Responsive - Tablet */
-        @media (max-width: 900px) {
-            body::before { display: none; }
-
-            .login-container { flex-direction: column; }
-
-            .brand-side {
-                padding: 2rem;
-                text-align: center;
-                align-items: center;
-            }
-
-            .brand-tagline { font-size: 1.75rem; }
-            .brand-description { display: none; }
-
-            .form-side {
-                width: 100%;
-                padding: 1rem;
-            }
-
-            .login-card { padding: 2rem; }
-        }
-
-        /* Responsive - Mobile */
-        @media (max-width: 480px) {
-            body { overflow: auto; }
-
-            .brand-side {
-                padding: 1.5rem 1rem;
-                flex: 0;
-            }
-
-            .brand-logo { margin-bottom: 1rem; }
-            .logo-text { font-size: 1.5rem; }
-            .brand-tagline { font-size: 1.25rem; margin-bottom: 0; }
-
-            .form-side {
-                flex: 1;
-                padding: 0.75rem;
-                padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
-            }
-
-            .login-card {
-                padding: 1.5rem;
-                border-radius: var(--radius-xl);
-                max-width: 100%;
-            }
-
-            .login-header { margin-bottom: 1.5rem; }
-            .login-header h1 { font-size: 1.5rem; }
-        }
-    </style>
+    <!-- Page-specific styles -->
+    <link rel="stylesheet" href="/css/pages/login.css">
 </head>
 <body>
     <div class="login-container">
@@ -307,9 +79,9 @@
         </div>
     </div>
 
-    <!-- Shared JS -->
-    <script src="/js/auth.js"></script>
-    <script src="/js/api.js"></script>
+    <!-- Shared JS (loaded as modules) -->
+    <script type="module" src="/js/auth.js"></script>
+    <script type="module" src="/js/api.js"></script>
 
     <!-- Page Script -->
     <script type="module">
@@ -318,6 +90,17 @@
 
         // Initialize
         registerServiceWorker();
+
+        // Wait for Auth to be available (loaded from auth.js module)
+        const waitForAuth = () => new Promise((resolve) => {
+            if (window.Auth) {
+                resolve(window.Auth);
+            } else {
+                // Retry after a short delay
+                setTimeout(() => resolve(waitForAuth()), 10);
+            }
+        });
+        const Auth = await waitForAuth();
 
         // Pre-fetch CSRF token to ensure it's ready before form submission
         Auth.ensureCsrfToken().catch(err => console.warn('CSRF pre-fetch failed:', err));

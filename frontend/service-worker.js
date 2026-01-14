@@ -1,7 +1,7 @@
 // Pratibha Marketing - Service Worker
 // Smart caching for PWA functionality
 
-const CACHE_NAME = 'pratibha-v29';
+const CACHE_NAME = 'pratibha-v31';
 const API_CACHE_NAME = 'pratibha-api-v1';
 
 // Static assets to cache immediately
@@ -37,7 +37,17 @@ const STATIC_ASSETS = [
   '/css/animations/inputs.css',
   '/css/animations/badges.css',
   '/css/animations/segments.css',
-  '/css/animations/page.css'
+  '/css/animations/page.css',
+  '/css/animations/swipe.css',
+  // Page-specific CSS
+  '/css/pages/login.css',
+  '/css/pages/signup.css',
+  '/css/pages/index.css',
+  '/css/pages/orders.css',
+  '/css/pages/products.css',
+  '/css/pages/market-rates.css',
+  '/css/pages/customer-management.css',
+  '/css/pages/customer-order-form.css'
 ];
 
 // API endpoints to cache (read-only data)
@@ -99,9 +109,56 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Handle static assets with cache-first strategy
+  // HTML files use network-first (so users always get latest version after deploy)
+  const isHtmlFile = url.pathname.endsWith('.html') || url.pathname === '/' || !url.pathname.includes('.');
+  if (isHtmlFile) {
+    event.respondWith(handleHtmlRequest(request));
+    return;
+  }
+
+  // Other static assets (JS, CSS, images) use cache-first strategy
   event.respondWith(handleStaticRequest(request));
 });
+
+// Network-first strategy for HTML files (ensures users get latest after deploy)
+async function handleHtmlRequest(request) {
+  try {
+    // Try network first
+    const networkResponse = await fetch(request);
+
+    if (networkResponse.ok) {
+      // Cache the fresh response
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(request, networkResponse.clone());
+    }
+
+    return networkResponse;
+  } catch (error) {
+    // Network failed - try cache as fallback
+    console.log('[SW] Network failed for HTML, trying cache:', request.url);
+    const cachedResponse = await caches.match(request);
+
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+
+    // No cache either - return offline message
+    return new Response(`
+      <!DOCTYPE html>
+      <html>
+        <head><title>Offline</title></head>
+        <body style="font-family: sans-serif; text-align: center; padding: 50px;">
+          <h1>You're offline</h1>
+          <p>Please check your internet connection and try again.</p>
+          <button onclick="location.reload()">Retry</button>
+        </body>
+      </html>
+    `, {
+      status: 503,
+      headers: { 'Content-Type': 'text/html' }
+    });
+  }
+}
 
 // Cache-first strategy for static assets
 async function handleStaticRequest(request) {

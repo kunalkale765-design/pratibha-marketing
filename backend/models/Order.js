@@ -90,11 +90,29 @@ const orderSchema = new mongoose.Schema({
     default: false
   },
   // Idempotency key for preventing duplicate orders on network failures
+  // Index defined below with sparse + unique options
   idempotencyKey: {
-    type: String,
-    sparse: true,
-    index: true
-  }
+    type: String
+  },
+  // Audit log for price changes (who changed what and when)
+  priceAuditLog: [{
+    changedAt: {
+      type: Date,
+      default: Date.now
+    },
+    changedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    changedByName: String,
+    productId: mongoose.Schema.Types.ObjectId,
+    productName: String,
+    oldRate: Number,
+    newRate: Number,
+    oldTotal: Number,
+    newTotal: Number,
+    reason: String
+  }]
 }, {
   timestamps: true
 });
@@ -124,5 +142,12 @@ orderSchema.pre('save', async function(next) {
 orderSchema.index({ customer: 1 });
 orderSchema.index({ status: 1 });
 orderSchema.index({ createdAt: -1 });
+
+// Idempotency key index - sparse because most orders won't have one
+// Used for duplicate order prevention on network failures
+orderSchema.index({ idempotencyKey: 1 }, { sparse: true, unique: true });
+
+// Compound index for common query: customer's orders sorted by date
+orderSchema.index({ customer: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Order', orderSchema);

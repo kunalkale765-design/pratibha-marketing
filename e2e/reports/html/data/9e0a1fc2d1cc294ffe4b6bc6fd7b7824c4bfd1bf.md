@@ -1,0 +1,89 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e6]: Pratibha Marketing
+        - paragraph [ref=e7]: Fresh Vegetables Supply & Distribution
+      - generic [ref=e8]:
+        - generic [ref=e9]: Loading...
+        - button "Logout" [ref=e10] [cursor=pointer]
+  - main [ref=e11]:
+    - generic [ref=e12]:
+      - generic [ref=e13]:
+        - generic [ref=e14]: Total Sale
+        - generic [ref=e15]: ₹0
+      - generic [ref=e16]:
+        - generic [ref=e17]: Profit
+        - generic [ref=e18]: ₹0
+    - generic [ref=e19]:
+      - link "+ Create Order" [ref=e20] [cursor=pointer]:
+        - /url: /customer-order-form.html
+        - generic [ref=e21]: +
+        - heading "Create Order" [level=3] [ref=e23]
+      - link "≡ Customers" [ref=e24] [cursor=pointer]:
+        - /url: /customer-management.html
+        - generic [ref=e25]: ≡
+        - heading "Customers" [level=3] [ref=e27]
+      - link "● Products" [ref=e28] [cursor=pointer]:
+        - /url: /products.html
+        - generic [ref=e29]: ●
+        - heading "Products" [level=3] [ref=e31]
+      - link "◇ Market Rates" [ref=e32] [cursor=pointer]:
+        - /url: /market-rates.html
+        - generic [ref=e33]: ◇
+        - heading "Market Rates" [level=3] [ref=e35]
+      - link "≣ View Orders" [ref=e36] [cursor=pointer]:
+        - /url: /orders.html
+        - generic [ref=e37]: ≣
+        - heading "View Orders" [level=3] [ref=e39]
+    - generic [ref=e41]:
+      - heading "Purchase List" [level=2] [ref=e42]
+      - generic [ref=e43]:
+        - button "⎙" [ref=e44] [cursor=pointer]
+        - button "↓" [ref=e45] [cursor=pointer]
+    - generic [ref=e59]:
+      - heading "Reports" [level=2] [ref=e61]
+      - generic [ref=e63] [cursor=pointer]:
+        - generic [ref=e64]: 📊
+        - generic [ref=e65]:
+          - generic [ref=e66]: Customer Ledger
+          - generic [ref=e67]: Invoice history with dates and amounts
+        - generic [ref=e68]: →
+    - generic [ref=e69]:
+      - heading "Analytics" [level=2] [ref=e71]
+      - generic [ref=e72]:
+        - generic [ref=e73]:
+          - generic [ref=e75]:
+            - generic [ref=e76]: Order Status
+            - generic [ref=e77]: Distribution by status
+          - generic [ref=e80]:
+            - generic [ref=e81]:
+              - generic [ref=e82]: "-"
+              - generic [ref=e83]: Pending
+            - generic [ref=e84]:
+              - generic [ref=e85]: "-"
+              - generic [ref=e86]: Processing
+            - generic [ref=e87]:
+              - generic [ref=e88]: "-"
+              - generic [ref=e89]: Delivered
+        - generic [ref=e90]:
+          - generic [ref=e92]:
+            - generic [ref=e93]: Revenue Trend
+            - generic [ref=e94]: Last 7 days
+          - generic [ref=e97]:
+            - generic [ref=e98]:
+              - generic [ref=e99]: "-"
+              - generic [ref=e100]: This Week
+            - generic [ref=e101]:
+              - generic [ref=e102]: "-"
+              - generic [ref=e103]: Avg/Day
+        - generic [ref=e106]:
+          - generic [ref=e107]: Top Products
+          - generic [ref=e108]: By quantity ordered
+    - generic [ref=e113]: Checking API...
+  - contentinfo [ref=e114]:
+    - paragraph [ref=e115]: Pratibha Marketing © 2026 | Fresh vegetables, delivered with trust
+```

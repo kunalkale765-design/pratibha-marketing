@@ -41,17 +41,8 @@ const protect = async (req, res, next) => {
         });
       }
 
-      // Validate magic link TTL (30 days from creation)
-      const MAGIC_LINK_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
-      if (customer.magicLinkCreatedAt) {
-        const linkAge = Date.now() - new Date(customer.magicLinkCreatedAt).getTime();
-        if (linkAge > MAGIC_LINK_TTL_MS) {
-          return res.status(401).json({
-            success: false,
-            message: 'Magic link has expired. Please request a new one.'
-          });
-        }
-      }
+      // Magic links never expire - valid until explicitly revoked
+
       // Create a virtual user object for magic link sessions
       req.user = {
         _id: null,

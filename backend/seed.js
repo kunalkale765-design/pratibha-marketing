@@ -175,11 +175,13 @@ const seedDatabase = async () => {
     // Generate a magic link for the first customer (for testing)
     const crypto = require('crypto');
     const testMagicToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(testMagicToken).digest('hex');
     await Customer.findByIdAndUpdate(customers[0]._id, {
-      magicLinkToken: testMagicToken,
+      magicLinkToken: hashedToken,
       magicLinkCreatedAt: new Date()
     });
-    console.log('✓ Magic link generated for Rajesh Kumar\n');
+    console.log('✓ Magic link generated for Rajesh Kumar');
+    console.log(`  Test URL: /customer-order-form.html?token=${testMagicToken}\n`);
 
     // Seed Market Rates for all products
     console.log('Seeding market rates...');

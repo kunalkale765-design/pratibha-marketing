@@ -146,17 +146,18 @@ describe('Magic Link Authentication', () => {
       expect(res.status).toBe(401);
     });
 
-    it('should reject expired magic link token', async () => {
-      // Manually set token creation to past (expired)
+    it('should accept magic link token even if created long ago (never expires)', async () => {
+      // Magic links never expire - they remain valid until explicitly revoked
       await Customer.findByIdAndUpdate(customer._id, {
-        magicLinkCreatedAt: new Date(Date.now() - 100 * 24 * 60 * 60 * 1000) // 100 days ago
+        magicLinkCreatedAt: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000) // 1 year ago
       });
 
       const res = await request(app)
         .get(`/api/auth/magic/${magicToken}`);
 
-      expect(res.status).toBe(401);
-      expect(res.body.message).toContain('expired');
+      // Should still work - magic links don't expire
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
     });
 
     it('should set authentication cookie on successful magic link auth', async () => {

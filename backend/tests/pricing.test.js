@@ -70,7 +70,7 @@ describe('Pricing System', () => {
       expect(res.body.data.totalAmount).toBe(2000);
     });
 
-    it('should ignore staff rate of 0 and use market rate', async () => {
+    it('should reject rate of 0 (min is 0.01 to prevent accidental free orders)', async () => {
       const customer = await testUtils.createTestCustomer({ pricingType: 'market' });
       await testUtils.createMarketRate(product, 100);
 
@@ -82,8 +82,8 @@ describe('Pricing System', () => {
           products: [{ product: product._id, quantity: 10, rate: 0 }]
         });
 
-      expect(res.status).toBe(201);
-      expect(res.body.data.products[0].rate).toBe(100); // Market rate
+      // Rate 0 is now rejected - validation requires min 0.01
+      expect(res.status).toBe(400);
     });
   });
 

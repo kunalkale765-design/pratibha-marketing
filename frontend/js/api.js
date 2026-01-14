@@ -3,63 +3,14 @@
  * Centralized fetch wrapper with error handling and offline detection
  */
 
+// Import CSRF functions from shared module (single source of truth)
+import { getCsrfToken, refreshCsrfToken, ensureCsrfToken } from './csrf.js';
+
 const API = {
-    // Track if we're currently refreshing the CSRF token to avoid multiple concurrent refreshes
-    _csrfRefreshPromise: null,
-
-    /**
-     * Get CSRF token from cookie
-     * @returns {string|null}
-     */
-    getCsrfToken() {
-        const match = document.cookie.match(/csrf_token=([^;]+)/);
-        return match ? match[1] : null;
-    },
-
-    /**
-     * Fetch a fresh CSRF token from the server
-     * @returns {Promise<string|null>}
-     */
-    async refreshCsrfToken() {
-        // If already refreshing, wait for that promise
-        if (this._csrfRefreshPromise) {
-            return this._csrfRefreshPromise;
-        }
-
-        this._csrfRefreshPromise = (async () => {
-            try {
-                const response = await fetch('/api/csrf-token', {
-                    credentials: 'include'
-                });
-                if (response.ok) {
-                    const data = await response.json();
-                    // The cookie is set by the server, but we return the token too
-                    return data.csrfToken || this.getCsrfToken();
-                }
-            } catch (error) {
-                console.error('Failed to refresh CSRF token:', error);
-            }
-            return null;
-        })();
-
-        try {
-            return await this._csrfRefreshPromise;
-        } finally {
-            this._csrfRefreshPromise = null;
-        }
-    },
-
-    /**
-     * Ensure CSRF token is available, fetching if necessary
-     * @returns {Promise<string|null>}
-     */
-    async ensureCsrfToken() {
-        let token = this.getCsrfToken();
-        if (!token) {
-            token = await this.refreshCsrfToken();
-        }
-        return token;
-    },
+    // Re-export CSRF functions for backwards compatibility
+    getCsrfToken,
+    refreshCsrfToken,
+    ensureCsrfToken,
 
     /**
      * Make an API request with automatic retry for network failures
@@ -72,6 +23,7 @@ const API = {
     async request(endpoint, options = {}, _isRetry = false, _retryCount = 0) {
         const MAX_RETRIES = 2;
         const RETRY_DELAY = 1000; // 1 second
+        const REQUEST_TIMEOUT = 30000; // 30 seconds timeout
         // Default options
         const defaultOptions = {
             credentials: 'include',
@@ -110,7 +62,17 @@ const API = {
                 };
             }
 
-            const response = await fetch(endpoint, fetchOptions);
+            // Create abort controller for timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+            fetchOptions.signal = controller.signal;
+
+            let response;
+            try {
+                response = await fetch(endpoint, fetchOptions);
+            } finally {
+                clearTimeout(timeoutId);
+            }
             let data;
             try {
                 data = await response.json();
@@ -198,11 +160,12 @@ const API = {
                 };
             }
 
-            // Don't retry aborted requests
+            // Don't retry aborted/timeout requests
             if (error.name === 'AbortError') {
                 return {
                     success: false,
-                    error: 'Request was cancelled.',
+                    error: 'Request timed out. Please try again.',
+                    timeout: true,
                     networkError: true
                 };
             }

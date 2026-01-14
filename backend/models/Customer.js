@@ -118,4 +118,12 @@ const customerSchema = new mongoose.Schema({
 // Index for faster searches
 customerSchema.index({ name: 1 });
 
+// Index for active customers - frequently filtered
+customerSchema.index({ isActive: 1 });
+
+// Compound index for listing active customers by name
+customerSchema.index({ isActive: 1, name: 1 });
+
+// Note: magicLinkToken index is already defined in field definition with unique + sparse
+
 module.exports = mongoose.model('Customer', customerSchema);
