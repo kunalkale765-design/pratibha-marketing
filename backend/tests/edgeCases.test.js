@@ -633,7 +633,7 @@ describe('Edge Cases and Error Handling', () => {
       expect(res.body.data.products[0].quantity).toBe(10);
     });
 
-    it('should reject quantity less than 0.2', async () => {
+    it('should reject quantity less than 0.01', async () => {
       const product = await testUtils.createTestProduct({ unit: 'kg' });
       await testUtils.createMarketRate(product, 100);
 
@@ -642,7 +642,7 @@ describe('Edge Cases and Error Handling', () => {
         .set('Cookie', `token=${adminToken}`)
         .send({
           customer: customer._id,
-          products: [{ product: product._id, quantity: 0.1 }]
+          products: [{ product: product._id, quantity: 0.001 }]
         });
 
       expect(res.status).toBe(400);
@@ -663,7 +663,7 @@ describe('Edge Cases and Error Handling', () => {
       expect(res.status).toBe(400);
     });
 
-    it('should accept quantity at boundary: 0.2', async () => {
+    it('should accept quantity at boundary: 0.01', async () => {
       const product = await testUtils.createTestProduct({ unit: 'kg' });
       await testUtils.createMarketRate(product, 100);
 
@@ -672,7 +672,7 @@ describe('Edge Cases and Error Handling', () => {
         .set('Cookie', `token=${adminToken}`)
         .send({
           customer: customer._id,
-          products: [{ product: product._id, quantity: 0.2 }]
+          products: [{ product: product._id, quantity: 0.01 }]
         });
 
       expect(res.status).toBe(201);

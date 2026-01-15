@@ -908,7 +908,7 @@
             let newValue = current + delta;
 
             // Minimum quantity for all units
-            const minQty = 0.2;
+            const minQty = 0.01;
 
             // Snap to 0 if going below minimum (allows removal)
             if (newValue < minQty && newValue > 0) {
@@ -961,7 +961,7 @@
             const current = parseFloat(input.value) || 0;
 
             // Validate minimum quantity
-            const minQty = 0.2;
+            const minQty = 0.01;
 
             if (current > 0 && current < minQty) {
                 showToast(`Minimum quantity: ${minQty} ${input.dataset.unit}`, 'info');
@@ -1071,7 +1071,7 @@
             if (!input) return;
             let val = parseFloat(input.value) || 0;
             val = Math.max(0, val + delta);
-            if (val > 0 && val < 0.2) val = 0.2;
+            if (val > 0 && val < 0.01) val = 0.01;
             input.value = val;
             addedProducts[idx].quantity = val;
             updateAddedAmount(idx);
@@ -1082,9 +1082,9 @@
             const input = document.getElementById(`added-qty-${idx}`);
             if (!input) return;
             let val = parseFloat(input.value) || 0;
-            if (val > 0 && val < 0.2) {
-                showToast('Minimum quantity: 0.2', 'info');
-                val = 0.2;
+            if (val > 0 && val < 0.01) {
+                showToast('Minimum quantity: 0.01', 'info');
+                val = 0.01;
                 input.value = val;
             }
             addedProducts[idx].quantity = val;

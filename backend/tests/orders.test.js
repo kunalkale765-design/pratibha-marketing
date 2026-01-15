@@ -414,14 +414,14 @@ describe('Order Endpoints', () => {
       expect(res.body.data.totalAmount).toBe(250);
     });
 
-    it('should reject quantity below minimum for kg unit', async () => {
+    it('should reject quantity below minimum', async () => {
       const res = await request(app)
         .put(`/api/orders/${testOrder._id}`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
           products: [{
             product: testProduct._id,
-            quantity: 0.1,  // Below 0.2 minimum for kg
+            quantity: 0.001,  // Below 0.01 minimum
             rate: 100
           }]
         });

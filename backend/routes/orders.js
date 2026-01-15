@@ -132,10 +132,10 @@ const validateOrder = [
   body('customer').notEmpty().withMessage('Customer is required'),
   body('products').isArray({ min: 1 }).withMessage('At least one product is required'),
   body('products.*.product').notEmpty().withMessage('Product ID is required'),
-  // Quantity: min 0.2, max 1,000,000 (reasonable upper limit to prevent abuse)
+  // Quantity: min 0.01, max 1,000,000 (reasonable upper limit to prevent abuse)
   body('products.*.quantity')
-    .isFloat({ min: 0.2, max: 1000000 })
-    .withMessage('Quantity must be between 0.2 and 1,000,000'),
+    .isFloat({ min: 0.01, max: 1000000 })
+    .withMessage('Quantity must be between 0.01 and 1,000,000'),
   // Rate is optional - will be calculated based on customer pricing type if not provided
   // Min rate: 0.01 to prevent accidental free orders
   // Max rate: 10,000,000 (reasonable upper limit), max 2 decimal precision enforced in business logic
@@ -610,10 +610,10 @@ router.put('/:id',
               message: `Quantity for "${product.name}" cannot be negative.`
             });
           }
-          if (quantity > 0 && quantity < 0.2) {
+          if (quantity > 0 && quantity < 0.01) {
             return res.status(400).json({
               success: false,
-              message: `Minimum quantity for "${product.name}" is 0.2 ${product.unit}`
+              message: `Minimum quantity for "${product.name}" is 0.01 ${product.unit}`
             });
           }
           if (quantity === 0) continue; // Skip if quantity is 0
@@ -663,10 +663,10 @@ router.put('/:id',
             message: `Quantity for "${original.productName}" cannot be negative.`
           });
         }
-        if (quantity > 0 && quantity < 0.2) {
+        if (quantity > 0 && quantity < 0.01) {
           return res.status(400).json({
             success: false,
-            message: `Minimum quantity for "${original.productName}" is 0.2 ${original.unit}`
+            message: `Minimum quantity for "${original.productName}" is 0.01 ${original.unit}`
           });
         }
 
@@ -886,8 +886,8 @@ router.put('/:id/customer-edit',
           throw new Error(`Product ${item.product} not found`);
         }
 
-        if (!item.quantity || item.quantity < 0.2) {
-          throw new Error(`Minimum quantity for "${product.name}" is 0.2 ${product.unit}`);
+        if (!item.quantity || item.quantity < 0.01) {
+          throw new Error(`Minimum quantity for "${product.name}" is 0.01 ${product.unit}`);
         }
 
         // Recalculate rate based on customer's pricing type (never trust client prices)

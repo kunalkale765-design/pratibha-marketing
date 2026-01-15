@@ -1,0 +1,32 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e5]: Pratibha Marketing
+    - heading "Fresh vegetables, delivered with trust" [level=2] [ref=e6]
+    - paragraph [ref=e7]: Connecting local farms to your kitchen. Quality produce, fair prices, and reliable delivery for hotels and restaurants.
+  - generic [ref=e9]:
+    - generic [ref=e10]:
+      - heading "Welcome Back" [level=1] [ref=e11]
+      - paragraph [ref=e12]: Sign in to your account
+    - generic [ref=e13]:
+      - generic [ref=e14]:
+        - generic [ref=e15]: Username
+        - textbox "Username" [ref=e16]:
+          - /placeholder: Enter your username
+          - text: testuser
+      - generic [ref=e17]:
+        - generic [ref=e18]: Password
+        - generic [ref=e19]:
+          - textbox "Password" [active] [ref=e20]:
+            - /placeholder: Enter your password
+          - button "◉" [ref=e21] [cursor=pointer]
+      - button "Sign In" [ref=e22] [cursor=pointer]:
+        - generic [ref=e23]: Sign In
+      - generic [ref=e25]: or
+      - paragraph [ref=e26]:
+        - text: Don't have an account?
+        - link "Sign up" [ref=e27] [cursor=pointer]:
+          - /url: /signup.html
+```

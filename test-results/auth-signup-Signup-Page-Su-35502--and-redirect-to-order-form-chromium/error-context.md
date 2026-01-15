@@ -1,0 +1,66 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - link "← Back to login" [ref=e6] [cursor=pointer]:
+        - /url: /login.html
+      - heading "Create Account" [level=1] [ref=e7]
+      - paragraph [ref=e8]: Join Pratibha Marketing
+    - generic [ref=e9]: Something went wrong. Try again.
+    - generic [ref=e10]:
+      - generic [ref=e11]:
+        - generic [ref=e12]: Full Name *
+        - textbox "Full Name *" [ref=e13]:
+          - /placeholder: Your full name
+          - text: New Test User
+      - generic [ref=e14]:
+        - generic [ref=e15]: Username *
+        - textbox "Username *" [ref=e16]:
+          - /placeholder: Enter your username
+          - text: user1768414124584
+      - generic [ref=e17]:
+        - generic [ref=e18]: Phone Number
+        - textbox "Phone Number" [ref=e19]:
+          - /placeholder: 10-digit phone number
+          - text: "9876543210"
+        - paragraph [ref=e20]: Optional - Enter 10 digits without spaces
+      - generic [ref=e21]:
+        - generic [ref=e22]: Password *
+        - textbox "Password *" [ref=e23]:
+          - /placeholder: Min 6 characters
+          - text: StrongPass123!
+        - generic [ref=e24]:
+          - generic [ref=e25]: ✓ At least 6 characters
+          - generic [ref=e26]: ✓ One uppercase letter
+          - generic [ref=e27]: ✓ One number
+      - generic [ref=e28]:
+        - generic [ref=e29]: Confirm Password *
+        - textbox "Confirm Password *" [ref=e30]:
+          - /placeholder: Re-enter password
+          - text: StrongPass123!
+      - button "Create Account" [ref=e31] [cursor=pointer]
+      - paragraph [ref=e32]:
+        - text: Already have an account?
+        - link "Sign in" [ref=e33] [cursor=pointer]:
+          - /url: /login.html
+  - generic [ref=e35]:
+    - generic [ref=e37]: Pratibha Marketing
+    - generic [ref=e38]:
+      - generic [ref=e39]:
+        - generic [ref=e40]: ◈
+        - generic [ref=e41]:
+          - heading "Easy Ordering" [level=3] [ref=e42]
+          - paragraph [ref=e43]: Place orders from your phone anytime
+      - generic [ref=e44]:
+        - generic [ref=e45]: ▷
+        - generic [ref=e46]:
+          - heading "Reliable Delivery" [level=3] [ref=e47]
+          - paragraph [ref=e48]: Fresh produce delivered on schedule
+      - generic [ref=e49]:
+        - generic [ref=e50]: ◇
+        - generic [ref=e51]:
+          - heading "Fair Pricing" [level=3] [ref=e52]
+          - paragraph [ref=e53]: Transparent market rates, no surprises
+```

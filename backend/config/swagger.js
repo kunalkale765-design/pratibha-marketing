@@ -515,7 +515,7 @@ swaggerSpec.paths = {
                     required: ['product', 'quantity', 'rate'],
                     properties: {
                       product: { type: 'string', description: 'Product ID' },
-                      quantity: { type: 'number', minimum: 0.2 },
+                      quantity: { type: 'number', minimum: 0.01 },
                       rate: { type: 'number', minimum: 0 }
                     }
                   }

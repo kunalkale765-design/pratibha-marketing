@@ -21,7 +21,7 @@ const orderSchema = new mongoose.Schema({
     quantity: {
       type: Number,
       required: [true, 'Quantity is required'],
-      min: [0.2, 'Quantity must be at least 0.2']
+      min: [0.01, 'Quantity must be greater than 0']
     },
     unit: {
       type: String,
@@ -93,6 +93,18 @@ const orderSchema = new mongoose.Schema({
   // Index defined below with sparse + unique options
   idempotencyKey: {
     type: String
+  },
+  // Batch reference - which batch this order belongs to
+  batch: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Batch',
+    index: true
+  },
+  // Whether the order is locked from customer edits (batch confirmed)
+  batchLocked: {
+    type: Boolean,
+    default: false,
+    index: true
   },
   // Audit log for price changes (who changed what and when)
   priceAuditLog: [{

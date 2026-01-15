@@ -1,0 +1,445 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e6]: Pratibha Marketing
+        - paragraph [ref=e7]: Fresh Vegetables Supply & Distribution
+      - generic [ref=e8]:
+        - generic [ref=e9]: Kunal
+        - button "Logout" [ref=e10] [cursor=pointer]
+  - main [ref=e11]:
+    - generic [ref=e12]:
+      - generic [ref=e13]:
+        - generic [ref=e14]: Total Sale
+        - generic [ref=e15]: ₹0
+      - generic [ref=e16]:
+        - generic [ref=e17]: Profit
+        - generic [ref=e18]: ₹0
+    - generic [ref=e19]:
+      - link "+ Create Order" [ref=e20] [cursor=pointer]:
+        - /url: /customer-order-form.html
+        - generic [ref=e21]: +
+        - heading "Create Order" [level=3] [ref=e23]
+      - link "≡ Customers" [ref=e24] [cursor=pointer]:
+        - /url: /customer-management.html
+        - generic [ref=e25]: ≡
+        - heading "Customers" [level=3] [ref=e27]
+      - link "● Products" [ref=e28] [cursor=pointer]:
+        - /url: /products.html
+        - generic [ref=e29]: ●
+        - heading "Products" [level=3] [ref=e31]
+      - link "◇ Market Rates" [ref=e32] [cursor=pointer]:
+        - /url: /market-rates.html
+        - generic [ref=e33]: ◇
+        - heading "Market Rates" [level=3] [ref=e35]
+      - link "≣ View Orders" [ref=e36] [cursor=pointer]:
+        - /url: /orders.html
+        - generic [ref=e37]: ≣
+        - heading "View Orders" [level=3] [ref=e39]
+    - generic [ref=e40]:
+      - generic [ref=e41]:
+        - heading "Purchase List" [level=2] [ref=e42]
+        - generic [ref=e43]:
+          - button "⎙" [ref=e44] [cursor=pointer]
+          - button "↓" [ref=e45] [cursor=pointer]
+      - generic [ref=e46]:
+        - generic [ref=e47]:
+          - generic [ref=e48]: Product
+          - generic [ref=e49]: Purchase Qty
+          - generic [ref=e50]: Purchase Price
+        - generic [ref=e51]: Indian Vegetables
+        - generic [ref=e53] [cursor=pointer]:
+          - generic [ref=e54]: ▶
+          - generic [ref=e55]: Cabbage
+          - generic [ref=e56]: "20"
+          - generic [ref=e57]: kg
+          - spinbutton [ref=e58]
+        - generic [ref=e60] [cursor=pointer]:
+          - generic [ref=e61]: ▶
+          - generic [ref=e62]: Brinjal Small
+          - generic [ref=e63]: "5"
+          - generic [ref=e64]: kg
+          - spinbutton [ref=e65]
+        - generic [ref=e67] [cursor=pointer]:
+          - generic [ref=e68]: ▶
+          - generic [ref=e69]: Brinjal Big
+          - generic [ref=e70]: "3"
+          - generic [ref=e71]: kg
+          - spinbutton [ref=e72]
+        - generic [ref=e74] [cursor=pointer]:
+          - generic [ref=e75]: ▶
+          - generic [ref=e76]: Aachari Chilli
+          - generic [ref=e77]: "0"
+          - generic [ref=e78]: kg
+          - spinbutton [ref=e79]
+        - generic [ref=e81] [cursor=pointer]:
+          - generic [ref=e82]: ▶
+          - generic [ref=e83]: Capsicum
+          - generic [ref=e84]: "0"
+          - generic [ref=e85]: kg
+          - spinbutton [ref=e86]
+        - generic [ref=e88] [cursor=pointer]:
+          - generic [ref=e89]: ▶
+          - generic [ref=e90]: Cauliflower
+          - generic [ref=e91]: "0"
+          - generic [ref=e92]: kg
+          - spinbutton [ref=e93]
+        - generic [ref=e95] [cursor=pointer]:
+          - generic [ref=e96]: ▶
+          - generic [ref=e97]: Coconut Wet
+          - generic [ref=e98]: "0"
+          - generic [ref=e99]: piece
+          - spinbutton [ref=e100]
+        - generic [ref=e102] [cursor=pointer]:
+          - generic [ref=e103]: ▶
+          - generic [ref=e104]: Coriander
+          - generic [ref=e105]: "0"
+          - generic [ref=e106]: kg
+          - spinbutton [ref=e107]
+        - generic [ref=e109] [cursor=pointer]:
+          - generic [ref=e110]: ▶
+          - generic [ref=e111]: Cucumber
+          - generic [ref=e112]: "0"
+          - generic [ref=e113]: kg
+          - spinbutton [ref=e114]
+        - generic [ref=e116] [cursor=pointer]:
+          - generic [ref=e117]: ▶
+          - generic [ref=e118]: Curry Leaves
+          - generic [ref=e119]: "0"
+          - generic [ref=e120]: kg
+          - spinbutton [ref=e121]
+        - generic [ref=e123] [cursor=pointer]:
+          - generic [ref=e124]: ▶
+          - generic [ref=e125]: Drumstick
+          - generic [ref=e126]: "0"
+          - generic [ref=e127]: kg
+          - spinbutton [ref=e128]
+        - generic [ref=e130] [cursor=pointer]:
+          - generic [ref=e131]: ▶
+          - generic [ref=e132]: Dum Aloo
+          - generic [ref=e133]: "0"
+          - generic [ref=e134]: kg
+          - spinbutton [ref=e135]
+        - generic [ref=e137] [cursor=pointer]:
+          - generic [ref=e138]: ▶
+          - generic [ref=e139]: French Beans
+          - generic [ref=e140]: "0"
+          - generic [ref=e141]: kg
+          - spinbutton [ref=e142]
+        - generic [ref=e144] [cursor=pointer]:
+          - generic [ref=e145]: ▶
+          - generic [ref=e146]: Ginger
+          - generic [ref=e147]: "0"
+          - generic [ref=e148]: kg
+          - spinbutton [ref=e149]
+        - generic [ref=e151] [cursor=pointer]:
+          - generic [ref=e152]: ▶
+          - generic [ref=e153]: Green Chilli
+          - generic [ref=e154]: "0"
+          - generic [ref=e155]: kg
+          - spinbutton [ref=e156]
+        - generic [ref=e158] [cursor=pointer]:
+          - generic [ref=e159]: ▶
+          - generic [ref=e160]: Karela
+          - generic [ref=e161]: "0"
+          - generic [ref=e162]: kg
+          - spinbutton [ref=e163]
+        - generic [ref=e165] [cursor=pointer]:
+          - generic [ref=e166]: ▶
+          - generic [ref=e167]: Kela Patta
+          - generic [ref=e168]: "0"
+          - generic [ref=e169]: kg
+          - spinbutton [ref=e170]
+        - generic [ref=e172] [cursor=pointer]:
+          - generic [ref=e173]: ▶
+          - generic [ref=e174]: Kundru
+          - generic [ref=e175]: "0"
+          - generic [ref=e176]: kg
+          - spinbutton [ref=e177]
+        - generic [ref=e179] [cursor=pointer]:
+          - generic [ref=e180]: ▶
+          - generic [ref=e181]: Lady Finger
+          - generic [ref=e182]: "0"
+          - generic [ref=e183]: kg
+          - spinbutton [ref=e184]
+        - generic [ref=e186] [cursor=pointer]:
+          - generic [ref=e187]: ▶
+          - generic [ref=e188]: Lemon
+          - generic [ref=e189]: "0"
+          - generic [ref=e190]: kg
+          - spinbutton [ref=e191]
+        - generic [ref=e193] [cursor=pointer]:
+          - generic [ref=e194]: ▶
+          - generic [ref=e195]: Lobia Falli
+          - generic [ref=e196]: "0"
+          - generic [ref=e197]: kg
+          - spinbutton [ref=e198]
+        - generic [ref=e200] [cursor=pointer]:
+          - generic [ref=e201]: ▶
+          - generic [ref=e202]: Methi
+          - generic [ref=e203]: "0"
+          - generic [ref=e204]: kg
+          - spinbutton [ref=e205]
+        - generic [ref=e207] [cursor=pointer]:
+          - generic [ref=e208]: ▶
+          - generic [ref=e209]: Mint
+          - generic [ref=e210]: "0"
+          - generic [ref=e211]: kg
+          - spinbutton [ref=e212]
+        - generic [ref=e214] [cursor=pointer]:
+          - generic [ref=e215]: ▶
+          - generic [ref=e216]: Onion
+          - generic [ref=e217]: "0"
+          - generic [ref=e218]: kg
+          - spinbutton [ref=e219]
+        - generic [ref=e221] [cursor=pointer]:
+          - generic [ref=e222]: ▶
+          - generic [ref=e223]: Padwal
+          - generic [ref=e224]: "0"
+          - generic [ref=e225]: kg
+          - spinbutton [ref=e226]
+        - generic [ref=e228] [cursor=pointer]:
+          - generic [ref=e229]: ▶
+          - generic [ref=e230]: Palak
+          - generic [ref=e231]: "0"
+          - generic [ref=e232]: kg
+          - spinbutton [ref=e233]
+        - generic [ref=e235] [cursor=pointer]:
+          - generic [ref=e236]: ▶
+          - generic [ref=e237]: Peeled Garlic
+          - generic [ref=e238]: "0"
+          - generic [ref=e239]: kg
+          - spinbutton [ref=e240]
+        - generic [ref=e242] [cursor=pointer]:
+          - generic [ref=e243]: ▶
+          - generic [ref=e244]: Potato
+          - generic [ref=e245]: "0"
+          - generic [ref=e246]: kg
+          - spinbutton [ref=e247]
+        - generic [ref=e249] [cursor=pointer]:
+          - generic [ref=e250]: ▶
+          - generic [ref=e251]: Pumpkin Red
+          - generic [ref=e252]: "0"
+          - generic [ref=e253]: kg
+          - spinbutton [ref=e254]
+        - generic [ref=e256] [cursor=pointer]:
+          - generic [ref=e257]: ▶
+          - generic [ref=e258]: Pumpkin White
+          - generic [ref=e259]: "0"
+          - generic [ref=e260]: kg
+          - spinbutton [ref=e261]
+        - generic [ref=e263] [cursor=pointer]:
+          - generic [ref=e264]: ▶
+          - generic [ref=e265]: Raddish
+          - generic [ref=e266]: "0"
+          - generic [ref=e267]: kg
+          - spinbutton [ref=e268]
+        - generic [ref=e270] [cursor=pointer]:
+          - generic [ref=e271]: ▶
+          - generic [ref=e272]: Raw Banana
+          - generic [ref=e273]: "0"
+          - generic [ref=e274]: kg
+          - spinbutton [ref=e275]
+        - generic [ref=e277] [cursor=pointer]:
+          - generic [ref=e278]: ▶
+          - generic [ref=e279]: Raw Papaya
+          - generic [ref=e280]: "0"
+          - generic [ref=e281]: kg
+          - spinbutton [ref=e282]
+        - generic [ref=e284] [cursor=pointer]:
+          - generic [ref=e285]: ▶
+          - generic [ref=e286]: Spring Onion
+          - generic [ref=e287]: "0"
+          - generic [ref=e288]: kg
+          - spinbutton [ref=e289]
+        - generic [ref=e291] [cursor=pointer]:
+          - generic [ref=e292]: ▶
+          - generic [ref=e293]: Tinda
+          - generic [ref=e294]: "0"
+          - generic [ref=e295]: kg
+          - spinbutton [ref=e296]
+        - generic [ref=e298] [cursor=pointer]:
+          - generic [ref=e299]: ▶
+          - generic [ref=e300]: Tomato
+          - generic [ref=e301]: "0"
+          - generic [ref=e302]: kg
+          - spinbutton [ref=e303]
+        - generic [ref=e305] [cursor=pointer]:
+          - generic [ref=e306]: ▶
+          - generic [ref=e307]: Carrot
+          - generic [ref=e308]: "25"
+          - generic [ref=e309]: kg
+          - spinbutton [ref=e310]
+        - generic [ref=e312] [cursor=pointer]:
+          - generic [ref=e313]: ▶
+          - generic [ref=e314]: Beetroot
+          - generic [ref=e315]: "3"
+          - generic [ref=e316]: kg
+          - spinbutton [ref=e317]
+        - generic [ref=e318]: Fruits
+        - generic [ref=e320] [cursor=pointer]:
+          - generic [ref=e321]: ▶
+          - generic [ref=e322]: Anar
+          - generic [ref=e323]: "0"
+          - generic [ref=e324]: kg
+          - spinbutton [ref=e325]
+        - generic [ref=e327] [cursor=pointer]:
+          - generic [ref=e328]: ▶
+          - generic [ref=e329]: Apple Green
+          - generic [ref=e330]: "0"
+          - generic [ref=e331]: kg
+          - spinbutton [ref=e332]
+        - generic [ref=e334] [cursor=pointer]:
+          - generic [ref=e335]: ▶
+          - generic [ref=e336]: Apple Red Imp
+          - generic [ref=e337]: "0"
+          - generic [ref=e338]: kg
+          - spinbutton [ref=e339]
+        - generic [ref=e341] [cursor=pointer]:
+          - generic [ref=e342]: ▶
+          - generic [ref=e343]: Banana
+          - generic [ref=e344]: "0"
+          - generic [ref=e345]: kg
+          - spinbutton [ref=e346]
+        - generic [ref=e348] [cursor=pointer]:
+          - generic [ref=e349]: ▶
+          - generic [ref=e350]: Chickoo
+          - generic [ref=e351]: "0"
+          - generic [ref=e352]: kg
+          - spinbutton [ref=e353]
+        - generic [ref=e355] [cursor=pointer]:
+          - generic [ref=e356]: ▶
+          - generic [ref=e357]: Coconut Tender
+          - generic [ref=e358]: "0"
+          - generic [ref=e359]: piece
+          - spinbutton [ref=e360]
+        - generic [ref=e362] [cursor=pointer]:
+          - generic [ref=e363]: ▶
+          - generic [ref=e364]: Dragon Fruit
+          - generic [ref=e365]: "0"
+          - generic [ref=e366]: kg
+          - spinbutton [ref=e367]
+        - generic [ref=e369] [cursor=pointer]:
+          - generic [ref=e370]: ▶
+          - generic [ref=e371]: Grapes
+          - generic [ref=e372]: "0"
+          - generic [ref=e373]: kg
+          - spinbutton [ref=e374]
+        - generic [ref=e376] [cursor=pointer]:
+          - generic [ref=e377]: ▶
+          - generic [ref=e378]: Guava
+          - generic [ref=e379]: "0"
+          - generic [ref=e380]: kg
+          - spinbutton [ref=e381]
+        - generic [ref=e383] [cursor=pointer]:
+          - generic [ref=e384]: ▶
+          - generic [ref=e385]: Kiwi
+          - generic [ref=e386]: "0"
+          - generic [ref=e387]: kg
+          - spinbutton [ref=e388]
+        - generic [ref=e390] [cursor=pointer]:
+          - generic [ref=e391]: ▶
+          - generic [ref=e392]: Melon
+          - generic [ref=e393]: "0"
+          - generic [ref=e394]: kg
+          - spinbutton [ref=e395]
+        - generic [ref=e397] [cursor=pointer]:
+          - generic [ref=e398]: ▶
+          - generic [ref=e399]: Orange Imp
+          - generic [ref=e400]: "0"
+          - generic [ref=e401]: kg
+          - spinbutton [ref=e402]
+        - generic [ref=e404] [cursor=pointer]:
+          - generic [ref=e405]: ▶
+          - generic [ref=e406]: Orange Juicy
+          - generic [ref=e407]: "0"
+          - generic [ref=e408]: kg
+          - spinbutton [ref=e409]
+        - generic [ref=e411] [cursor=pointer]:
+          - generic [ref=e412]: ▶
+          - generic [ref=e413]: Papaya
+          - generic [ref=e414]: "0"
+          - generic [ref=e415]: kg
+          - spinbutton [ref=e416]
+        - generic [ref=e418] [cursor=pointer]:
+          - generic [ref=e419]: ▶
+          - generic [ref=e420]: Pears Green
+          - generic [ref=e421]: "0"
+          - generic [ref=e422]: kg
+          - spinbutton [ref=e423]
+        - generic [ref=e425] [cursor=pointer]:
+          - generic [ref=e426]: ▶
+          - generic [ref=e427]: Pears Red
+          - generic [ref=e428]: "0"
+          - generic [ref=e429]: kg
+          - spinbutton [ref=e430]
+        - generic [ref=e432] [cursor=pointer]:
+          - generic [ref=e433]: ▶
+          - generic [ref=e434]: Pineapple
+          - generic [ref=e435]: "0"
+          - generic [ref=e436]: piece
+          - spinbutton [ref=e437]
+        - generic [ref=e439] [cursor=pointer]:
+          - generic [ref=e440]: ▶
+          - generic [ref=e441]: Plum
+          - generic [ref=e442]: "0"
+          - generic [ref=e443]: kg
+          - spinbutton [ref=e444]
+        - generic [ref=e446] [cursor=pointer]:
+          - generic [ref=e447]: ▶
+          - generic [ref=e448]: Sweet Lime
+          - generic [ref=e449]: "0"
+          - generic [ref=e450]: kg
+          - spinbutton [ref=e451]
+        - generic [ref=e453] [cursor=pointer]:
+          - generic [ref=e454]: ▶
+          - generic [ref=e455]: Watermelon
+          - generic [ref=e456]: "0"
+          - generic [ref=e457]: kg
+          - spinbutton [ref=e458]
+    - generic [ref=e459]:
+      - heading "Reports" [level=2] [ref=e461]
+      - generic [ref=e463] [cursor=pointer]:
+        - generic [ref=e464]: 📊
+        - generic [ref=e465]:
+          - generic [ref=e466]: Customer Ledger
+          - generic [ref=e467]: Invoice history with dates and amounts
+        - generic [ref=e468]: →
+    - generic [ref=e469]:
+      - heading "Analytics" [level=2] [ref=e471]
+      - generic [ref=e472]:
+        - generic [ref=e473]:
+          - generic [ref=e475]:
+            - generic [ref=e476]: Order Status
+            - generic [ref=e477]: Distribution by status
+          - generic [ref=e480]:
+            - generic [ref=e481]:
+              - generic [ref=e482]: "3"
+              - generic [ref=e483]: Pending
+            - generic [ref=e484]:
+              - generic [ref=e485]: "0"
+              - generic [ref=e486]: Processing
+            - generic [ref=e487]:
+              - generic [ref=e488]: "0"
+              - generic [ref=e489]: Delivered
+        - generic [ref=e490]:
+          - generic [ref=e492]:
+            - generic [ref=e493]: Revenue Trend
+            - generic [ref=e494]: Last 7 days
+          - generic [ref=e497]:
+            - generic [ref=e498]:
+              - generic [ref=e499]: ₹1,535
+              - generic [ref=e500]: This Week
+            - generic [ref=e501]:
+              - generic [ref=e502]: ₹219
+              - generic [ref=e503]: Avg/Day
+        - generic [ref=e506]:
+          - generic [ref=e507]: Top Products
+          - generic [ref=e508]: By quantity ordered
+    - generic [ref=e513]: API Online
+  - contentinfo [ref=e514]:
+    - paragraph [ref=e515]: Pratibha Marketing © 2026 | Fresh vegetables, delivered with trust
+```

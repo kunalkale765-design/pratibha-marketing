@@ -1,0 +1,97 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - link "Pratibha Marketing" [ref=e4] [cursor=pointer]:
+        - /url: /
+      - generic [ref=e5]:
+        - button "+ Add" [active] [ref=e6] [cursor=pointer]
+        - link "Home" [ref=e7] [cursor=pointer]:
+          - /url: /
+  - textbox "Search customers..." [ref=e9]
+  - generic [ref=e11]:
+    - generic [ref=e12]:
+      - generic [ref=e13]:
+        - generic [ref=e14]: Bougainvillea Banquets
+        - generic [ref=e15]: Market
+      - generic [ref=e16]:
+        - button "Link" [ref=e17] [cursor=pointer]
+        - button "Edit" [ref=e18] [cursor=pointer]
+        - button "Delete" [ref=e19] [cursor=pointer]
+    - generic [ref=e20]:
+      - generic [ref=e21]:
+        - generic [ref=e22]: E2E Test Customer
+        - generic [ref=e23]: Market
+      - generic [ref=e24]:
+        - button "Link" [ref=e25] [cursor=pointer]
+        - button "Edit" [ref=e26] [cursor=pointer]
+        - button "Delete" [ref=e27] [cursor=pointer]
+    - generic [ref=e28]:
+      - generic [ref=e29]:
+        - generic [ref=e30]: Hotel Sayyaji
+        - generic [ref=e31]: Contract
+      - generic [ref=e32]:
+        - button "Link" [ref=e33] [cursor=pointer]
+        - button "Prices" [ref=e34] [cursor=pointer]
+        - button "Edit" [ref=e35] [cursor=pointer]
+        - button "Delete" [ref=e36] [cursor=pointer]
+    - generic [ref=e37]:
+      - generic [ref=e38]:
+        - generic [ref=e39]: ROOTS Corporation Pvt Ltd (OCM)
+        - generic [ref=e40]: Contract
+      - generic [ref=e41]:
+        - button "Link" [ref=e42] [cursor=pointer]
+        - button "Prices" [ref=e43] [cursor=pointer]
+        - button "Edit" [ref=e44] [cursor=pointer]
+        - button "Delete" [ref=e45] [cursor=pointer]
+    - generic [ref=e46]:
+      - generic [ref=e47]:
+        - generic [ref=e48]: ROOTS Corporation Pvt Ltd (Ramdaspeth)
+        - generic [ref=e49]: Contract
+      - generic [ref=e50]:
+        - button "Link" [ref=e51] [cursor=pointer]
+        - button "Prices" [ref=e52] [cursor=pointer]
+        - button "Edit" [ref=e53] [cursor=pointer]
+        - button "Delete" [ref=e54] [cursor=pointer]
+    - generic [ref=e55]:
+      - generic [ref=e56]:
+        - generic [ref=e57]: Royal Orchid
+        - generic [ref=e58]: Contract
+      - generic [ref=e59]:
+        - button "Link" [ref=e60] [cursor=pointer]
+        - button "Prices" [ref=e61] [cursor=pointer]
+        - button "Edit" [ref=e62] [cursor=pointer]
+        - button "Delete" [ref=e63] [cursor=pointer]
+  - generic [ref=e65]:
+    - generic [ref=e66]:
+      - generic [ref=e67]: Add Customer
+      - button "×" [ref=e68] [cursor=pointer]
+    - generic [ref=e69]:
+      - generic [ref=e70]:
+        - generic [ref=e71]:
+          - generic [ref=e72]: Name *
+          - textbox [ref=e73]
+        - generic [ref=e74]:
+          - generic [ref=e75]: Phone
+          - textbox "10 digits" [ref=e76]
+        - generic [ref=e77]:
+          - generic [ref=e78]: WhatsApp
+          - textbox "10 digits" [ref=e79]
+        - generic [ref=e80]:
+          - generic [ref=e81]: Address
+          - textbox [ref=e82]
+        - generic [ref=e83]:
+          - generic [ref=e84]: Pricing
+          - generic [ref=e85]:
+            - generic [ref=e86]: Pricing Type
+            - combobox [ref=e87] [cursor=pointer]:
+              - option "Market Rate" [selected]
+              - option "Market + Markup %"
+              - option "Contract (Fixed)"
+      - generic [ref=e88]:
+        - button "Cancel" [ref=e89] [cursor=pointer]
+        - button "Save" [ref=e90] [cursor=pointer]:
+          - generic [ref=e91]: Save
+```
