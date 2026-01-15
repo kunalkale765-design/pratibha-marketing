@@ -332,7 +332,7 @@ describe('Order Endpoints', () => {
       expect(res.body.data.notes).toBe('Updated notes');
     });
 
-    it('should reject product not in original order', async () => {
+    it('should reject non-existent product', async () => {
       const fakeProductId = '507f1f77bcf86cd799439011';
       const res = await request(app)
         .put(`/api/orders/${testOrder._id}`)
@@ -345,12 +345,13 @@ describe('Order Endpoints', () => {
           }]
         });
 
-      expect(res.statusCode).toBe(400); // Product not in order error
-      expect(res.body.message).toContain('not in this order');
+      expect(res.statusCode).toBe(400);
+      expect(res.body.message).toContain('not found');
     });
 
-    it('should reject adding new products (only prices can be updated)', async () => {
+    it('should allow adding new products to order', async () => {
       const product2 = await testUtils.createTestProduct({ name: 'Product 2', unit: 'kg' });
+      await testUtils.createMarketRate(product2, 50);
 
       const res = await request(app)
         .put(`/api/orders/${testOrder._id}`)
@@ -362,8 +363,10 @@ describe('Order Endpoints', () => {
           ]
         });
 
-      expect(res.statusCode).toBe(400);
-      expect(res.body.message).toContain('Cannot add or remove products');
+      expect(res.statusCode).toBe(200);
+      expect(res.body.data.products.length).toBe(2);
+      expect(res.body.data.products[1].productName).toBe('Product 2');
+      expect(res.body.data.totalAmount).toBe(1500); // (10 * 100) + (10 * 50)
     });
 
     it('should allow staff to update quantities', async () => {

@@ -21,7 +21,7 @@ const orderSchema = new mongoose.Schema({
     quantity: {
       type: Number,
       required: [true, 'Quantity is required'],
-      min: [0.01, 'Quantity must be greater than 0']
+      min: [0.2, 'Quantity must be at least 0.2']
     },
     unit: {
       type: String,

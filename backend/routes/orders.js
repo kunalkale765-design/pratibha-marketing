@@ -132,10 +132,10 @@ const validateOrder = [
   body('customer').notEmpty().withMessage('Customer is required'),
   body('products').isArray({ min: 1 }).withMessage('At least one product is required'),
   body('products.*.product').notEmpty().withMessage('Product ID is required'),
-  // Quantity: min 0.01, max 1,000,000 (reasonable upper limit to prevent abuse)
+  // Quantity: min 0.2, max 1,000,000 (reasonable upper limit to prevent abuse)
   body('products.*.quantity')
-    .isFloat({ min: 0.01, max: 1000000 })
-    .withMessage('Quantity must be between 0.01 and 1,000,000'),
+    .isFloat({ min: 0.2, max: 1000000 })
+    .withMessage('Quantity must be between 0.2 and 1,000,000'),
   // Rate is optional - will be calculated based on customer pricing type if not provided
   // Min rate: 0.01 to prevent accidental free orders
   // Max rate: 10,000,000 (reasonable upper limit), max 2 decimal precision enforced in business logic
@@ -561,8 +561,14 @@ router.put('/:id',
       throw new Error('Order not found');
     }
 
-    // Update product prices only - quantities and products cannot be changed
+    // Update products - staff can add, remove, and modify prices/quantities
     if (req.body.products && Array.isArray(req.body.products)) {
+      // Get customer for pricing calculation (needed for new products)
+      const customer = await Customer.findById(order.customer);
+      if (!customer) {
+        return res.status(404).json({ success: false, message: 'Customer not found' });
+      }
+
       // Build a map of original order products for validation
       const originalProductMap = new Map();
       for (const p of order.products) {
@@ -576,43 +582,92 @@ router.put('/:id',
         });
       }
 
-      // Validate that request products match original order exactly
-      if (req.body.products.length !== order.products.length) {
-        return res.status(400).json({
-          success: false,
-          message: 'Cannot add or remove products. Only prices can be updated.'
-        });
-      }
+      // All validations passed - update prices and/or quantities
+      let totalAmount = 0;
+      const updatedProducts = [];
+      const auditChanges = []; // Track changes for audit log
 
-      // Validate each product in request exists in original order with same quantity
       for (const item of req.body.products) {
         const productId = item.product?.toString();
         const original = originalProductMap.get(productId);
 
+        // Handle NEW product (not in original order)
         if (!original) {
-          return res.status(400).json({
-            success: false,
-            message: `Product ${productId} is not in this order. Only prices can be updated.`
+          // Fetch product from database
+          const product = await Product.findById(productId);
+          if (!product) {
+            return res.status(400).json({
+              success: false,
+              message: `Product ${productId} not found`
+            });
+          }
+
+          // Validate quantity
+          const quantity = item.quantity || 1;
+          if (quantity < 0) {
+            return res.status(400).json({
+              success: false,
+              message: `Quantity for "${product.name}" cannot be negative.`
+            });
+          }
+          if (quantity > 0 && quantity < 0.2) {
+            return res.status(400).json({
+              success: false,
+              message: `Minimum quantity for "${product.name}" is 0.2 ${product.unit}`
+            });
+          }
+          if (quantity === 0) continue; // Skip if quantity is 0
+
+          // Calculate price based on customer's pricing type (or use provided rate for non-contract)
+          const requestedRate = item.priceAtTime || item.rate;
+          const priceResult = await calculatePrice(customer, product, requestedRate);
+          const rate = priceResult.rate;
+          const amount = quantity * rate;
+          totalAmount += amount;
+
+          // Add to audit log
+          auditChanges.push({
+            changedAt: new Date(),
+            changedBy: req.user._id,
+            changedByName: req.user.name,
+            productId: productId,
+            productName: product.name,
+            oldRate: 0,
+            newRate: rate,
+            oldQuantity: 0,
+            newQuantity: quantity,
+            oldTotal: 0,
+            newTotal: amount,
+            reason: 'Product added by staff'
           });
+
+          updatedProducts.push({
+            product: productId,
+            productName: product.name,
+            quantity: quantity,
+            unit: product.unit,
+            rate: rate,
+            amount: amount,
+            isContractPrice: priceResult.isContractPrice
+          });
+          continue;
         }
 
-        // Validate quantity if provided (staff can now change quantities)
-        if (item.quantity !== undefined && item.quantity !== original.quantity) {
-          // Negative quantities not allowed
-          if (item.quantity < 0) {
-            return res.status(400).json({
-              success: false,
-              message: `Quantity for "${original.productName}" cannot be negative.`
-            });
-          }
+        // Handle EXISTING product
+        // Validate quantity if provided
+        const quantity = item.quantity !== undefined ? item.quantity : original.quantity;
 
-          // Validate minimum quantity (allow 0 to remove)
-          if (item.quantity > 0 && item.quantity < 0.2) {
-            return res.status(400).json({
-              success: false,
-              message: `Minimum quantity for "${original.productName}" is 0.2 ${original.unit}`
-            });
-          }
+        if (quantity < 0) {
+          return res.status(400).json({
+            success: false,
+            message: `Quantity for "${original.productName}" cannot be negative.`
+          });
+        }
+        if (quantity > 0 && quantity < 0.2) {
+          return res.status(400).json({
+            success: false,
+            message: `Minimum quantity for "${original.productName}" is 0.2 ${original.unit}`
+          });
         }
 
         // For contract customers: prevent modification of contract prices
@@ -623,19 +678,6 @@ router.put('/:id',
             message: `Contract price for "${original.productName}" cannot be changed. Edit contract prices in customer management.`
           });
         }
-      }
-
-      // All validations passed - update prices and/or quantities
-      let totalAmount = 0;
-      const updatedProducts = [];
-      const auditChanges = []; // Track changes for audit log
-
-      for (const item of req.body.products) {
-        const productId = item.product.toString();
-        const original = originalProductMap.get(productId);
-
-        // Get quantity from request (or use original for backward compatibility)
-        const quantity = item.quantity !== undefined ? item.quantity : original.quantity;
 
         // Handle product removal (quantity = 0)
         if (quantity === 0) {
