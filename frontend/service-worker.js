@@ -1,7 +1,7 @@
 // Pratibha Marketing - Service Worker
 // Smart caching for PWA functionality
 
-const CACHE_NAME = 'pratibha-v34';
+const CACHE_NAME = 'pratibha-v35';
 const API_CACHE_NAME = 'pratibha-api-v1';
 
 // Static assets to cache immediately
