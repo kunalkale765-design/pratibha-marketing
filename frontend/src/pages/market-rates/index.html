@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Market Rates - Pratibha Marketing</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#2e3532">
+
+    <!-- Shared CSS -->
+    <link rel="stylesheet" href="/assets/css/variables.css">
+    <link rel="stylesheet" href="/assets/css/base.css">
+    <link rel="stylesheet" href="/assets/css/components.css">
+    <link rel="stylesheet" href="/assets/css/utilities.css">
+    <link rel="stylesheet" href="/assets/css/responsive.css">
+
+    <!-- Animations -->
+    <link rel="stylesheet" href="/assets/css/animations/skeleton.css">
+    <link rel="stylesheet" href="/assets/css/animations/cards.css">
+    <link rel="stylesheet" href="/assets/css/animations/inputs.css">
+    <link rel="stylesheet" href="/assets/css/animations/buttons.css">
+    <link rel="stylesheet" href="/assets/css/animations/page.css">
+
+    <!-- jsPDF for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+    <!-- Page-specific styles -->
+    <link rel="stylesheet" href="/assets/css/pages/market-rates.css">
+</head>
+
+<body>
+    <header class="header header-animated">
+        <div class="header-content">
+            <a href="/" class="logo">Pratibha <span>Marketing</span></a>
+            <a href="/" class="btn-back btn-animated">Dashboard</a>
+        </div>
+    </header>
+
+    <div class="date-bar" id="dateBar">Loading...</div>
+
+    <div id="toast" class="toast"></div>
+
+    <div class="product-list" id="productList">
+        <!-- Skeleton loading placeholders -->
+        <div class="skeleton-card" style="display: flex; align-items: center; gap: 1rem;">
+            <div style="flex: 1;">
+                <div class="skeleton skeleton-title" style="width: 50%; margin-bottom: 0.25rem;"></div>
+                <div class="skeleton skeleton-text" style="width: 30%;"></div>
+            </div>
+            <div class="skeleton" style="width: 100px; height: 44px; border-radius: 8px;"></div>
+        </div>
+        <div class="skeleton-card" style="display: flex; align-items: center; gap: 1rem;">
+            <div style="flex: 1;">
+                <div class="skeleton skeleton-title" style="width: 50%; margin-bottom: 0.25rem;"></div>
+                <div class="skeleton skeleton-text" style="width: 30%;"></div>
+            </div>
+            <div class="skeleton" style="width: 100px; height: 44px; border-radius: 8px;"></div>
+        </div>
+        <div class="skeleton-card" style="display: flex; align-items: center; gap: 1rem;">
+            <div style="flex: 1;">
+                <div class="skeleton skeleton-title" style="width: 50%; margin-bottom: 0.25rem;"></div>
+                <div class="skeleton skeleton-text" style="width: 30%;"></div>
+            </div>
+            <div class="skeleton" style="width: 100px; height: 44px; border-radius: 8px;"></div>
+        </div>
+    </div>
+
+    <!-- 7-Day History Section -->
+    <section class="history-section">
+        <div class="history-card">
+            <div class="history-header">
+                <h2 class="history-title">7-Day Rate History</h2>
+                <div class="history-controls">
+                    <select id="historyCategory" class="history-select input-animated" onchange="loadHistory()">
+                        <option value="all">All Categories</option>
+                    </select>
+                    <button class="btn-export" onclick="exportToPDF()">
+                        <span>Export PDF</span>
+                    </button>
+                </div>
+            </div>
+            <div class="history-content" id="historyContent">
+                <div class="history-loading">Loading history...</div>
+            </div>
+        </div>
+    </section>
+
+    <div class="bottom-bar">
+        <div class="changes-count"><span id="changesCount">0</span> changed</div>
+        <button class="btn-save btn-animated" id="saveBtn" disabled onclick="saveRates()">
+            <span class="btn-text">Save Rates</span>
+        </button>
+    </div>
+
+    <script type="module" src="/js/auth.js"></script>
+    <script type="module" src="/js/api.js"></script>
+    <script type="module" src="/js/pages/market-rates.js"></script>
+</body>
+
+</html>
+</body>
+
+</html>

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - Pratibha Marketing</title>
+
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#7e9181">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Pratibha">
+    <link rel="apple-touch-icon" href="/assets/icons/icon.svg">
+
+    <!-- Shared CSS (order matters!) -->
+    <link rel="stylesheet" href="/assets/css/variables.css">
+    <link rel="stylesheet" href="/assets/css/base.css">
+    <link rel="stylesheet" href="/assets/css/components.css">
+    <link rel="stylesheet" href="/assets/css/utilities.css">
+    <link rel="stylesheet" href="/assets/css/responsive.css">
+
+    <!-- Page-specific styles -->
+    <link rel="stylesheet" href="/assets/css/pages/signup.css">
+</head>
+
+<body>
+    <div class="signup-container">
+        <!-- Form Side -->
+        <div class="form-side">
+            <div class="signup-card">
+                <div class="signup-header">
+                    <a href="/pages/auth/login.html" class="back-link">← Back to login</a>
+                    <h1>Create Account</h1>
+                    <p>Join Pratibha Marketing</p>
+                </div>
+
+                <div id="noticeMessage" class="message notice"></div>
+                <div id="successMessage" class="message success"></div>
+
+                <form id="signupForm">
+                    <div class="form-group">
+                        <label class="form-label" for="name">Full Name *</label>
+                        <input type="text" id="name" class="form-input" placeholder="Your full name" required
+                            autocomplete="name">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="email">Username *</label>
+                        <input type="text" id="email" class="form-input" placeholder="Enter your username" required
+                            autocomplete="username">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="phone">Phone Number</label>
+                        <input type="tel" id="phone" class="form-input" placeholder="10-digit phone number"
+                            pattern="[0-9]{10}" autocomplete="tel">
+                        <p class="form-hint">Optional - Enter 10 digits without spaces</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="password">Password *</label>
+                        <input type="password" id="password" class="form-input" placeholder="Min 6 characters" required
+                            autocomplete="new-password" minlength="6">
+                        <div class="password-requirements">
+                            <div class="requirement" id="req-length">◯ At least 6 characters</div>
+                            <div class="requirement" id="req-upper">◯ One uppercase letter</div>
+                            <div class="requirement" id="req-number">◯ One number</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="confirmPassword">Confirm Password *</label>
+                        <input type="password" id="confirmPassword" class="form-input" placeholder="Re-enter password"
+                            required autocomplete="new-password" minlength="6">
+                    </div>
+
+                    <button type="submit" id="signupBtn" class="btn btn-primary btn-block">Create Account</button>
+
+                    <p class="login-link">
+                        Already have an account? <a href="/pages/auth/login.html">Sign in</a>
+                    </p>
+                </form>
+            </div>
+        </div>
+
+        <!-- Brand Side -->
+        <div class="brand-side">
+            <div class="brand-content">
+                <div class="brand-logo">
+                    <span class="logo-text">Pratibha Marketing</span>
+                </div>
+
+                <div class="brand-features">
+                    <div class="feature">
+                        <div class="feature-icon">◈</div>
+                        <div class="feature-text">
+                            <h3>Easy Ordering</h3>
+                            <p>Place orders from your phone anytime</p>
+                        </div>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">▷</div>
+                        <div class="feature-text">
+                            <h3>Reliable Delivery</h3>
+                            <p>Fresh produce delivered on schedule</p>
+                        </div>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">◇</div>
+                        <div class="feature-text">
+                            <h3>Fair Pricing</h3>
+                            <p>Transparent market rates, no surprises</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shared JS (loaded as modules) -->
+    <script type="module" src="/js/auth.js"></script>
+    <script type="module" src="/js/api.js"></script>
+
+    <!-- Page Script -->
+    <script type="module" src="/js/pages/signup.js"></script>
+</body>
+
+</html>

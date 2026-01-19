@@ -164,4 +164,10 @@ orderSchema.index({ idempotencyKey: 1 }, { sparse: true, unique: true });
 // Compound index for common query: customer's orders sorted by date
 orderSchema.index({ customer: 1, createdAt: -1 });
 
+// Compound index for batch queries: orders in a batch by status
+orderSchema.index({ batch: 1, status: 1 });
+
+// Index for finding editable orders
+orderSchema.index({ batchLocked: 1, status: 1 });
+
 module.exports = mongoose.model('Order', orderSchema);

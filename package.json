@@ -6,6 +6,9 @@
   "scripts": {
     "start": "node backend/server.js",
     "dev": "nodemon backend/server.js",
+    "dev:frontend": "cd frontend && vite",
+    "build:frontend": "cd frontend && vite build",
+    "preview:frontend": "cd frontend && vite preview",
     "test": "cross-env NODE_ENV=test jest --runInBand --detectOpenHandles --forceExit",
     "test:watch": "cross-env NODE_ENV=test jest --watch",
     "test:coverage": "cross-env NODE_ENV=test jest --coverage --forceExit",
@@ -57,7 +60,8 @@
     "nodemon": "^3.0.2",
     "sharp": "^0.34.5",
     "supertest": "^6.3.3",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1"
   },
   "engines": {
     "node": ">=18.0.0"

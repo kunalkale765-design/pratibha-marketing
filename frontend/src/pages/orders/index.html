@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Orders - Pratibha Marketing</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#2e3532">
+
+    <!-- Shared CSS -->
+    <link rel="stylesheet" href="/assets/css/variables.css">
+    <link rel="stylesheet" href="/assets/css/base.css">
+    <link rel="stylesheet" href="/assets/css/components.css">
+    <link rel="stylesheet" href="/assets/css/utilities.css">
+    <link rel="stylesheet" href="/assets/css/responsive.css">
+
+    <!-- Animations -->
+    <link rel="stylesheet" href="/assets/css/animations/skeleton.css">
+    <link rel="stylesheet" href="/assets/css/animations/cards.css">
+    <link rel="stylesheet" href="/assets/css/animations/inputs.css">
+    <link rel="stylesheet" href="/assets/css/animations/buttons.css">
+    <link rel="stylesheet" href="/assets/css/animations/badges.css">
+    <link rel="stylesheet" href="/assets/css/animations/segments.css">
+    <link rel="stylesheet" href="/assets/css/animations/page.css">
+    <link rel="stylesheet" href="/assets/css/animations/swipe.css">
+
+    <!-- Page-specific styles -->
+    <link rel="stylesheet" href="/assets/css/pages/orders.css">
+</head>
+
+<body>
+    <header class="header header-animated">
+        <div class="header-content">
+            <a href="/" class="logo">Pratibha <span>Marketing</span></a>
+            <div class="header-btns">
+                <a href="/pages/order-form/" class="btn-header primary">+ New</a>
+                <a href="/" class="btn-header">Home</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="filters-bar" id="filtersBar">
+        <div class="segment-control" id="filterSegments">
+            <div class="segment-indicator" id="segmentIndicator"></div>
+            <button class="segment-btn active" data-filter="all">All</button>
+            <button class="segment-btn" data-filter="pending">Pending</button>
+            <button class="segment-btn" data-filter="delivered">Delivered</button>
+            <button class="segment-btn" data-filter="cancelled">Cancelled</button>
+        </div>
+    </div>
+
+    <div class="search-bar">
+        <input type="text" class="search-input input-animated" placeholder="Search order or customer..."
+            id="searchInput">
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <div class="orders-list" id="ordersList">
+        <!-- Skeleton loading placeholders -->
+        <div class="skeleton-card" style="display: flex; align-items: center; gap: 0.875rem;">
+            <div class="skeleton" style="width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;"></div>
+            <div style="flex: 1;">
+                <div class="skeleton skeleton-text" style="width: 60%; margin-bottom: 0.375rem;"></div>
+                <div class="skeleton skeleton-text" style="width: 35%;"></div>
+            </div>
+            <div class="skeleton" style="width: 70px; height: 32px; border-radius: 20px;"></div>
+        </div>
+        <div class="skeleton-card" style="display: flex; align-items: center; gap: 0.875rem;">
+            <div class="skeleton" style="width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;"></div>
+            <div style="flex: 1;">
+                <div class="skeleton skeleton-text" style="width: 70%; margin-bottom: 0.375rem;"></div>
+                <div class="skeleton skeleton-text" style="width: 40%;"></div>
+            </div>
+            <div class="skeleton" style="width: 65px; height: 32px; border-radius: 20px;"></div>
+        </div>
+        <div class="skeleton-card" style="display: flex; align-items: center; gap: 0.875rem;">
+            <div class="skeleton" style="width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;"></div>
+            <div style="flex: 1;">
+                <div class="skeleton skeleton-text" style="width: 55%; margin-bottom: 0.375rem;"></div>
+                <div class="skeleton skeleton-text" style="width: 30%;"></div>
+            </div>
+            <div class="skeleton" style="width: 75px; height: 32px; border-radius: 20px;"></div>
+        </div>
+    </div>
+
+    <!-- Order Detail Modal -->
+    <div id="orderModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title" id="modalTitle">Order Details</div>
+                <button class="btn-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+            <div class="modal-footer" id="modalFooter">
+                <button class="btn-modal secondary btn-animated" id="printFromModalBtn" onclick="printFromModal()">
+                    <span class="btn-text">Print Invoice</span>
+                </button>
+                <button class="btn-save-prices btn-animated" id="savePricesBtn" onclick="savePrices()">
+                    <span class="btn-text">Save Changes</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoice Modal -->
+    <div id="invoiceModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title" id="invoiceModalTitle">Generate Invoice</div>
+                <button class="btn-close" onclick="closeInvoiceModal()">×</button>
+            </div>
+            <div class="modal-body" id="invoiceModalBody">
+                <div class="invoice-loading">Loading...</div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modal primary btn-animated" id="generateInvoiceBtn" onclick="generateInvoice()"
+                    disabled>
+                    <span class="btn-text">Download PDF</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/js/auth.js"></script>
+    <script type="module" src="/js/api.js"></script>
+    <script type="module" src="/js/pages/orders.js"></script>
+</body>
+
+</html>

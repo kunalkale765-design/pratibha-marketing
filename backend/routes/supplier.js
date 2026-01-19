@@ -2,8 +2,10 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const Order = require('../models/Order');
+const Batch = require('../models/Batch');
 const MarketRate = require('../models/MarketRate');
 const { protect, authorize } = require('../middleware/auth');
+const { getISTTime } = require('../services/batchScheduler');
 
 // @route   GET /api/supplier/quantity-summary
 // @desc    Get consolidated quantities needed across all pending orders
@@ -170,6 +172,88 @@ router.get('/daily-requirements', protect, authorize('admin', 'staff'), async (r
       date: today.toISOString().split('T')[0],
       orderCount: todayOrders.length,
       data
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// @route   GET /api/supplier/batch-summary
+// @desc    Get consolidated quantities grouped by batch for today
+// @access  Private (Admin, Staff)
+router.get('/batch-summary', protect, authorize('admin', 'staff'), async (req, res, next) => {
+  try {
+    const ist = getISTTime();
+    const today = ist.dateOnly;
+
+    // Get today's batches
+    const batches = await Batch.find({ date: today })
+      .sort({ batchType: 1 });
+
+    if (batches.length === 0) {
+      return res.json({
+        success: true,
+        currentTime: ist.date.toISOString(),
+        data: []
+      });
+    }
+
+    // Get batch summaries with aggregated quantities
+    const batchSummaries = await Promise.all(
+      batches.map(async (batch) => {
+        // Get all non-cancelled orders in this batch
+        const orders = await Order.find({
+          batch: batch._id,
+          status: { $nin: ['cancelled'] }
+        }).populate('products.product', 'name unit');
+
+        // Aggregate quantities by product
+        const quantityMap = new Map();
+
+        orders.forEach(order => {
+          order.products.forEach(item => {
+            const productId = item.product?._id?.toString() || item.product?.toString();
+            if (!productId) return;
+
+            const productName = item.productName || item.product?.name || 'Unknown Product';
+            const unit = item.unit || item.product?.unit || 'unit';
+
+            if (quantityMap.has(productId)) {
+              const existing = quantityMap.get(productId);
+              existing.totalQuantity += item.quantity || 0;
+              existing.orderCount += 1;
+            } else {
+              quantityMap.set(productId, {
+                productId,
+                productName,
+                unit,
+                totalQuantity: item.quantity || 0,
+                orderCount: 1
+              });
+            }
+          });
+        });
+
+        // Convert to array and sort by quantity
+        const products = Array.from(quantityMap.values())
+          .sort((a, b) => b.totalQuantity - a.totalQuantity);
+
+        return {
+          batchNumber: batch.batchNumber,
+          batchType: batch.batchType,
+          status: batch.status,
+          confirmedAt: batch.confirmedAt,
+          orderCount: orders.length,
+          products
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      currentTime: ist.date.toISOString(),
+      date: today.toISOString().split('T')[0],
+      data: batchSummaries
     });
   } catch (error) {
     next(error);

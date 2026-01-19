@@ -207,6 +207,18 @@ frontend/
 | Method | Endpoint | Access | Description |
 |--------|----------|--------|-------------|
 | GET | /quantity-summary | Admin/Staff | Aggregate order quantities |
+| GET | /batch-summary | Admin/Staff | Get today's batch-wise quantities |
+
+### Batches `/api/batches`
+| Method | Endpoint | Access | Description |
+|--------|----------|--------|-------------|
+| GET | / | Admin/Staff | List batches with filters |
+| GET | /today | Admin/Staff | Get today's batches with counts |
+| GET | /:id | Admin/Staff | Get batch details |
+| POST | /:id/confirm | Admin/Staff | Manually confirm batch |
+| GET | /:id/orders | Admin/Staff | Get orders in batch |
+| GET | /:id/quantity-summary | Admin/Staff | Get product quantities for batch |
+| GET | /date/:date | Admin/Staff | Get batches for specific date |
 
 ### Invoices `/api/invoices`
 | Method | Endpoint | Access | Description |

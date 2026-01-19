@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pratibha Marketing - Dashboard</title>
+
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="/assets/manifest-Wfz3HFOQ.json">
+    <meta name="theme-color" content="#7e9181">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Pratibha">
+    <link rel="apple-touch-icon" href="/icons/icon.svg">
+
+    <!-- Chart.js for analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"
+        integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4"
+        crossorigin="anonymous"></script>
+
+    <!-- Shared CSS -->
+
+    <!-- Animations -->
+
+    <!-- Page-specific styles -->
+  <script type="module" crossorigin src="/assets/main-BSThQRPL.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/ui-Usu6AxiT.js">
+  <link rel="modulepreload" crossorigin href="/assets/init-DAk7Tmy7.js">
+  <link rel="stylesheet" crossorigin href="/assets/ui-BaXdD4wa.css">
+  <link rel="stylesheet" crossorigin href="/assets/main-DpSG_OB5.css">
+  <link rel="stylesheet" crossorigin href="/assets/page-BklDA2cI.css">
+  <link rel="stylesheet" crossorigin href="/assets/buttons-CLMBJEwY.css">
+</head>
+
+<body>
+    <header class="header header-animated">
+        <div class="header-content">
+            <div>
+                <div class="logo">
+                    <div class="logo-text">Pratibha <span>Marketing</span></div>
+                </div>
+                <p class="header-subtitle">Fresh Vegetables Supply & Distribution</p>
+            </div>
+            <div class="header-actions">
+                <div class="user-badge" id="userBadge">Loading...</div>
+                <button class="btn-header btn-animated" id="logoutBtn">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="main">
+        <!-- Stats -->
+        <div class="stats-row">
+            <div class="stat-card sale">
+                <div class="stat-label">Total Sale</div>
+                <div class="stat-value" id="totalSale">₹0</div>
+            </div>
+            <div class="stat-card profit">
+                <div class="stat-label">Profit</div>
+                <div class="stat-value" id="totalProfit">₹0</div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="actions-grid">
+            <a href="/pages/order-form/" class="action-card card-animated primary">
+                <div class="action-icon">+</div>
+                <div class="action-content">
+                    <h3 class="action-title">Create Order</h3>
+                    <p class="action-desc">New customer order</p>
+                </div>
+            </a>
+
+            <a href="/pages/customers/" class="action-card card-animated">
+                <div class="action-icon">≡</div>
+                <div class="action-content">
+                    <h3 class="action-title">Customers</h3>
+                    <p class="action-desc">Manage details</p>
+                </div>
+            </a>
+
+            <a href="/pages/products/" class="action-card card-animated">
+                <div class="action-icon">●</div>
+                <div class="action-content">
+                    <h3 class="action-title">Products</h3>
+                    <p class="action-desc">Product catalog</p>
+                </div>
+            </a>
+
+            <a href="/pages/market-rates/" class="action-card card-animated">
+                <div class="action-icon">◇</div>
+                <div class="action-content">
+                    <h3 class="action-title">Market Rates</h3>
+                </div>
+            </a>
+            <a href="/pages/orders/" class="action-card card-animated">
+                <div class="action-icon">≣</div>
+                <div class="action-content">
+                    <h3 class="action-title">View Orders</h3>
+                    <p class="action-desc">Track orders</p>
+                </div>
+            </a>
+        </div>
+
+        <!-- Batch Management Section -->
+        <div class="batch-container" id="batchContainer">
+            <div class="batch-header">
+                <h2>Today's Batches</h2>
+                <div class="batch-time" id="batchCurrentTime"></div>
+            </div>
+            <div class="batch-info" id="batchInfo">
+                <span class="badge badge-info">Currently accepting: Loading...</span>
+            </div>
+            <div class="batch-cards" id="batchCards">
+                <div class="batch-card skeleton">
+                    <div class="skeleton skeleton-title" style="width: 60%;"></div>
+                    <div class="skeleton skeleton-text" style="width: 40%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Purchase List -->
+        <div class="procurement-container">
+            <div class="procurement-header">
+                <h2>Purchase List</h2>
+                <div class="header-actions">
+                    <button class="btn-icon" id="printBtn" title="Print">⎙</button>
+                    <button class="btn-icon" id="exportBtn" title="Export CSV">↓</button>
+                    <button class="btn-save-rates" id="saveRatesBtn">Save</button>
+                </div>
+            </div>
+            <div class="procurement-list" id="procurementList">
+                <!-- Skeleton loading -->
+                <div class="skeleton-card" style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem;">
+                    <div class="skeleton skeleton-title" style="width: 35%;"></div>
+                    <div class="skeleton skeleton-text" style="width: 20%;"></div>
+                    <div class="skeleton" style="width: 80px; height: 32px; border-radius: 6px; margin-left: auto;">
+                    </div>
+                </div>
+                <div class="skeleton-card" style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem;">
+                    <div class="skeleton skeleton-title" style="width: 35%;"></div>
+                    <div class="skeleton skeleton-text" style="width: 20%;"></div>
+                    <div class="skeleton" style="width: 80px; height: 32px; border-radius: 6px; margin-left: auto;">
+                    </div>
+                </div>
+                <div class="skeleton-card" style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem;">
+                    <div class="skeleton skeleton-title" style="width: 35%;"></div>
+                    <div class="skeleton skeleton-text" style="width: 20%;"></div>
+                    <div class="skeleton" style="width: 80px; height: 32px; border-radius: 6px; margin-left: auto;">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reports Section -->
+        <div class="reports-container">
+            <div class="reports-header">
+                <h2>Reports</h2>
+            </div>
+            <div class="reports-content">
+                <div class="report-card" onclick="openLedgerModal()">
+                    <div class="report-icon">📊</div>
+                    <div class="report-info">
+                        <div class="report-title">Customer Ledger</div>
+                        <div class="report-desc">Invoice history with dates and amounts</div>
+                    </div>
+                    <div class="report-arrow">→</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ledger Report Modal -->
+        <div id="ledgerModal" class="modal-overlay">
+            <div class="modal" style="max-width: 400px;">
+                <div class="modal-header">
+                    <h2 class="modal-title">Download Ledger</h2>
+                    <button class="modal-close" onclick="closeLedgerModal()">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">Customer (optional)</label>
+                        <select id="ledgerCustomer" class="form-input">
+                            <option value="">All Customers</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">From Date</label>
+                            <input type="date" id="ledgerFromDate" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">To Date</label>
+                            <input type="date" id="ledgerToDate" class="form-input">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="closeLedgerModal()">Cancel</button>
+                    <button class="btn btn-primary" onclick="downloadLedger()">Download Excel</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Section -->
+        <section class="analytics-section">
+            <div class="analytics-header">
+                <h2>Analytics</h2>
+            </div>
+            <div class="analytics-grid">
+                <!-- Order Status Chart -->
+                <div class="analytics-card">
+                    <div class="analytics-card-header">
+                        <div>
+                            <div class="analytics-card-title">Order Status</div>
+                            <div class="analytics-card-subtitle">Distribution by status</div>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="orderStatusChart"></canvas>
+                    </div>
+                    <div class="analytics-summary" id="orderStatusSummary">
+                        <div class="summary-item">
+                            <div class="summary-value" id="pendingCount">-</div>
+                            <div class="summary-label">Pending</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-value" id="processingCount">-</div>
+                            <div class="summary-label">Processing</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-value" id="deliveredCount">-</div>
+                            <div class="summary-label">Delivered</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Revenue Trend Chart -->
+                <div class="analytics-card">
+                    <div class="analytics-card-header">
+                        <div>
+                            <div class="analytics-card-title">Revenue Trend</div>
+                            <div class="analytics-card-subtitle">Last 7 days</div>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                    <div class="analytics-summary">
+                        <div class="summary-item">
+                            <div class="summary-value" id="weekTotal">-</div>
+                            <div class="summary-label">This Week</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-value" id="avgDaily">-</div>
+                            <div class="summary-label">Avg/Day</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top Products Chart -->
+                <div class="analytics-card">
+                    <div class="analytics-card-header">
+                        <div>
+                            <div class="analytics-card-title">Top Products</div>
+                            <div class="analytics-card-subtitle">By quantity ordered</div>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="topProductsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="api-status">
+            <span class="api-dot" id="apiDot"></span>
+            <span id="apiStatus">Checking API...</span>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>Pratibha Marketing &copy; 2026 | Fresh vegetables, delivered with trust</p>
+    </footer>
+
+    <!-- Shared JS (loaded as modules) -->
+    <!-- Vite handles module resolution -->
+</body>
+
+</html>

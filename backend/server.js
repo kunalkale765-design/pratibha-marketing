@@ -54,6 +54,7 @@ const { csrfTokenSetter, csrfProtection, csrfTokenHandler } = require('./middlew
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 const { startScheduler, stopScheduler } = require('./services/marketRateScheduler');
+const { startScheduler: startBatchScheduler, stopScheduler: stopBatchScheduler } = require('./services/batchScheduler');
 
 // Initialize Sentry (only in production/development, not in test)
 if (process.env.SENTRY_DSN && process.env.NODE_ENV !== 'test') {
@@ -106,7 +107,7 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
   : ['http://localhost:5000'];
 
 app.use(cors({
-  origin: function(origin, callback) {
+  origin: function (origin, callback) {
     // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
 
@@ -208,6 +209,7 @@ app.use('/api/market-rates', require('./routes/marketRates'));
 app.use('/api/supplier', require('./routes/supplier'));
 app.use('/api/invoices', require('./routes/invoices'));
 app.use('/api/reports', require('./routes/reports'));
+app.use('/api/batches', require('./routes/batches'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -245,26 +247,26 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // Serve static frontend files
-app.use(express.static(path.join(__dirname, '../frontend')));
+if (process.env.NODE_ENV === 'production') {
+  // In production, serve the built files from dist
+  app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
-// Serve HTML pages
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/index.html'));
-});
-
-// Catch-all route for frontend (SPA support)
-app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api')) {
-    return next();
-  }
-  // Try to serve the specific file, fallback to index.html
-  const filePath = path.join(__dirname, '../frontend', req.path);
-  res.sendFile(filePath, (err) => {
-    if (err) {
-      res.sendFile(path.join(__dirname, '../frontend/index.html'));
+  // Catch-all route for SPA support (serve index.html)
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) {
+      return next();
     }
+    res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
   });
-});
+} else {
+  // In development, we expect the use of Vite dev server (port 5173)
+  // But we can serve src as a fallback, mostly for asset references if needed
+  app.use(express.static(path.join(__dirname, '../frontend/src')));
+
+  app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/src/index.html'));
+  });
+}
 
 // Error Handling Middleware (must be last)
 // ==========================================
@@ -295,8 +297,9 @@ const startServer = async () => {
 ║   MongoDB: Connected                          ║
 ╚═══════════════════════════════════════════════╝
       `);
-      // Start the market rate scheduler after server is ready
+      // Start the schedulers after server is ready
       startScheduler();
+      startBatchScheduler();
     });
   } catch (error) {
     console.error('Failed to start server:', error.message);
@@ -337,6 +340,7 @@ process.on('uncaughtException', (err) => {
 const gracefulShutdown = async (signal) => {
   console.log(`${signal} received. Shutting down gracefully...`);
   stopScheduler();
+  stopBatchScheduler();
 
   // Close MongoDB connection
   try {

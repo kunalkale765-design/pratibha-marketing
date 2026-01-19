@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Customers - Pratibha Marketing</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#2e3532">
+
+    <!-- Shared CSS -->
+    <link rel="stylesheet" href="/assets/css/variables.css">
+    <link rel="stylesheet" href="/assets/css/base.css">
+    <link rel="stylesheet" href="/assets/css/components.css">
+    <link rel="stylesheet" href="/assets/css/utilities.css">
+    <link rel="stylesheet" href="/assets/css/responsive.css">
+
+    <!-- Animations -->
+    <link rel="stylesheet" href="/assets/css/animations/skeleton.css">
+    <link rel="stylesheet" href="/assets/css/animations/cards.css">
+    <link rel="stylesheet" href="/assets/css/animations/inputs.css">
+    <link rel="stylesheet" href="/assets/css/animations/buttons.css">
+    <link rel="stylesheet" href="/assets/css/animations/badges.css">
+    <link rel="stylesheet" href="/assets/css/animations/page.css">
+
+    <!-- Page-specific styles -->
+    <link rel="stylesheet" href="/assets/css/pages/customer-management.css">
+</head>
+
+<body>
+    <header class="header header-animated">
+        <div class="header-content">
+            <a href="/" class="logo">Pratibha <span>Marketing</span></a>
+            <div class="header-btns">
+                <button onclick="showAddCustomerForm()" class="btn-header primary btn-animated">+ Add</button>
+                <a href="/" class="btn-header btn-animated">Home</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="search-bar">
+        <input id="searchInput" type="text" placeholder="Search customers..." class="search-input input-animated"
+            oninput="searchCustomers()">
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <div id="customersList" class="customers-list">
+        <!-- Skeleton loading placeholders -->
+        <div class="skeleton-card">
+            <div class="skeleton-row" style="margin-bottom: 0.75rem;">
+                <div class="skeleton skeleton-title" style="width: 50%;"></div>
+                <div class="skeleton skeleton-text" style="width: 20%;"></div>
+            </div>
+            <div class="skeleton skeleton-text" style="width: 40%; margin-bottom: 0.5rem;"></div>
+            <div class="skeleton skeleton-text" style="width: 70%; margin-bottom: 0.75rem;"></div>
+            <div class="skeleton-row" style="gap: 0.5rem;">
+                <div class="skeleton" style="height: 36px; flex: 1; border-radius: 8px;"></div>
+                <div class="skeleton" style="height: 36px; flex: 1; border-radius: 8px;"></div>
+                <div class="skeleton" style="height: 36px; flex: 1; border-radius: 8px;"></div>
+            </div>
+        </div>
+        <div class="skeleton-card">
+            <div class="skeleton-row" style="margin-bottom: 0.75rem;">
+                <div class="skeleton skeleton-title" style="width: 50%;"></div>
+                <div class="skeleton skeleton-text" style="width: 20%;"></div>
+            </div>
+            <div class="skeleton skeleton-text" style="width: 40%; margin-bottom: 0.5rem;"></div>
+            <div class="skeleton skeleton-text" style="width: 70%; margin-bottom: 0.75rem;"></div>
+            <div class="skeleton-row" style="gap: 0.5rem;">
+                <div class="skeleton" style="height: 36px; flex: 1; border-radius: 8px;"></div>
+                <div class="skeleton" style="height: 36px; flex: 1; border-radius: 8px;"></div>
+                <div class="skeleton" style="height: 36px; flex: 1; border-radius: 8px;"></div>
+            </div>
+        </div>
+        <div class="skeleton-card">
+            <div class="skeleton-row" style="margin-bottom: 0.75rem;">
+                <div class="skeleton skeleton-title" style="width: 50%;"></div>
+                <div class="skeleton skeleton-text" style="width: 20%;"></div>
+            </div>
+            <div class="skeleton skeleton-text" style="width: 40%; margin-bottom: 0.5rem;"></div>
+            <div class="skeleton skeleton-text" style="width: 70%; margin-bottom: 0.75rem;"></div>
+            <div class="skeleton-row" style="gap: 0.5rem;">
+                <div class="skeleton" style="height: 36px; flex: 1; border-radius: 8px;"></div>
+                <div class="skeleton" style="height: 36px; flex: 1; border-radius: 8px;"></div>
+                <div class="skeleton" style="height: 36px; flex: 1; border-radius: 8px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Customer Modal -->
+    <div id="customerModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title" id="modalTitle">Add Customer</div>
+                <button class="btn-close" onclick="closeModal()">×</button>
+            </div>
+            <form id="customerForm">
+                <div class="modal-body">
+                    <input type="hidden" id="customerId">
+                    <div class="form-group">
+                        <label class="form-label">Name *</label>
+                        <input id="customerName" type="text" class="form-input input-animated" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Phone</label>
+                        <input id="customerPhone" type="tel" class="form-input input-animated" placeholder="10 digits"
+                            pattern="[0-9]{10}" maxlength="10" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">WhatsApp</label>
+                        <input id="customerWhatsapp" type="tel" class="form-input input-animated"
+                            placeholder="10 digits" pattern="[0-9]{10}" maxlength="10"
+                            oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Address</label>
+                        <textarea id="customerAddress" rows="2" class="form-textarea input-animated"></textarea>
+                    </div>
+                    <div class="form-section">
+                        <div class="form-section-title">Pricing</div>
+                        <div class="form-group">
+                            <label class="form-label">Pricing Type</label>
+                            <select id="customerPricingType" class="form-select input-animated"
+                                onchange="toggleMarkupField()">
+                                <option value="market">Market Rate</option>
+                                <option value="markup">Market + Markup %</option>
+                                <option value="contract">Contract (Fixed)</option>
+                            </select>
+                        </div>
+                        <div id="markupField" class="form-group hidden">
+                            <label class="form-label">Markup %</label>
+                            <input id="customerMarkup" type="number" step="0.1" min="0" value="0"
+                                class="form-input input-animated">
+                            <p class="form-hint">e.g., 25 = price + 25%</p>
+                        </div>
+                        <div id="contractInfo" class="info-box hidden">
+                            Save customer first, then use "Prices" button to set contract prices.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" onclick="closeModal()"
+                        class="btn-modal secondary btn-animated">Cancel</button>
+                    <button type="submit" class="btn-modal primary btn-animated" id="saveCustomerBtn">
+                        <span class="btn-text">Save</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Contract Prices Modal -->
+    <div id="contractModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <div>
+                    <div class="modal-title">Contract Prices</div>
+                    <div id="contractCustomerName" style="font-size: 0.875rem; color: var(--text-muted);"></div>
+                </div>
+                <button class="btn-close" onclick="closeContractModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="contractCustomerId">
+                <div class="form-group">
+                    <input id="productSearch" type="text" placeholder="Search products..."
+                        class="search-input input-animated" oninput="filterContractProducts()">
+                </div>
+                <div id="contractCategoryPills" class="category-pills">
+                    <button class="cat-pill active" data-category="" onclick="filterByContractCategory('')">All</button>
+                </div>
+                <div id="contractPricesList" class="contract-list"></div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeContractModal()" class="btn-modal secondary btn-animated">Cancel</button>
+                <button onclick="saveContractPrices()" class="btn-modal primary btn-animated" id="saveContractBtn">
+                    <span class="btn-text">Save Prices</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/js/pages/customers.js"></script>
+</body>
+
+</html>

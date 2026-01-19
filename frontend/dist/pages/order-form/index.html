@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Order - Pratibha Marketing</title>
+    <link rel="manifest" href="/assets/manifest-Wfz3HFOQ.json">
+    <meta name="theme-color" content="#2e3532">
+
+    <!-- Shared CSS -->
+
+    <!-- Page-specific styles -->
+  <script type="module" crossorigin src="/assets/orderForm-BEf8hQZ3.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/ui-Usu6AxiT.js">
+  <link rel="modulepreload" crossorigin href="/assets/api-BESsD5Cs.js">
+  <link rel="modulepreload" crossorigin href="/assets/init-DAk7Tmy7.js">
+  <link rel="stylesheet" crossorigin href="/assets/ui-BaXdD4wa.css">
+  <link rel="stylesheet" crossorigin href="/assets/orderForm-C8O6VO4u.css">
+</head>
+
+<body>
+    <header class="header">
+        <div class="header-content">
+            <a href="/" class="logo">Pratibha <span>Marketing</span></a>
+            <button class="btn-header" id="logoutBtn">Logout</button>
+        </div>
+    </header>
+
+    <!-- Tab Navigation -->
+    <div class="order-tabs">
+        <button class="order-tab active" data-tab="new" id="newOrderTab">New Order</button>
+        <button class="order-tab" data-tab="list" id="myOrdersTab">My Orders</button>
+    </div>
+
+    <!-- New Order View (existing content wrapped) -->
+    <div id="newOrderView" class="order-view active">
+        <div class="customer-bar" id="customerBar">
+            <select id="customerSelect" class="customer-select">
+                <option value="">Select Customer</option>
+            </select>
+        </div>
+
+        <div class="search-bar">
+            <input type="text" class="search-input" placeholder="Search products..." id="searchInput">
+        </div>
+
+        <div class="category-pills" id="categoryPills">
+            <button class="cat-pill active" data-cat="all">All</button>
+        </div>
+
+        <div id="toast" class="toast"></div>
+
+        <div class="product-list" id="productList">
+            <div class="loading">Loading products...</div>
+        </div>
+
+        <div class="order-summary">
+            <div class="summary-info">
+                <div class="summary-stat">
+                    <div class="value" id="itemCount">0</div>
+                    <div class="label">Items</div>
+                </div>
+            </div>
+            <input type="text" class="order-notes-input" id="orderNotes" placeholder="Add note (optional)..."
+                maxlength="200">
+            <button class="btn-order" id="orderBtn" disabled onclick="placeOrder()">
+                Place Order
+            </button>
+        </div>
+    </div><!-- End newOrderView -->
+
+    <!-- My Orders View -->
+    <div id="ordersListView" class="order-view">
+        <div class="status-filters">
+            <button class="status-pill active" data-status="all">All</button>
+            <button class="status-pill" data-status="pending">Pending</button>
+            <button class="status-pill" data-status="confirmed">Confirmed</button>
+            <button class="status-pill" data-status="delivered">Delivered</button>
+        </div>
+        <div id="ordersContainer" class="orders-container">
+            <div class="loading">Loading orders...</div>
+        </div>
+    </div>
+
+    <!-- Order Detail/Edit Modal -->
+    <div id="orderModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title" id="orderModalTitle"></h2>
+                <button class="modal-close" onclick="closeOrderModal()">×</button>
+            </div>
+            <div class="modal-body" id="orderModalBody">
+                <!-- Content rendered dynamically -->
+            </div>
+            <div class="modal-footer" id="orderModalFooter">
+                <!-- Buttons rendered dynamically -->
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>
+</body>
+
+</html>

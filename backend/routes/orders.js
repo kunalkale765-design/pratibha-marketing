@@ -5,7 +5,9 @@ const Order = require('../models/Order');
 const Customer = require('../models/Customer');
 const Product = require('../models/Product');
 const MarketRate = require('../models/MarketRate');
+const Batch = require('../models/Batch');
 const { protect, authorize } = require('../middleware/auth');
+const { assignOrderToBatch, getISTTime, BATCH_CONFIG } = require('../services/batchScheduler');
 
 // Helper function to get current market rate for a product
 async function getMarketRate(productId) {
@@ -221,6 +223,7 @@ router.get('/', protect, async (req, res, next) => {
     const orders = await Order.find(filter)
       .populate('customer', 'name phone')
       .populate('products.product', 'name unit')
+      .populate('batch', 'batchNumber batchType status')
       .select('-__v')
       .sort({ createdAt: -1 })
       .limit(limit);
@@ -242,47 +245,48 @@ router.get('/:id',
   protect,
   param('id').isMongoId().withMessage('Invalid order ID'),
   async (req, res, next) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ success: false, errors: errors.array() });
-    }
-
-    const order = await Order.findById(req.params.id)
-      .populate('customer')
-      .populate('products.product')
-      .select('-__v');
-
-    if (!order) {
-      res.status(404);
-      throw new Error('Order not found');
-    }
-
-    // SECURITY: Customers can only view their own orders
-    if (req.user.role === 'customer') {
-      const userCustomerId = typeof req.user.customer === 'object'
-        ? req.user.customer._id.toString()
-        : req.user.customer?.toString();
-      const orderCustomerId = typeof order.customer === 'object'
-        ? order.customer._id.toString()
-        : order.customer.toString();
-
-      if (userCustomerId !== orderCustomerId) {
-        return res.status(403).json({
-          success: false,
-          message: 'Access denied. You can only view your own orders.'
-        });
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ success: false, errors: errors.array() });
       }
-    }
 
-    res.json({
-      success: true,
-      data: order
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+      const order = await Order.findById(req.params.id)
+        .populate('customer')
+        .populate('products.product')
+        .populate('batch', 'batchNumber batchType status confirmedAt')
+        .select('-__v');
+
+      if (!order) {
+        res.status(404);
+        throw new Error('Order not found');
+      }
+
+      // SECURITY: Customers can only view their own orders
+      if (req.user.role === 'customer') {
+        const userCustomerId = typeof req.user.customer === 'object'
+          ? req.user.customer._id.toString()
+          : req.user.customer?.toString();
+        const orderCustomerId = typeof order.customer === 'object'
+          ? order.customer._id.toString()
+          : order.customer.toString();
+
+        if (userCustomerId !== orderCustomerId) {
+          return res.status(403).json({
+            success: false,
+            message: 'Access denied. You can only view your own orders.'
+          });
+        }
+      }
+
+      res.json({
+        success: true,
+        data: order
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
 
 // @route   GET /api/orders/customer/:customerId
 // @desc    Get orders by customer
@@ -494,6 +498,9 @@ router.post('/', protect, validateOrder, async (req, res, next) => {
       }
     }
 
+    // Assign order to appropriate batch based on current time (IST)
+    const batch = await assignOrderToBatch(new Date());
+
     // Create order (include idempotencyKey if provided)
     const orderData = {
       customer: req.body.customer,
@@ -501,7 +508,9 @@ router.post('/', protect, validateOrder, async (req, res, next) => {
       totalAmount: totalAmount,
       deliveryAddress: req.body.deliveryAddress,
       notes: req.body.notes,
-      usedPricingFallback: usedPricingFallback
+      usedPricingFallback: usedPricingFallback,
+      batch: batch._id,
+      batchLocked: false // New orders are always editable
     };
 
     if (idempotencyKey) {
@@ -513,7 +522,8 @@ router.post('/', protect, validateOrder, async (req, res, next) => {
     // Populate and return
     const populatedOrder = await Order.findById(order._id)
       .populate('customer', 'name phone')
-      .populate('products.product', 'name unit');
+      .populate('products.product', 'name unit')
+      .populate('batch', 'batchNumber batchType status');
 
     // Build response with warnings/info
     const response = {
@@ -548,247 +558,247 @@ router.put('/:id',
   authorize('admin', 'staff'),
   param('id').isMongoId().withMessage('Invalid order ID'),
   async (req, res, next) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ success: false, errors: errors.array() });
-    }
-
-    const order = await Order.findById(req.params.id);
-
-    if (!order) {
-      res.status(404);
-      throw new Error('Order not found');
-    }
-
-    // Update products - staff can add, remove, and modify prices/quantities
-    if (req.body.products && Array.isArray(req.body.products)) {
-      // Get customer for pricing calculation (needed for new products)
-      const customer = await Customer.findById(order.customer);
-      if (!customer) {
-        return res.status(404).json({ success: false, message: 'Customer not found' });
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ success: false, errors: errors.array() });
       }
 
-      // Build a map of original order products for validation
-      const originalProductMap = new Map();
-      for (const p of order.products) {
-        const productId = p.product.toString();
-        originalProductMap.set(productId, {
-          quantity: p.quantity,
-          productName: p.productName,
-          unit: p.unit,
-          rate: p.rate,
-          isContractPrice: p.isContractPrice || false
-        });
+      const order = await Order.findById(req.params.id);
+
+      if (!order) {
+        res.status(404);
+        throw new Error('Order not found');
       }
 
-      // All validations passed - update prices and/or quantities
-      let totalAmount = 0;
-      const updatedProducts = [];
-      const auditChanges = []; // Track changes for audit log
+      // Update products - staff can add, remove, and modify prices/quantities
+      if (req.body.products && Array.isArray(req.body.products)) {
+        // Get customer for pricing calculation (needed for new products)
+        const customer = await Customer.findById(order.customer);
+        if (!customer) {
+          return res.status(404).json({ success: false, message: 'Customer not found' });
+        }
 
-      for (const item of req.body.products) {
-        const productId = item.product?.toString();
-        const original = originalProductMap.get(productId);
+        // Build a map of original order products for validation
+        const originalProductMap = new Map();
+        for (const p of order.products) {
+          const productId = p.product.toString();
+          originalProductMap.set(productId, {
+            quantity: p.quantity,
+            productName: p.productName,
+            unit: p.unit,
+            rate: p.rate,
+            isContractPrice: p.isContractPrice || false
+          });
+        }
 
-        // Handle NEW product (not in original order)
-        if (!original) {
-          // Fetch product from database
-          const product = await Product.findById(productId);
-          if (!product) {
-            return res.status(400).json({
-              success: false,
-              message: `Product ${productId} not found`
+        // All validations passed - update prices and/or quantities
+        let totalAmount = 0;
+        const updatedProducts = [];
+        const auditChanges = []; // Track changes for audit log
+
+        for (const item of req.body.products) {
+          const productId = item.product?.toString();
+          const original = originalProductMap.get(productId);
+
+          // Handle NEW product (not in original order)
+          if (!original) {
+            // Fetch product from database
+            const product = await Product.findById(productId);
+            if (!product) {
+              return res.status(400).json({
+                success: false,
+                message: `Product ${productId} not found`
+              });
+            }
+
+            // Validate quantity
+            const quantity = item.quantity || 1;
+            if (quantity < 0) {
+              return res.status(400).json({
+                success: false,
+                message: `Quantity for "${product.name}" cannot be negative.`
+              });
+            }
+            if (quantity > 0 && quantity < 0.01) {
+              return res.status(400).json({
+                success: false,
+                message: `Minimum quantity for "${product.name}" is 0.01 ${product.unit}`
+              });
+            }
+            if (quantity === 0) continue; // Skip if quantity is 0
+
+            // Calculate price based on customer's pricing type (or use provided rate for non-contract)
+            const requestedRate = item.priceAtTime || item.rate;
+            const priceResult = await calculatePrice(customer, product, requestedRate);
+            const rate = priceResult.rate;
+            const amount = quantity * rate;
+            totalAmount += amount;
+
+            // Add to audit log
+            auditChanges.push({
+              changedAt: new Date(),
+              changedBy: req.user._id,
+              changedByName: req.user.name,
+              productId: productId,
+              productName: product.name,
+              oldRate: 0,
+              newRate: rate,
+              oldQuantity: 0,
+              newQuantity: quantity,
+              oldTotal: 0,
+              newTotal: amount,
+              reason: 'Product added by staff'
             });
+
+            updatedProducts.push({
+              product: productId,
+              productName: product.name,
+              quantity: quantity,
+              unit: product.unit,
+              rate: rate,
+              amount: amount,
+              isContractPrice: priceResult.isContractPrice
+            });
+            continue;
           }
 
-          // Validate quantity
-          const quantity = item.quantity || 1;
+          // Handle EXISTING product
+          // Validate quantity if provided
+          const quantity = item.quantity !== undefined ? item.quantity : original.quantity;
+
           if (quantity < 0) {
             return res.status(400).json({
               success: false,
-              message: `Quantity for "${product.name}" cannot be negative.`
+              message: `Quantity for "${original.productName}" cannot be negative.`
             });
           }
           if (quantity > 0 && quantity < 0.01) {
             return res.status(400).json({
               success: false,
-              message: `Minimum quantity for "${product.name}" is 0.01 ${product.unit}`
+              message: `Minimum quantity for "${original.productName}" is 0.01 ${original.unit}`
             });
           }
-          if (quantity === 0) continue; // Skip if quantity is 0
 
-          // Calculate price based on customer's pricing type (or use provided rate for non-contract)
+          // For contract customers: prevent modification of contract prices
           const requestedRate = item.priceAtTime || item.rate;
-          const priceResult = await calculatePrice(customer, product, requestedRate);
-          const rate = priceResult.rate;
+          if (original.isContractPrice && requestedRate !== undefined && requestedRate !== original.rate) {
+            return res.status(400).json({
+              success: false,
+              message: `Contract price for "${original.productName}" cannot be changed. Edit contract prices in customer management.`
+            });
+          }
+
+          // Handle product removal (quantity = 0)
+          if (quantity === 0) {
+            auditChanges.push({
+              changedAt: new Date(),
+              changedBy: req.user._id,
+              changedByName: req.user.name,
+              productId: item.product,
+              productName: original.productName,
+              oldRate: original.rate,
+              newRate: original.rate,
+              oldQuantity: original.quantity,
+              newQuantity: 0,
+              oldTotal: original.quantity * original.rate,
+              newTotal: 0,
+              reason: 'Product removed by staff'
+            });
+            continue; // Skip this product, don't add to updatedProducts
+          }
+
+          // Use original rate for contract prices, otherwise use provided rate
+          let rate;
+          if (original.isContractPrice) {
+            rate = original.rate; // Contract prices are locked
+          } else {
+            rate = item.priceAtTime || item.rate || original.rate || 0;
+          }
+
+          if (rate < 0) {
+            return res.status(400).json({
+              success: false,
+              message: `Rate for product "${original.productName}" cannot be negative.`
+            });
+          }
+
           const amount = quantity * rate;
           totalAmount += amount;
 
-          // Add to audit log
-          auditChanges.push({
-            changedAt: new Date(),
-            changedBy: req.user._id,
-            changedByName: req.user.name,
-            productId: productId,
-            productName: product.name,
-            oldRate: 0,
-            newRate: rate,
-            oldQuantity: 0,
-            newQuantity: quantity,
-            oldTotal: 0,
-            newTotal: amount,
-            reason: 'Product added by staff'
-          });
+          // Track changes for audit log (price and/or quantity)
+          const priceChanged = rate !== original.rate;
+          const quantityChanged = quantity !== original.quantity;
 
-          updatedProducts.push({
-            product: productId,
-            productName: product.name,
-            quantity: quantity,
-            unit: product.unit,
-            rate: rate,
-            amount: amount,
-            isContractPrice: priceResult.isContractPrice
-          });
-          continue;
-        }
+          if (priceChanged || quantityChanged) {
+            let reason = '';
+            if (priceChanged && quantityChanged) {
+              reason = 'Price and quantity updated by staff';
+            } else if (priceChanged) {
+              reason = 'Price updated by staff';
+            } else {
+              reason = 'Quantity updated by staff';
+            }
 
-        // Handle EXISTING product
-        // Validate quantity if provided
-        const quantity = item.quantity !== undefined ? item.quantity : original.quantity;
-
-        if (quantity < 0) {
-          return res.status(400).json({
-            success: false,
-            message: `Quantity for "${original.productName}" cannot be negative.`
-          });
-        }
-        if (quantity > 0 && quantity < 0.01) {
-          return res.status(400).json({
-            success: false,
-            message: `Minimum quantity for "${original.productName}" is 0.01 ${original.unit}`
-          });
-        }
-
-        // For contract customers: prevent modification of contract prices
-        const requestedRate = item.priceAtTime || item.rate;
-        if (original.isContractPrice && requestedRate !== undefined && requestedRate !== original.rate) {
-          return res.status(400).json({
-            success: false,
-            message: `Contract price for "${original.productName}" cannot be changed. Edit contract prices in customer management.`
-          });
-        }
-
-        // Handle product removal (quantity = 0)
-        if (quantity === 0) {
-          auditChanges.push({
-            changedAt: new Date(),
-            changedBy: req.user._id,
-            changedByName: req.user.name,
-            productId: item.product,
-            productName: original.productName,
-            oldRate: original.rate,
-            newRate: original.rate,
-            oldQuantity: original.quantity,
-            newQuantity: 0,
-            oldTotal: original.quantity * original.rate,
-            newTotal: 0,
-            reason: 'Product removed by staff'
-          });
-          continue; // Skip this product, don't add to updatedProducts
-        }
-
-        // Use original rate for contract prices, otherwise use provided rate
-        let rate;
-        if (original.isContractPrice) {
-          rate = original.rate; // Contract prices are locked
-        } else {
-          rate = item.priceAtTime || item.rate || original.rate || 0;
-        }
-
-        if (rate < 0) {
-          return res.status(400).json({
-            success: false,
-            message: `Rate for product "${original.productName}" cannot be negative.`
-          });
-        }
-
-        const amount = quantity * rate;
-        totalAmount += amount;
-
-        // Track changes for audit log (price and/or quantity)
-        const priceChanged = rate !== original.rate;
-        const quantityChanged = quantity !== original.quantity;
-
-        if (priceChanged || quantityChanged) {
-          let reason = '';
-          if (priceChanged && quantityChanged) {
-            reason = 'Price and quantity updated by staff';
-          } else if (priceChanged) {
-            reason = 'Price updated by staff';
-          } else {
-            reason = 'Quantity updated by staff';
+            auditChanges.push({
+              changedAt: new Date(),
+              changedBy: req.user._id,
+              changedByName: req.user.name,
+              productId: item.product,
+              productName: original.productName,
+              oldRate: original.rate,
+              newRate: rate,
+              oldQuantity: original.quantity,
+              newQuantity: quantity,
+              oldTotal: original.quantity * original.rate,
+              newTotal: amount,
+              reason: reason
+            });
           }
 
-          auditChanges.push({
-            changedAt: new Date(),
-            changedBy: req.user._id,
-            changedByName: req.user.name,
-            productId: item.product,
+          updatedProducts.push({
+            product: item.product,
             productName: original.productName,
-            oldRate: original.rate,
-            newRate: rate,
-            oldQuantity: original.quantity,
-            newQuantity: quantity,
-            oldTotal: original.quantity * original.rate,
-            newTotal: amount,
-            reason: reason
+            quantity: quantity,
+            unit: original.unit,
+            rate: rate,
+            amount: amount,
+            isContractPrice: original.isContractPrice
           });
         }
 
-        updatedProducts.push({
-          product: item.product,
-          productName: original.productName,
-          quantity: quantity,
-          unit: original.unit,
-          rate: rate,
-          amount: amount,
-          isContractPrice: original.isContractPrice
-        });
-      }
+        order.products = updatedProducts;
+        order.totalAmount = totalAmount;
+        order.markModified('products'); // Ensure array replacement is detected
 
-      order.products = updatedProducts;
-      order.totalAmount = totalAmount;
-      order.markModified('products'); // Ensure array replacement is detected
-
-      // Add changes to audit log
-      if (auditChanges.length > 0) {
-        if (!order.priceAuditLog) {
-          order.priceAuditLog = [];
+        // Add changes to audit log
+        if (auditChanges.length > 0) {
+          if (!order.priceAuditLog) {
+            order.priceAuditLog = [];
+          }
+          order.priceAuditLog.push(...auditChanges);
         }
-        order.priceAuditLog.push(...auditChanges);
       }
+
+      // Update notes if provided
+      if (req.body.notes !== undefined) {
+        order.notes = req.body.notes;
+      }
+
+      await order.save();
+
+      const populatedOrder = await Order.findById(order._id)
+        .populate('customer', 'name phone')
+        .populate('products.product', 'name unit');
+
+      res.json({
+        success: true,
+        data: populatedOrder
+      });
+    } catch (error) {
+      next(error);
     }
-
-    // Update notes if provided
-    if (req.body.notes !== undefined) {
-      order.notes = req.body.notes;
-    }
-
-    await order.save();
-
-    const populatedOrder = await Order.findById(order._id)
-      .populate('customer', 'name phone')
-      .populate('products.product', 'name unit');
-
-    res.json({
-      success: true,
-      data: populatedOrder
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+  });
 
 // @route   PUT /api/orders/:id/customer-edit
 // @desc    Update order products/quantities (customer can edit their own pending orders)
@@ -797,146 +807,154 @@ router.put('/:id/customer-edit',
   protect,
   param('id').isMongoId().withMessage('Invalid order ID'),
   async (req, res, next) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ success: false, errors: errors.array() });
-    }
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ success: false, errors: errors.array() });
+      }
 
-    const order = await Order.findById(req.params.id).populate('customer');
+      const order = await Order.findById(req.params.id).populate('customer');
 
-    if (!order) {
-      res.status(404);
-      throw new Error('Order not found');
-    }
+      if (!order) {
+        res.status(404);
+        throw new Error('Order not found');
+      }
 
-    // SECURITY: Customers can only edit their own orders
-    if (req.user.role === 'customer') {
-      const userCustomerId = typeof req.user.customer === 'object'
-        ? req.user.customer._id.toString()
-        : req.user.customer?.toString();
-      const orderCustomerId = typeof order.customer === 'object'
-        ? order.customer._id.toString()
-        : order.customer.toString();
+      // SECURITY: Customers can only edit their own orders
+      if (req.user.role === 'customer') {
+        const userCustomerId = typeof req.user.customer === 'object'
+          ? req.user.customer._id.toString()
+          : req.user.customer?.toString();
+        const orderCustomerId = typeof order.customer === 'object'
+          ? order.customer._id.toString()
+          : order.customer.toString();
 
-      if (userCustomerId !== orderCustomerId) {
-        return res.status(403).json({
+        if (userCustomerId !== orderCustomerId) {
+          return res.status(403).json({
+            success: false,
+            message: 'You can only edit your own orders'
+          });
+        }
+      }
+
+      // SECURITY: Only pending orders can be edited
+      if (order.status !== 'pending') {
+        return res.status(400).json({
           success: false,
-          message: 'You can only edit your own orders'
+          message: 'Only pending orders can be edited'
         });
       }
-    }
 
-    // SECURITY: Only pending orders can be edited
-    if (order.status !== 'pending') {
-      return res.status(400).json({
-        success: false,
-        message: 'Only pending orders can be edited'
-      });
-    }
-
-    // Validate products array
-    if (!req.body.products || !Array.isArray(req.body.products) || req.body.products.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'At least one product is required'
-      });
-    }
-
-    // Get customer for pricing calculation
-    const customer = await Customer.findById(order.customer._id || order.customer);
-    if (!customer) {
-      res.status(404);
-      throw new Error('Customer not found');
-    }
-
-    // SECURITY: Contract customers can only include products that are either:
-    // 1. Already in the order (staff may have added non-contracted products), OR
-    // 2. Have contract prices configured
-    if (req.user.role === 'customer' && customer.pricingType === 'contract') {
-      const contractProductIds = customer.contractPrices
-        ? [...customer.contractPrices.keys()]
-        : [];
-      const existingProductIds = order.products.map(p =>
-        typeof p.product === 'object' ? p.product._id.toString() : p.product.toString()
-      );
-      const allowedProductIds = new Set([...contractProductIds, ...existingProductIds]);
-
-      const requestedProductIds = req.body.products.map(p =>
-        typeof p.product === 'object' ? p.product._id.toString() : p.product.toString()
-      );
-      const unauthorizedProducts = requestedProductIds.filter(
-        pid => !allowedProductIds.has(pid)
-      );
-
-      if (unauthorizedProducts.length > 0) {
-        return res.status(403).json({
+      // SECURITY: Check if batch is locked (confirmed)
+      if (order.batchLocked) {
+        return res.status(400).json({
           success: false,
-          message: 'Some products are not available for your account.'
+          message: 'This order\'s batch has been confirmed. Please contact us to make changes.'
         });
       }
+
+      // Validate products array
+      if (!req.body.products || !Array.isArray(req.body.products) || req.body.products.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'At least one product is required'
+        });
+      }
+
+      // Get customer for pricing calculation
+      const customer = await Customer.findById(order.customer._id || order.customer);
+      if (!customer) {
+        res.status(404);
+        throw new Error('Customer not found');
+      }
+
+      // SECURITY: Contract customers can only include products that are either:
+      // 1. Already in the order (staff may have added non-contracted products), OR
+      // 2. Have contract prices configured
+      if (req.user.role === 'customer' && customer.pricingType === 'contract') {
+        const contractProductIds = customer.contractPrices
+          ? [...customer.contractPrices.keys()]
+          : [];
+        const existingProductIds = order.products.map(p =>
+          typeof p.product === 'object' ? p.product._id.toString() : p.product.toString()
+        );
+        const allowedProductIds = new Set([...contractProductIds, ...existingProductIds]);
+
+        const requestedProductIds = req.body.products.map(p =>
+          typeof p.product === 'object' ? p.product._id.toString() : p.product.toString()
+        );
+        const unauthorizedProducts = requestedProductIds.filter(
+          pid => !allowedProductIds.has(pid)
+        );
+
+        if (unauthorizedProducts.length > 0) {
+          return res.status(403).json({
+            success: false,
+            message: 'Some products are not available for your account.'
+          });
+        }
+      }
+
+      // Update products with recalculated prices
+      let totalAmount = 0;
+      const updatedProducts = await Promise.all(
+        req.body.products.map(async (item) => {
+          const product = await Product.findById(item.product);
+          if (!product) {
+            throw new Error(`Product ${item.product} not found`);
+          }
+
+          if (!item.quantity || item.quantity < 0.01) {
+            throw new Error(`Minimum quantity for "${product.name}" is 0.01 ${product.unit}`);
+          }
+
+          // Recalculate rate based on customer's pricing type (never trust client prices)
+          const priceResult = await calculatePrice(customer, product);
+          const amount = item.quantity * priceResult.rate;
+          totalAmount += amount;
+
+          return {
+            product: item.product,
+            productName: product.name,
+            quantity: item.quantity,
+            unit: product.unit,
+            rate: priceResult.rate,
+            amount: amount,
+            isContractPrice: priceResult.isContractPrice
+          };
+        })
+      );
+
+      order.products = updatedProducts;
+      order.totalAmount = totalAmount;
+      order.markModified('products'); // Ensure array replacement is detected
+
+      await order.save();
+
+      const populatedOrder = await Order.findById(order._id)
+        .populate('customer', 'name phone')
+        .populate('products.product', 'name unit');
+
+      res.json({
+        success: true,
+        data: populatedOrder
+      });
+    } catch (error) {
+      next(error);
     }
-
-    // Update products with recalculated prices
-    let totalAmount = 0;
-    const updatedProducts = await Promise.all(
-      req.body.products.map(async (item) => {
-        const product = await Product.findById(item.product);
-        if (!product) {
-          throw new Error(`Product ${item.product} not found`);
-        }
-
-        if (!item.quantity || item.quantity < 0.01) {
-          throw new Error(`Minimum quantity for "${product.name}" is 0.01 ${product.unit}`);
-        }
-
-        // Recalculate rate based on customer's pricing type (never trust client prices)
-        const priceResult = await calculatePrice(customer, product);
-        const amount = item.quantity * priceResult.rate;
-        totalAmount += amount;
-
-        return {
-          product: item.product,
-          productName: product.name,
-          quantity: item.quantity,
-          unit: product.unit,
-          rate: priceResult.rate,
-          amount: amount,
-          isContractPrice: priceResult.isContractPrice
-        };
-      })
-    );
-
-    order.products = updatedProducts;
-    order.totalAmount = totalAmount;
-    order.markModified('products'); // Ensure array replacement is detected
-
-    await order.save();
-
-    const populatedOrder = await Order.findById(order._id)
-      .populate('customer', 'name phone')
-      .populate('products.product', 'name unit');
-
-    res.json({
-      success: true,
-      data: populatedOrder
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+  });
 
 // Valid status transitions (state machine)
 // Flow: pending → confirmed → processing → packed → shipped → delivered
 // Cancellation: any status except 'delivered' can go to 'cancelled'
 const VALID_STATUS_TRANSITIONS = {
   pending: ['confirmed', 'cancelled'],
-  confirmed: ['processing', 'cancelled'],
-  processing: ['packed', 'cancelled'],
-  packed: ['shipped', 'cancelled'],
+  confirmed: ['processing', 'packed', 'shipped', 'delivered', 'cancelled'], // Allow direct jump to delivered
+  processing: ['packed', 'shipped', 'delivered', 'cancelled'],
+  packed: ['shipped', 'delivered', 'cancelled'],
   shipped: ['delivered', 'cancelled'],
-  delivered: [], // Terminal state - no transitions allowed
-  cancelled: []  // Terminal state - no transitions allowed
+  delivered: [], // Terminal state
+  cancelled: []  // Terminal state
 };
 
 // @route   PUT /api/orders/:id/status
@@ -1107,40 +1125,40 @@ router.delete('/:id',
   authorize('admin', 'staff'),
   param('id').isMongoId().withMessage('Invalid order ID'),
   async (req, res, next) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ success: false, errors: errors.array() });
-    }
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ success: false, errors: errors.array() });
+      }
 
-    const order = await Order.findById(req.params.id);
+      const order = await Order.findById(req.params.id);
 
-    if (!order) {
-      res.status(404);
-      throw new Error('Order not found');
-    }
+      if (!order) {
+        res.status(404);
+        throw new Error('Order not found');
+      }
 
-    // Don't allow cancelling already cancelled orders
-    if (order.status === 'cancelled') {
-      return res.status(400).json({
-        success: false,
-        message: 'Order is already cancelled'
+      // Don't allow cancelling already cancelled orders
+      if (order.status === 'cancelled') {
+        return res.status(400).json({
+          success: false,
+          message: 'Order is already cancelled'
+        });
+      }
+
+      // Update order status
+      order.status = 'cancelled';
+      order.cancelledBy = req.user._id;
+      order.cancelledAt = new Date();
+      await order.save();
+
+      res.json({
+        success: true,
+        message: 'Order cancelled successfully'
       });
+    } catch (error) {
+      next(error);
     }
-
-    // Update order status
-    order.status = 'cancelled';
-    order.cancelledBy = req.user._id;
-    order.cancelledAt = new Date();
-    await order.save();
-
-    res.json({
-      success: true,
-      message: 'Order cancelled successfully'
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+  });
 
 module.exports = router;
