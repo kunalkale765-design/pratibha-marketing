@@ -2081,12 +2081,12 @@ function updatePackingCompleteButton() {
 
 // Hold packing order
 function holdPackingOrder() {
-    document.getElementById('packingHoldModal').classList.add('show');
+    document.getElementById('packingHoldModal').classList.add('active');
 }
 
 // Close hold modal
 function closePackingHoldModal() {
-    document.getElementById('packingHoldModal').classList.remove('show');
+    document.getElementById('packingHoldModal').classList.remove('active');
     document.getElementById('packingHoldReason').value = '';
 }
 
