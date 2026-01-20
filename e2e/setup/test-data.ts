@@ -99,14 +99,15 @@ export const AUTH_STORAGE_PATHS = {
   customer: 'e2e/.auth/customer.json'
 };
 
-// Page URLs
+// Page URLs (matching Vite build output structure)
 export const PAGE_URLS = {
-  login: '/login.html',
-  signup: '/signup.html',
+  login: '/pages/auth/login.html',
+  signup: '/pages/auth/signup.html',
   dashboard: '/index.html',
-  orders: '/orders.html',
-  customers: '/customer-management.html',
-  products: '/products.html',
-  marketRates: '/market-rates.html',
-  customerOrderForm: '/customer-order-form.html'
+  orders: '/pages/orders/index.html',
+  customers: '/pages/customers/index.html',
+  products: '/pages/products/index.html',
+  marketRates: '/pages/market-rates/index.html',
+  customerOrderForm: '/pages/order-form/index.html',
+  packing: '/pages/packing/index.html'
 };

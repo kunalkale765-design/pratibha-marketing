@@ -171,8 +171,8 @@ async function authenticateUser(
   // Clear cookies to ensure we're logged out before login attempt
   await context.clearCookies();
 
-  // Navigate to login page
-  await page.goto(`${baseURL}/login.html`);
+  // Navigate to login page (using Vite build output path)
+  await page.goto(`${baseURL}/pages/auth/login.html`);
   await page.waitForLoadState('networkidle');
 
   // Wait for the form to be ready (ES modules loading)
@@ -216,7 +216,7 @@ async function registerUser(
     return;
   }
 
-  await page.goto(`${baseURL}/signup.html`);
+  await page.goto(`${baseURL}/pages/auth/signup.html`);
   await page.waitForLoadState('networkidle');
 
   await page.fill('#name', user.name);
