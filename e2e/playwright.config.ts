@@ -102,6 +102,7 @@ export default defineConfig({
   // Run your local dev server before starting the tests
   webServer: {
     command: 'node backend/server.js',
+    cwd: '..',  // Run from project root, not e2e directory
     url: 'http://localhost:3000/api/health',
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
