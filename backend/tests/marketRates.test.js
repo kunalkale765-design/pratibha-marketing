@@ -759,7 +759,6 @@ describe('Market Rates Endpoints', () => {
   describe('Auto-update Pending Orders with Zero Rates', () => {
     let adminToken, product;
     const Order = require('../models/Order');
-    const Customer = require('../models/Customer');
 
     beforeEach(async () => {
       const admin = await testUtils.createAdminUser();

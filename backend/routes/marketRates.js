@@ -4,7 +4,6 @@ const { body, param, query, validationResult } = require('express-validator');
 const MarketRate = require('../models/MarketRate');
 const Product = require('../models/Product');
 const Order = require('../models/Order');
-const Customer = require('../models/Customer');
 const { protect, authorize } = require('../middleware/auth');
 const { resetAllMarketRates } = require('../services/marketRateScheduler');
 
