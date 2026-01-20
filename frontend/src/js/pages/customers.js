@@ -12,6 +12,9 @@ let allCustomers = [];
 let allProducts = [];
 let currentContractPrices = {};
 let selectedContractCategory = '';
+let currentPage = 1;
+let totalPages = 1;
+let currentLimit = 100;
 
 async function init() {
     // Pre-fetch CSRF token to ensure it's ensureCsrfTokenready before form submissions
@@ -19,6 +22,8 @@ async function init() {
 
     const user = await Auth.requireAuth(['admin', 'staff']);
     if (!user) return;
+
+    setupPaginationControls();
     await Promise.all([loadCustomers(), loadProducts()]);
 }
 
@@ -36,11 +41,26 @@ async function loadProducts() {
     }
 }
 
-async function loadCustomers() {
+async function loadCustomers(page = 1) {
     try {
-        const res = await fetch('/api/customers', { credentials: 'include' });
+        const searchVal = document.getElementById('searchInput')?.value.trim();
+        const params = new URLSearchParams({
+            limit: currentLimit,
+            page: page
+        });
+
+        if (searchVal) {
+            params.append('search', searchVal);
+        }
+
+        const res = await fetch(`/api/customers?${params.toString()}`, { credentials: 'include' });
         const data = await res.json();
+
         allCustomers = data.data || [];
+        currentPage = data.page || 1;
+        totalPages = data.pages || 1;
+
+        updatePaginationUI();
         displayCustomers(allCustomers);
     } catch (e) {
         console.error('Failed to load customers:', e);
@@ -52,9 +72,46 @@ async function loadCustomers() {
             createElement('button', {
                 id: 'retryCustomersBtn',
                 style: { marginTop: '1rem', padding: '0.5rem 1rem', background: 'var(--dusty-olive)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' },
-                onclick: loadCustomers
+                onclick: () => loadCustomers(currentPage)
             }, 'Try Again')
         ]));
+    }
+}
+
+function updatePaginationUI() {
+    const controls = document.getElementById('paginationControls');
+    const prevBtn = document.getElementById('prevPageBtn');
+    const nextBtn = document.getElementById('nextPageBtn');
+    const info = document.getElementById('pageInfo');
+
+    if (!controls || !prevBtn || !nextBtn || !info) return;
+
+    if (totalPages <= 1) {
+        controls.style.display = 'none';
+        return;
+    }
+
+    controls.style.display = 'flex';
+    info.textContent = `Page ${currentPage} of ${totalPages}`;
+
+    prevBtn.disabled = currentPage <= 1;
+    nextBtn.disabled = currentPage >= totalPages;
+}
+
+function setupPaginationControls() {
+    const prevBtn = document.getElementById('prevPageBtn');
+    const nextBtn = document.getElementById('nextPageBtn');
+
+    if (prevBtn) {
+        prevBtn.onclick = () => {
+            if (currentPage > 1) loadCustomers(currentPage - 1);
+        };
+    }
+
+    if (nextBtn) {
+        nextBtn.onclick = () => {
+            if (currentPage < totalPages) loadCustomers(currentPage + 1);
+        };
     }
 }
 
@@ -132,12 +189,22 @@ function displayCustomers(customers) {
     container.appendChild(fragment);
 }
 
+// Debounce helper
+function debounce(fn, delay) {
+    let timeoutId;
+    return function (...args) {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => fn.apply(this, args), delay);
+    };
+}
+
+const debouncedSearch = debounce(() => {
+    currentPage = 1;
+    loadCustomers(1);
+}, 300);
+
 function searchCustomers() {
-    const q = document.getElementById('searchInput').value.toLowerCase();
-    const filtered = allCustomers.filter(c =>
-        c.name.toLowerCase().includes(q) || (c.phone && c.phone.includes(q))
-    );
-    displayCustomers(filtered);
+    debouncedSearch();
 }
 
 function toggleMarkupField() {

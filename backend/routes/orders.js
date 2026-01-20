@@ -175,9 +175,11 @@ const validateOrder = [
 // @access  Private
 router.get('/', protect, async (req, res, next) => {
   try {
-    const { status, customer, startDate, endDate, limit: rawLimit } = req.query;
+    const { status, customer, startDate, endDate, limit: rawLimit, page: rawPage } = req.query;
     // Validate and cap limit to prevent DoS (min 1, max 1000, default 50)
     const limit = Math.min(Math.max(parseInt(rawLimit) || 50, 1), 1000);
+    const page = Math.max(parseInt(rawPage) || 1, 1);
+    const skip = (page - 1) * limit;
     const filter = {};
 
     // SECURITY: Customers can only see their own orders
@@ -225,17 +227,24 @@ router.get('/', protect, async (req, res, next) => {
       }
     }
 
-    const orders = await Order.find(filter)
-      .populate('customer', 'name phone')
-      .populate('products.product', 'name unit')
-      .populate('batch', 'batchNumber batchType status')
-      .select('-__v')
-      .sort({ createdAt: -1 })
-      .limit(limit);
+    const [orders, total] = await Promise.all([
+      Order.find(filter)
+        .populate('customer', 'name phone')
+        .populate('products.product', 'name unit')
+        .populate('batch', 'batchNumber batchType status')
+        .select('-__v')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Order.countDocuments(filter)
+    ]);
 
     res.json({
       success: true,
       count: orders.length,
+      total,
+      page,
+      pages: Math.ceil(total / limit),
       data: orders
     });
   } catch (error) {

@@ -7,14 +7,19 @@ const { resetAllMarketRates, startScheduler, stopScheduler } = require('../servi
 
 describe('Market Rate Scheduler', () => {
   describe('resetAllMarketRates', () => {
-    it('should reset all active product rates to 0', async () => {
+    it('should reset all active product rates to 0 for Indian Vegetables category', async () => {
       // Create products
-      const product1 = await testUtils.createTestProduct({ name: 'Rice', isActive: true });
-      const product2 = await testUtils.createTestProduct({ name: 'Wheat', isActive: true });
+      const product1 = await testUtils.createTestProduct({ name: 'Okra', isActive: true, category: 'Indian Vegetables' });
+      const product2 = await testUtils.createTestProduct({ name: 'Spinach', isActive: true, category: 'Indian Vegetables' });
 
-      // Create initial market rates
-      await testUtils.createMarketRate(product1, 2500);
-      await testUtils.createMarketRate(product2, 1800);
+      // Create products that should NOT be reset
+      const product3 = await testUtils.createTestProduct({ name: 'Rice', isActive: true, category: 'Grains' });
+
+      // Create initial market rates (set to yesterday so they don't block reset)
+      const yesterday = new Date(Date.now() - 86400000);
+      await testUtils.createMarketRate(product1, 2500, { effectiveDate: yesterday });
+      await testUtils.createMarketRate(product2, 1800, { effectiveDate: yesterday });
+      await testUtils.createMarketRate(product3, 5000, { effectiveDate: yesterday });
 
       // Run reset
       const result = await resetAllMarketRates();
@@ -23,14 +28,20 @@ describe('Market Rate Scheduler', () => {
       expect(result.count).toBe(2);
       expect(result.total).toBe(2);
 
-      // Verify new rates are 0
+      // Verify new rates are 0 for Indian Vegetables
       const newRates = await MarketRate.find({ rate: 0 }).sort({ effectiveDate: -1 });
       expect(newRates.length).toBe(2);
+
+      // Verify other products were untouched
+      const grainRates = await MarketRate.find({ product: product3._id });
+      expect(grainRates.length).toBe(1);
+      expect(grainRates[0].rate).toBe(5000);
     });
 
     it('should preserve previous rate in new record', async () => {
-      const product = await testUtils.createTestProduct({ name: 'Sugar', isActive: true });
-      await testUtils.createMarketRate(product, 3500);
+      const product = await testUtils.createTestProduct({ name: 'Bitter Gourd', isActive: true, category: 'Indian Vegetables' });
+      const yesterday = new Date(Date.now() - 86400000);
+      await testUtils.createMarketRate(product, 3500, { effectiveDate: yesterday });
 
       await resetAllMarketRates();
 
@@ -45,20 +56,22 @@ describe('Market Rate Scheduler', () => {
       expect(resetRate.previousRate).toBe(3500);
     });
 
-    it('should return success with count 0 when no active products', async () => {
+    it('should return success with count 0 when no active products in target category', async () => {
       // Create inactive product only
-      await testUtils.createTestProduct({ name: 'Inactive Product', isActive: false });
+      await testUtils.createTestProduct({ name: 'Inactive Product', isActive: false, category: 'Indian Vegetables' });
+      // Create active product in wrong category
+      await testUtils.createTestProduct({ name: 'Rice', isActive: true, category: 'Grains' });
 
       const result = await resetAllMarketRates();
 
       expect(result.success).toBe(true);
       expect(result.count).toBe(0);
-      expect(result.message).toBe('No active products');
+      expect(result.message).toContain('No active products');
     });
 
     it('should skip inactive products', async () => {
-      await testUtils.createTestProduct({ name: 'Active', isActive: true });
-      await testUtils.createTestProduct({ name: 'Inactive', isActive: false });
+      await testUtils.createTestProduct({ name: 'Active', isActive: true, category: 'Indian Vegetables' });
+      await testUtils.createTestProduct({ name: 'Inactive', isActive: false, category: 'Indian Vegetables' });
 
       const result = await resetAllMarketRates();
 
@@ -67,7 +80,7 @@ describe('Market Rate Scheduler', () => {
     });
 
     it('should set effectiveDate to today midnight', async () => {
-      const product = await testUtils.createTestProduct({ name: 'Test', isActive: true });
+      const product = await testUtils.createTestProduct({ name: 'Test', isActive: true, category: 'Indian Vegetables' });
 
       await resetAllMarketRates();
 
@@ -81,7 +94,7 @@ describe('Market Rate Scheduler', () => {
     });
 
     it('should set source to Daily Reset', async () => {
-      const product = await testUtils.createTestProduct({ name: 'Test', isActive: true });
+      const product = await testUtils.createTestProduct({ name: 'Test', isActive: true, category: 'Indian Vegetables' });
 
       await resetAllMarketRates();
 
@@ -92,7 +105,7 @@ describe('Market Rate Scheduler', () => {
     });
 
     it('should set updatedBy to system_scheduler', async () => {
-      const product = await testUtils.createTestProduct({ name: 'Test', isActive: true });
+      const product = await testUtils.createTestProduct({ name: 'Test', isActive: true, category: 'Indian Vegetables' });
 
       await resetAllMarketRates();
 
@@ -103,7 +116,7 @@ describe('Market Rate Scheduler', () => {
     });
 
     it('should return duration in result', async () => {
-      const product = await testUtils.createTestProduct({ name: 'Test', isActive: true });
+      const product = await testUtils.createTestProduct({ name: 'Test', isActive: true, category: 'Indian Vegetables' });
 
       const result = await resetAllMarketRates();
 
@@ -114,7 +127,7 @@ describe('Market Rate Scheduler', () => {
 
     it('should handle products without existing market rates', async () => {
       // Create product without any market rate
-      const product = await testUtils.createTestProduct({ name: 'NewProduct', isActive: true });
+      const product = await testUtils.createTestProduct({ name: 'NewProduct', isActive: true, category: 'Indian Vegetables' });
 
       const result = await resetAllMarketRates();
 
@@ -129,12 +142,14 @@ describe('Market Rate Scheduler', () => {
     it('should reset multiple products in sequence', async () => {
       // Create 5 products
       const products = [];
+      const yesterday = new Date(Date.now() - 86400000);
       for (let i = 0; i < 5; i++) {
         const product = await testUtils.createTestProduct({
           name: `Product${i}`,
-          isActive: true
+          isActive: true,
+          category: 'Indian Vegetables'
         });
-        await testUtils.createMarketRate(product, 1000 + i * 100);
+        await testUtils.createMarketRate(product, 1000 + i * 100, { effectiveDate: yesterday });
         products.push(product);
       }
 
@@ -153,7 +168,7 @@ describe('Market Rate Scheduler', () => {
     });
 
     it('should include notes in reset record', async () => {
-      const product = await testUtils.createTestProduct({ name: 'Test', isActive: true });
+      const product = await testUtils.createTestProduct({ name: 'Test', isActive: true, category: 'Indian Vegetables' });
 
       await resetAllMarketRates();
 
