@@ -88,7 +88,7 @@ export async function logout() {
   }
 
   // Redirect to login
-  window.location.href = '/login.html';
+  window.location.href = '/pages/auth/login.html';
 }
 
 /**

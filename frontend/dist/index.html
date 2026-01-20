@@ -24,13 +24,13 @@
     <!-- Animations -->
 
     <!-- Page-specific styles -->
-  <script type="module" crossorigin src="/assets/main-CrfpQiI_.js"></script>
+  <script type="module" crossorigin src="/assets/main-xapCqLUe.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/responsive-D1ZTW0b0.js">
-  <link rel="modulepreload" crossorigin href="/assets/ui-Bs0uH3rR.js">
-  <link rel="modulepreload" crossorigin href="/assets/api-CEln0qT5.js">
-  <link rel="modulepreload" crossorigin href="/assets/init-BmEs7ovC.js">
+  <link rel="modulepreload" crossorigin href="/assets/ui-D1Am529b.js">
+  <link rel="modulepreload" crossorigin href="/assets/api-BqPqbFNt.js">
+  <link rel="modulepreload" crossorigin href="/assets/init-6NQZls6S.js">
   <link rel="stylesheet" crossorigin href="/assets/responsive-BaXdD4wa.css">
-  <link rel="stylesheet" crossorigin href="/assets/main-DpSG_OB5.css">
+  <link rel="stylesheet" crossorigin href="/assets/main-Cx7lMCu4.css">
   <link rel="stylesheet" crossorigin href="/assets/page-BklDA2cI.css">
   <link rel="stylesheet" crossorigin href="/assets/buttons-CLMBJEwY.css">
 </head>
@@ -97,10 +97,18 @@
                 </div>
             </a>
             <a href="/pages/orders/" class="action-card card-animated">
-                <div class="action-icon">≣</div>
+                <div class="action-icon">&#8803;</div>
                 <div class="action-content">
                     <h3 class="action-title">View Orders</h3>
                     <p class="action-desc">Track orders</p>
+                </div>
+            </a>
+
+            <a href="/pages/packing/" class="action-card card-animated packing">
+                <div class="action-icon">&#128230;</div>
+                <div class="action-content">
+                    <h3 class="action-title">Packing Station</h3>
+                    <p class="action-desc">Pack orders</p>
                 </div>
             </a>
         </div>
@@ -131,6 +139,11 @@
                     <button class="btn-icon" id="exportBtn" title="Export CSV">↓</button>
                     <button class="btn-save-rates" id="saveRatesBtn">Save</button>
                 </div>
+            </div>
+            <div class="batch-filter" id="batchFilter">
+                <button class="batch-filter-btn active" data-batch="all">All</button>
+                <button class="batch-filter-btn" data-batch="1st">1st Batch</button>
+                <button class="batch-filter-btn" data-batch="2nd">2nd Batch</button>
             </div>
             <div class="procurement-list" id="procurementList">
                 <!-- Skeleton loading -->

@@ -98,10 +98,18 @@
                 </div>
             </a>
             <a href="/pages/orders/" class="action-card card-animated">
-                <div class="action-icon">≣</div>
+                <div class="action-icon">&#8803;</div>
                 <div class="action-content">
                     <h3 class="action-title">View Orders</h3>
                     <p class="action-desc">Track orders</p>
+                </div>
+            </a>
+
+            <a href="/pages/packing/" class="action-card card-animated packing">
+                <div class="action-icon">&#128230;</div>
+                <div class="action-content">
+                    <h3 class="action-title">Packing Station</h3>
+                    <p class="action-desc">Pack orders</p>
                 </div>
             </a>
         </div>
@@ -132,6 +140,11 @@
                     <button class="btn-icon" id="exportBtn" title="Export CSV">↓</button>
                     <button class="btn-save-rates" id="saveRatesBtn">Save</button>
                 </div>
+            </div>
+            <div class="batch-filter" id="batchFilter">
+                <button class="batch-filter-btn active" data-batch="all">All</button>
+                <button class="batch-filter-btn" data-batch="1st">1st Batch</button>
+                <button class="batch-filter-btn" data-batch="2nd">2nd Batch</button>
             </div>
             <div class="procurement-list" id="procurementList">
                 <!-- Skeleton loading -->

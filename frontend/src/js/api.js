@@ -100,7 +100,7 @@ const API = {
                 if (typeof Auth !== 'undefined') {
                     Auth.clearAuth();
                 }
-                window.location.href = '/login.html';
+                window.location.href = '/pages/auth/login.html';
                 return { success: false, error: 'Session expired. Please login again.', status: 401 };
             }
 

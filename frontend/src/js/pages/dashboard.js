@@ -16,6 +16,8 @@ initPage();
 let products = [];
 let rates = [];
 let procurement = [];
+let batchSummary = [];
+let selectedBatch = 'all';
 let changedRates = {};
 
 // Elements
@@ -31,14 +33,25 @@ if (printBtn) printBtn.addEventListener('click', printList);
 if (exportBtn) exportBtn.addEventListener('click', exportCSV);
 if (saveRatesBtn) saveRatesBtn.addEventListener('click', saveAllRates);
 
+// Batch filter event listeners
+document.querySelectorAll('.batch-filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.batch-filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedBatch = btn.dataset.batch;
+        displayProcurementList();
+    });
+});
+
 async function loadDashboardStats() {
     try {
-        const [ordersRes, customersRes, productsRes, ratesRes, procurementRes] = await Promise.all([
+        const [ordersRes, customersRes, productsRes, ratesRes, procurementRes, batchSummaryRes] = await Promise.all([
             fetch('/api/orders', { credentials: 'include' }),
             fetch('/api/customers', { credentials: 'include' }),
             fetch('/api/products', { credentials: 'include' }),
             fetch('/api/market-rates', { credentials: 'include' }),
-            fetch('/api/supplier/quantity-summary', { credentials: 'include' })
+            fetch('/api/supplier/quantity-summary', { credentials: 'include' }),
+            fetch('/api/supplier/batch-summary', { credentials: 'include' })
         ]);
 
         const orders = await ordersRes.json();
@@ -46,10 +59,12 @@ async function loadDashboardStats() {
         const productsData = await productsRes.json();
         const ratesData = await ratesRes.json();
         const procurementData = await procurementRes.json();
+        const batchSummaryData = await batchSummaryRes.json();
 
         products = productsData.data || [];
         rates = ratesData.data || [];
         procurement = procurementData.data || [];
+        batchSummary = batchSummaryData.data || [];
 
         // Calculate Total Sale (from delivered/completed orders)
         const ordersList = orders.data || [];
@@ -95,8 +110,25 @@ function displayProcurementList() {
     const rateMap = {};
     rates.forEach(rate => { rateMap[rate.product] = rate; });
 
+    // Get procurement data based on selected batch
+    let activeProcurement = procurement;
+    if (selectedBatch !== 'all') {
+        const batchData = batchSummary.find(b => b.batchType === selectedBatch);
+        if (batchData && batchData.products) {
+            // Convert batch products to same format as procurement
+            activeProcurement = batchData.products.map(p => ({
+                productName: p.productName,
+                totalQuantity: p.totalQuantity,
+                unit: p.unit,
+                orderCount: p.orderCount
+            }));
+        } else {
+            activeProcurement = [];
+        }
+    }
+
     const procurementMap = {};
-    procurement.forEach(item => { procurementMap[item.productName] = item; });
+    activeProcurement.forEach(item => { procurementMap[item.productName] = item; });
 
     // Filter to only Indian Vegetables and Fruits
     const filteredProducts = products.filter(p =>

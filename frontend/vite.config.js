@@ -19,6 +19,7 @@ export default defineConfig({
         signup: resolve(__dirname, 'src/pages/auth/signup.html'),
         resetPassword: resolve(__dirname, 'src/pages/auth/reset-password.html'),
         orderForm: resolve(__dirname, 'src/pages/order-form/index.html'),
+        packing: resolve(__dirname, 'src/pages/packing/index.html'),
       }
     }
   },

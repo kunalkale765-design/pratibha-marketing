@@ -220,6 +220,19 @@ frontend/
 | GET | /:id/quantity-summary | Admin/Staff | Get product quantities for batch |
 | GET | /date/:date | Admin/Staff | Get batches for specific date |
 
+### Packing `/api/packing`
+| Method | Endpoint | Access | Description |
+|--------|----------|--------|-------------|
+| GET | /queue | Admin/Staff | Get orders ready for packing |
+| GET | /stats | Admin/Staff | Get packing statistics for today |
+| GET | /:orderId | Admin/Staff | Get packing details for order |
+| POST | /:orderId/start | Admin/Staff | Start packing session |
+| PUT | /:orderId/item/:productId | Admin/Staff | Update item packing status |
+| POST | /:orderId/complete | Admin/Staff | Complete packing session |
+| POST | /:orderId/hold | Admin/Staff | Put order on hold for review |
+| POST | /:orderId/resume | Admin/Staff | Resume packing from hold |
+| GET | /batch/:batchId/summary | Admin/Staff | Get batch packing summary |
+
 ### Invoices `/api/invoices`
 | Method | Endpoint | Access | Description |
 |--------|----------|--------|-------------|

@@ -54,6 +54,42 @@
 .btn-icon:hover { background: var(--pale-slate-light); }
 .btn-icon:active { transform: scale(0.95); }
 
+/* Batch Filter */
+.batch-filter {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: var(--cream);
+    border-bottom: 1px solid var(--pale-slate-light);
+}
+
+.batch-filter-btn {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--pale-slate-light);
+    border-radius: var(--radius-md);
+    background: var(--warm-white);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.batch-filter-btn:hover {
+    background: var(--pale-slate-light);
+    color: var(--gunmetal);
+}
+
+.batch-filter-btn.active {
+    background: var(--dusty-olive);
+    border-color: var(--dusty-olive);
+    color: white;
+}
+
+.batch-filter-btn.active:hover {
+    background: var(--dusty-olive-dark);
+}
+
 .procurement-list {
     padding: 0.5rem;
     max-height: 400px;
@@ -291,6 +327,12 @@
 
 .action-card.primary {
     background: var(--dusty-olive);
+    color: white;
+    border: none;
+}
+
+.action-card.packing {
+    background: linear-gradient(135deg, var(--terracotta), #d4b78d);
     color: white;
     border: none;
 }
@@ -550,7 +592,8 @@
 .action-card:nth-child(3) { animation-delay: 0.2s; }
 .action-card:nth-child(4) { animation-delay: 0.25s; }
 .action-card:nth-child(5) { animation-delay: 0.3s; }
-.batch-container { animation: fadeInUp 0.4s ease backwards; animation-delay: 0.3s; }
+.action-card:nth-child(6) { animation-delay: 0.35s; }
+.batch-container { animation: fadeInUp 0.4s ease backwards; animation-delay: 0.35s; }
 .procurement-container { animation: fadeInUp 0.4s ease backwards; animation-delay: 0.35s; }
 .reports-container { animation: fadeInUp 0.4s ease backwards; animation-delay: 0.4s; }
 .analytics-section { animation: fadeInUp 0.4s ease backwards; animation-delay: 0.45s; }
