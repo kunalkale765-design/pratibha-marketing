@@ -60,6 +60,7 @@ export default defineConfig({
   },
 
   // Configure projects for major browsers and viewports
+  // Note: CI only runs chromium for speed. Full browser matrix runs locally.
   projects: [
     // Setup project - runs first to authenticate users
     {
@@ -67,7 +68,7 @@ export default defineConfig({
       testMatch: /.*\.setup\.ts/,
     },
 
-    // Desktop Chrome - primary browser
+    // Desktop Chrome - primary browser (always runs)
     {
       name: 'chromium',
       use: {
@@ -78,25 +79,25 @@ export default defineConfig({
       dependencies: ['setup'],
     },
 
-    // Mobile Safari (iPhone 12)
-    {
+    // Mobile Safari (iPhone 12) - local only, requires WebKit
+    ...(process.env.CI ? [] : [{
       name: 'mobile-safari',
       use: {
         ...devices['iPhone 12'],
         storageState: './e2e/.auth/admin.json',
       },
       dependencies: ['setup'],
-    },
+    }]),
 
-    // Tablet (iPad)
-    {
+    // Tablet (iPad) - local only, requires WebKit
+    ...(process.env.CI ? [] : [{
       name: 'tablet',
       use: {
         ...devices['iPad (gen 7)'],
         storageState: './e2e/.auth/admin.json',
       },
       dependencies: ['setup'],
-    },
+    }]),
   ],
 
   // Run your local dev server before starting the tests
