@@ -1,4 +1,4 @@
-import { showToast, createElement } from '/js/ui.js';
+import { showToast } from '/js/ui.js';
 
 // Wait for Auth to be available
 const waitForAuth = () => new Promise((resolve) => {
@@ -9,7 +9,7 @@ const Auth = await waitForAuth();
 
 // State
 let queueOrders = [];
-let currentView = 'queue';
+let _currentView = 'queue';
 let currentUser = null;
 
 // Initialize
@@ -33,7 +33,7 @@ function setupViewToggle() {
 
 // Switch between queue and batch views
 async function switchView(view) {
-    currentView = view;
+    _currentView = view;
 
     // Update button states
     document.querySelectorAll('.view-btn').forEach(btn => {

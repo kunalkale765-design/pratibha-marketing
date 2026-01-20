@@ -8,7 +8,7 @@ const waitForAuth = () => new Promise((resolve) => {
 const Auth = await waitForAuth();
 
 let orders = [];
-let marketRates = {};
+const marketRates = {};
 let allProducts = []; // All available products for adding to orders
 let addedProducts = []; // Newly added products (not yet saved)
 let currentFilter = 'all';
@@ -750,7 +750,7 @@ async function viewOrder(id) {
 
         const isStaff = currentUser.role === 'admin' || currentUser.role === 'staff';
 
-        const batchInfo = order.batch?.batchType
+        const _batchInfo = order.batch?.batchType
             ? `<span class="badge badge-batch">${order.batch.batchType}${order.batchLocked ? ' 🔒' : ''}</span>`
             : '-';
 
@@ -1018,7 +1018,7 @@ async function viewOrder(id) {
         }
 
         document.getElementById('orderModal').classList.add('show');
-    } catch (e) {
+    } catch (_e) {
         showToast('Could not load order', 'info');
     }
 }

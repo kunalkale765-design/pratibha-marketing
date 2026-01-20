@@ -9,7 +9,7 @@ const waitForAuth = () => new Promise((resolve) => {
 const Auth = await waitForAuth();
 
 let products = [];
-let rates = {};
+const rates = {};
 let changedRates = {};
 let historyData = null;
 

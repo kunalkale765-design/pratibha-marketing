@@ -18,7 +18,7 @@ export default [
     },
     rules: {
       // Error prevention
-      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }],
       'no-console': 'off',
       'no-undef': 'error',
 
@@ -29,7 +29,7 @@ export default [
 
       // Style
       'semi': ['warn', 'always'],
-      'quotes': ['warn', 'single', { avoidEscape: true }],
+      'quotes': ['warn', 'single', { avoidEscape: true, allowTemplateLiterals: true }],
     }
   },
 
@@ -46,14 +46,14 @@ export default [
       }
     },
     rules: {
-      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }],
       'no-console': 'off',
       'no-undef': 'error',
       'eqeqeq': ['error', 'always', { null: 'ignore' }],
       'no-var': 'error',
       'prefer-const': 'warn',
       'semi': ['warn', 'always'],
-      'quotes': ['warn', 'single', { avoidEscape: true }],
+      'quotes': ['warn', 'single', { avoidEscape: true, allowTemplateLiterals: true }],
     }
   },
 
@@ -71,14 +71,14 @@ export default [
       }
     },
     rules: {
-      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }],
       'no-console': 'off',
       'no-undef': 'error',
       'eqeqeq': ['error', 'always', { null: 'ignore' }],
       'no-var': 'warn',
       'prefer-const': 'warn',
       'semi': ['warn', 'always'],
-      'quotes': ['warn', 'single', { avoidEscape: true }],
+      'quotes': ['warn', 'single', { avoidEscape: true, allowTemplateLiterals: true }],
     }
   },
 
@@ -93,14 +93,14 @@ export default [
       }
     },
     rules: {
-      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }],
       'no-console': 'off',
       'no-undef': 'error',
       'eqeqeq': ['error', 'always', { null: 'ignore' }],
       'no-var': 'warn',
       'prefer-const': 'warn',
       'semi': ['warn', 'always'],
-      'quotes': ['warn', 'single', { avoidEscape: true }],
+      'quotes': ['warn', 'single', { avoidEscape: true, allowTemplateLiterals: true }],
     }
   },
 

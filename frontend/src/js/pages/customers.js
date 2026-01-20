@@ -68,7 +68,7 @@ function getPricingBadge(customer) {
     return createElement('span', { className: 'badge badge-market' }, 'Market');
 }
 
-function formatCurrency(amount) {
+function _formatCurrency(amount) {
     if (amount === undefined || amount === null) return '-';
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
 }
@@ -362,13 +362,13 @@ async function shareMagicLink(customerId, _isRetry = false) {
             headers['X-CSRF-Token'] = csrfToken;
         }
 
-        let res = await fetch(`/api/customers/${customerId}/magic-link`, {
+        const res = await fetch(`/api/customers/${customerId}/magic-link`, {
             method: 'POST',
             headers,
             credentials: 'include'
         });
 
-        let data = await res.json();
+        const data = await res.json();
 
         // Handle CSRF error with retry
         if (res.status === 403 && data?.message?.toLowerCase().includes('csrf') && !_isRetry) {

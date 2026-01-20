@@ -20,7 +20,7 @@ if (customerSelect) customerSelect.addEventListener('change', onCustomerChange);
 let currentUser = null;
 let selectedCustomer = null;
 let products = [];
-let marketRates = {};
+const marketRates = {};
 let customers = [];
 let isStaff = false;
 
@@ -47,7 +47,7 @@ async function init() {
                 window.location.href = '/pages/auth/login.html';
                 return;
             }
-        } catch (e) {
+        } catch (_e) {
             showToast('Authentication issue. Please refresh.', 'info');
             window.location.href = '/pages/auth/login.html';
             return;
@@ -545,10 +545,10 @@ async function placeOrder() {
 // ====================
 // TAB MANAGEMENT
 // ====================
-let activeTab = 'new';
+let _activeTab = 'new';
 
 function switchTab(tabName) {
-    activeTab = tabName;
+    _activeTab = tabName;
 
     // Update tab buttons
     document.querySelectorAll('.order-tab').forEach(tab => {
@@ -635,7 +635,7 @@ function renderOrdersList() {
 
         const badges = [];
         if (order.batch?.batchType) {
-            let batchText = `${order.batch.batchType} Batch`;
+            const batchText = `${order.batch.batchType} Batch`;
             // Note: Not modifying text logic here, just structure
             badges.push(createElement('span', { className: 'badge badge-batch' }, batchText));
         }

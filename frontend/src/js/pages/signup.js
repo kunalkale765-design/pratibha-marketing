@@ -55,7 +55,7 @@ async function checkAuth() {
         if (response.ok) {
             window.location.href = '/';
         }
-    } catch (error) {
+    } catch (_error) {
         // Not logged in - stay on signup page
     }
 }

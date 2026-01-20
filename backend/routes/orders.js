@@ -5,9 +5,8 @@ const Order = require('../models/Order');
 const Customer = require('../models/Customer');
 const Product = require('../models/Product');
 const MarketRate = require('../models/MarketRate');
-const Batch = require('../models/Batch');
 const { protect, authorize } = require('../middleware/auth');
-const { assignOrderToBatch, getISTTime, BATCH_CONFIG } = require('../services/batchScheduler');
+const { assignOrderToBatch } = require('../services/batchScheduler');
 
 // Helper function to round to 2 decimal places (avoids floating-point precision issues)
 function roundTo2Decimals(num) {

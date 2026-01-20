@@ -18,14 +18,13 @@ let rates = [];
 let procurement = [];
 let batchSummary = [];
 let selectedBatch = 'all';
-let changedRates = {};
+const changedRates = {};
 
 // Elements
 const logoutBtn = document.getElementById('logoutBtn');
 const printBtn = document.getElementById('printBtn');
 const exportBtn = document.getElementById('exportBtn');
 const saveRatesBtn = document.getElementById('saveRatesBtn');
-const saveRatesBtnContainer = document.getElementById('saveRatesBtn'); // Added for safer reference
 
 // Event listeners
 if (logoutBtn) logoutBtn.addEventListener('click', logout);
@@ -55,7 +54,7 @@ async function loadDashboardStats() {
         ]);
 
         const orders = await ordersRes.json();
-        const customers = await customersRes.json();
+        const _customers = await customersRes.json();
         const productsData = await productsRes.json();
         const ratesData = await ratesRes.json();
         const procurementData = await procurementRes.json();
@@ -415,7 +414,7 @@ async function saveAllRates() {
     saveRatesBtn.disabled = false;
 
     if (failures.length > 0) {
-        const failedNames = failures.map(f => f.productName).join(', ');
+        const _failedNames = failures.map(f => f.productName).join(', ');
         showToast(`${failures.length} rate(s) not saved. Try again.`, 'info');
         if (Object.keys(changedRates).length > 0) {
             saveRatesBtn.classList.add('show');
@@ -445,7 +444,7 @@ async function checkAPIHealth() {
             document.getElementById('apiDot').classList.add('offline');
             document.getElementById('apiStatus').textContent = 'API Offline';
         }
-    } catch (error) {
+    } catch (_error) {
         document.getElementById('apiDot').classList.add('offline');
         document.getElementById('apiStatus').textContent = 'API Offline';
     }

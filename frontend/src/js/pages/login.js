@@ -45,7 +45,7 @@ async function checkAuth() {
                 window.location.href = '/';
             }
         }
-    } catch (error) {
+    } catch (_error) {
         // Not logged in - stay on login page
     }
 }

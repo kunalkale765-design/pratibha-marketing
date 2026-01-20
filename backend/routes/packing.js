@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const mongoose = require('mongoose');
 const Order = require('../models/Order');
 const Batch = require('../models/Batch');
 const { protect, authorize } = require('../middleware/auth');
