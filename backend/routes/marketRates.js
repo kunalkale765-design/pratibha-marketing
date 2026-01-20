@@ -7,6 +7,11 @@ const Order = require('../models/Order');
 const { protect, authorize } = require('../middleware/auth');
 const { resetAllMarketRates } = require('../services/marketRateScheduler');
 
+// Helper function to round to 2 decimal places (avoids floating-point precision issues)
+function roundTo2Decimals(num) {
+  return Math.round(num * 100) / 100;
+}
+
 // Helper function to update pending orders with zero rates when market rate is set
 async function updatePendingOrdersWithZeroRates(productId, newRate) {
   try {
@@ -30,7 +35,7 @@ async function updatePendingOrdersWithZeroRates(productId, newRate) {
       let calculatedRate = newRate;
       if (customer.pricingType === 'markup') {
         const markup = customer.markupPercentage || 0;
-        calculatedRate = newRate * (1 + markup / 100);
+        calculatedRate = roundTo2Decimals(newRate * (1 + markup / 100));
       }
 
       // Update only the products with rate=0 for this product
@@ -40,14 +45,14 @@ async function updatePendingOrdersWithZeroRates(productId, newRate) {
       for (const item of order.products) {
         if (item.product.toString() === productId.toString() && item.rate === 0) {
           item.rate = calculatedRate;
-          item.amount = item.quantity * calculatedRate;
+          item.amount = roundTo2Decimals(item.quantity * calculatedRate);
           orderModified = true;
         }
         newTotal += item.amount;
       }
 
       if (orderModified) {
-        order.totalAmount = newTotal;
+        order.totalAmount = roundTo2Decimals(newTotal);
         await order.save();
         updatedCount++;
       }

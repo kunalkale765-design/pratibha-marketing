@@ -9,6 +9,11 @@ const Batch = require('../models/Batch');
 const { protect, authorize } = require('../middleware/auth');
 const { assignOrderToBatch, getISTTime, BATCH_CONFIG } = require('../services/batchScheduler');
 
+// Helper function to round to 2 decimal places (avoids floating-point precision issues)
+function roundTo2Decimals(num) {
+  return Math.round(num * 100) / 100;
+}
+
 // Helper function to get current market rate for a product
 async function getMarketRate(productId) {
   try {
@@ -78,7 +83,7 @@ function calculatePriceWithRate(customer, product, prefetchedMarketRate, request
   if (pricingType === 'markup') {
     const markup = customer.markupPercentage || 0;
     return {
-      rate: marketRate * (1 + markup / 100),
+      rate: roundTo2Decimals(marketRate * (1 + markup / 100)),
       usedFallback: false,
       isContractPrice: false,
       saveAsContractPrice: false
@@ -87,7 +92,7 @@ function calculatePriceWithRate(customer, product, prefetchedMarketRate, request
 
   // Market pricing (default)
   return {
-    rate: marketRate,
+    rate: roundTo2Decimals(marketRate),
     usedFallback: false,
     isContractPrice: false,
     saveAsContractPrice: false
@@ -121,12 +126,12 @@ async function calculatePrice(customer, product, requestedRate = null) {
   if (pricingType === 'markup') {
     const marketRate = await getMarketRate(product._id) || 0;
     const markup = customer.markupPercentage || 0;
-    return { rate: marketRate * (1 + markup / 100), isContractPrice: false };
+    return { rate: roundTo2Decimals(marketRate * (1 + markup / 100)), isContractPrice: false };
   }
 
   // Market pricing (default)
   const currentRate = await getMarketRate(product._id);
-  return { rate: currentRate || 0, isContractPrice: false };
+  return { rate: roundTo2Decimals(currentRate || 0), isContractPrice: false };
 }
 
 // Validation middleware
@@ -444,7 +449,7 @@ router.post('/', protect, validateOrder, async (req, res, next) => {
       // Calculate rate based on customer's pricing type
       // Pass the pre-fetched market rate to avoid race conditions
       const priceResult = calculatePriceWithRate(customer, product, rateMap.get(product._id.toString()), item.rate);
-      const amount = item.quantity * priceResult.rate;
+      const amount = roundTo2Decimals(item.quantity * priceResult.rate);
       totalAmount += amount;
 
       if (priceResult.usedFallback) {
@@ -632,7 +637,7 @@ router.put('/:id',
             const requestedRate = item.priceAtTime || item.rate;
             const priceResult = await calculatePrice(customer, product, requestedRate);
             const rate = priceResult.rate;
-            const amount = quantity * rate;
+            const amount = roundTo2Decimals(quantity * rate);
             totalAmount += amount;
 
             // Add to audit log
@@ -723,7 +728,7 @@ router.put('/:id',
             });
           }
 
-          const amount = quantity * rate;
+          const amount = roundTo2Decimals(quantity * rate);
           totalAmount += amount;
 
           // Track changes for audit log (price and/or quantity)
@@ -910,7 +915,7 @@ router.put('/:id/customer-edit',
 
           // Recalculate rate based on customer's pricing type (never trust client prices)
           const priceResult = await calculatePrice(customer, product);
-          const amount = item.quantity * priceResult.rate;
+          const amount = roundTo2Decimals(item.quantity * priceResult.rate);
           totalAmount += amount;
 
           return {
