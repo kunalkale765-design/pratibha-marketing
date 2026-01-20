@@ -9,7 +9,15 @@ if (process.env.CI || process.env.DEBUG_STARTUP) {
 
 // Preserve NODE_ENV if set (for tests)
 const preservedNodeEnv = process.env.NODE_ENV;
-require('dotenv').config();
+if (process.env.CI || process.env.DEBUG_STARTUP) {
+  console.log('[DEBUG] About to load dotenv...');
+}
+// Don't let dotenv overwrite existing env vars (important for CI/E2E)
+require('dotenv').config({ override: false });
+if (process.env.CI || process.env.DEBUG_STARTUP) {
+  console.log('[DEBUG] dotenv loaded, MONGODB_URI after:', process.env.MONGODB_URI ? 'SET' : 'NOT SET');
+  console.log('[DEBUG] validateEnv() about to run...');
+}
 if (preservedNodeEnv) {
   process.env.NODE_ENV = preservedNodeEnv;
 }
@@ -47,6 +55,9 @@ const validateEnv = () => {
 };
 
 validateEnv();
+if (process.env.CI || process.env.DEBUG_STARTUP) {
+  console.log('[DEBUG] validateEnv() passed, loading modules...');
+}
 const Sentry = require('@sentry/node');
 const express = require('express');
 const cors = require('cors');
@@ -64,6 +75,10 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 const { startScheduler, stopScheduler } = require('./services/marketRateScheduler');
 const { startScheduler: startBatchScheduler, stopScheduler: stopBatchScheduler } = require('./services/batchScheduler');
+
+if (process.env.CI || process.env.DEBUG_STARTUP) {
+  console.log('[DEBUG] All modules loaded successfully');
+}
 
 // Initialize Sentry (only in production/development, not in test)
 if (process.env.SENTRY_DSN && process.env.NODE_ENV !== 'test') {
@@ -317,9 +332,17 @@ const startServer = async () => {
   }
 };
 
-// Only start server if not in test mode (Supertest handles server in tests)
-if (process.env.NODE_ENV !== 'test') {
+// Only start server if not in Jest test mode (Supertest handles server in unit tests)
+// Allow server to start in CI for E2E tests, or when explicitly requested
+if (process.env.NODE_ENV !== 'test' || process.env.CI || process.env.START_SERVER) {
+  if (process.env.CI || process.env.DEBUG_STARTUP) {
+    console.log('[DEBUG] Starting server...');
+  }
   startServer();
+} else {
+  if (process.env.CI || process.env.DEBUG_STARTUP) {
+    console.log('[DEBUG] NODE_ENV=test and no CI/START_SERVER flag, skipping startServer()');
+  }
 }
 
 // Handle unhandled promise rejections
