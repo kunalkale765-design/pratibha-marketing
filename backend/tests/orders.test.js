@@ -721,7 +721,7 @@ describe('Order Endpoints', () => {
     });
   });
 
-  describe('Order Status State Machine - Invalid Transitions', () => {
+  describe('Order Status State Machine - Transition Rules', () => {
     let testOrder;
 
     beforeEach(async () => {
@@ -765,23 +765,24 @@ describe('Order Endpoints', () => {
       expect(res.statusCode).toBe(400);
     });
 
-    it('should reject confirmed -> packed (must process first)', async () => {
+    it('should allow confirmed -> packed (direct jump)', async () => {
       // First confirm the order
       await request(app)
         .put(`/api/orders/${testOrder._id}/status`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ status: 'confirmed' });
 
-      // Try to skip to packed
+      // Direct jump to packed is allowed
       const res = await request(app)
         .put(`/api/orders/${testOrder._id}/status`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ status: 'packed' });
 
-      expect(res.statusCode).toBe(400);
+      expect(res.statusCode).toBe(200);
+      expect(res.body.data.status).toBe('packed');
     });
 
-    it('should reject confirmed -> shipped (must pack first)', async () => {
+    it('should allow confirmed -> shipped (direct jump)', async () => {
       await request(app)
         .put(`/api/orders/${testOrder._id}/status`)
         .set('Authorization', `Bearer ${adminToken}`)
@@ -792,10 +793,11 @@ describe('Order Endpoints', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ status: 'shipped' });
 
-      expect(res.statusCode).toBe(400);
+      expect(res.statusCode).toBe(200);
+      expect(res.body.data.status).toBe('shipped');
     });
 
-    it('should reject processing -> shipped (must pack first)', async () => {
+    it('should allow processing -> shipped (direct jump)', async () => {
       await request(app)
         .put(`/api/orders/${testOrder._id}/status`)
         .set('Authorization', `Bearer ${adminToken}`)
@@ -811,10 +813,11 @@ describe('Order Endpoints', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ status: 'shipped' });
 
-      expect(res.statusCode).toBe(400);
+      expect(res.statusCode).toBe(200);
+      expect(res.body.data.status).toBe('shipped');
     });
 
-    it('should reject packed -> delivered (must ship first)', async () => {
+    it('should allow packed -> delivered (direct jump)', async () => {
       // Go through: pending -> confirmed -> processing -> packed
       await request(app)
         .put(`/api/orders/${testOrder._id}/status`)
@@ -831,13 +834,14 @@ describe('Order Endpoints', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ status: 'packed' });
 
-      // Try to skip to delivered
+      // Direct jump to delivered is allowed
       const res = await request(app)
         .put(`/api/orders/${testOrder._id}/status`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ status: 'delivered' });
 
-      expect(res.statusCode).toBe(400);
+      expect(res.statusCode).toBe(200);
+      expect(res.body.data.status).toBe('delivered');
     });
 
     it('should reject transition from delivered (terminal state)', async () => {

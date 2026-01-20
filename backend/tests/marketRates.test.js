@@ -755,4 +755,159 @@ describe('Market Rates Endpoints', () => {
       expect(parseFloat(res.body.data.changePercentage)).toBeCloseTo(-25, 1);
     });
   });
+
+  describe('Auto-update Pending Orders with Zero Rates', () => {
+    let adminToken, product;
+    const Order = require('../models/Order');
+    const Customer = require('../models/Customer');
+
+    beforeEach(async () => {
+      const admin = await testUtils.createAdminUser();
+      adminToken = admin.token;
+      product = await testUtils.createTestProduct();
+    });
+
+    it('should auto-update pending orders for market customers when rate is set', async () => {
+      // Create a market customer
+      const customer = await testUtils.createTestCustomer({ pricingType: 'market' });
+
+      // Create an order with rate=0 (simulating order created before market rate was set)
+      const order = await Order.create({
+        customer: customer._id,
+        products: [{
+          product: product._id,
+          productName: product.name,
+          quantity: 10,
+          unit: product.unit,
+          rate: 0,
+          amount: 0
+        }],
+        totalAmount: 0,
+        status: 'pending'
+      });
+
+      // Set market rate
+      const res = await request(app)
+        .post('/api/market-rates')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          product: product._id,
+          rate: 100
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.ordersUpdated).toBe(1);
+
+      // Verify order was updated
+      const updatedOrder = await Order.findById(order._id);
+      expect(updatedOrder.products[0].rate).toBe(100);
+      expect(updatedOrder.products[0].amount).toBe(1000); // 10 * 100
+      expect(updatedOrder.totalAmount).toBe(1000);
+    });
+
+    it('should auto-update pending orders for markup customers with markup applied', async () => {
+      // Create a markup customer with 20% markup
+      const customer = await testUtils.createMarkupCustomer(20);
+
+      // Create an order with rate=0
+      const order = await Order.create({
+        customer: customer._id,
+        products: [{
+          product: product._id,
+          productName: product.name,
+          quantity: 5,
+          unit: product.unit,
+          rate: 0,
+          amount: 0
+        }],
+        totalAmount: 0,
+        status: 'pending'
+      });
+
+      // Set market rate
+      await request(app)
+        .post('/api/market-rates')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          product: product._id,
+          rate: 100
+        });
+
+      // Verify order was updated with markup
+      const updatedOrder = await Order.findById(order._id);
+      expect(updatedOrder.products[0].rate).toBe(120); // 100 + 20% markup
+      expect(updatedOrder.products[0].amount).toBe(600); // 5 * 120
+      expect(updatedOrder.totalAmount).toBe(600);
+    });
+
+    it('should NOT auto-update orders for contract customers', async () => {
+      // Create a contract customer
+      const contractPrices = {};
+      contractPrices[product._id.toString()] = 150;
+      const customer = await testUtils.createContractCustomer(contractPrices);
+
+      // Create an order with rate=0
+      const order = await Order.create({
+        customer: customer._id,
+        products: [{
+          product: product._id,
+          productName: product.name,
+          quantity: 5,
+          unit: product.unit,
+          rate: 0,
+          amount: 0
+        }],
+        totalAmount: 0,
+        status: 'pending'
+      });
+
+      // Set market rate
+      const res = await request(app)
+        .post('/api/market-rates')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          product: product._id,
+          rate: 100
+        });
+
+      expect(res.status).toBe(201);
+
+      // Verify order was NOT updated (contract customer)
+      const unchangedOrder = await Order.findById(order._id);
+      expect(unchangedOrder.products[0].rate).toBe(0);
+      expect(unchangedOrder.totalAmount).toBe(0);
+    });
+
+    it('should NOT auto-update orders that are already processing or beyond', async () => {
+      const customer = await testUtils.createTestCustomer({ pricingType: 'market' });
+
+      // Create an order in 'processing' status with rate=0
+      const order = await Order.create({
+        customer: customer._id,
+        products: [{
+          product: product._id,
+          productName: product.name,
+          quantity: 10,
+          unit: product.unit,
+          rate: 0,
+          amount: 0
+        }],
+        totalAmount: 0,
+        status: 'processing'
+      });
+
+      // Set market rate
+      await request(app)
+        .post('/api/market-rates')
+        .set('Cookie', `token=${adminToken}`)
+        .send({
+          product: product._id,
+          rate: 100
+        });
+
+      // Verify order was NOT updated (already processing)
+      const unchangedOrder = await Order.findById(order._id);
+      expect(unchangedOrder.products[0].rate).toBe(0);
+    });
+  });
 });
