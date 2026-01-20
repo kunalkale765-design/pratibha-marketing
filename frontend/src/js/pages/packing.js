@@ -9,8 +9,6 @@ const Auth = await waitForAuth();
 
 // State
 let queueOrders = [];
-let currentOrder = null;
-let currentPackingItems = [];
 let currentView = 'queue';
 let currentUser = null;
 
@@ -132,11 +130,12 @@ function renderQueue() {
         </div>
     `).join('');
 
-    // Add click handlers
+    // Add click handlers - navigate to Orders page with deep link
     container.querySelectorAll('.order-card').forEach(card => {
         card.addEventListener('click', () => {
             const orderId = card.dataset.orderId;
-            openPackingModal(orderId);
+            // Navigate to Orders page with packing action
+            window.location.href = `/pages/orders/?order=${orderId}&action=pack`;
         });
     });
 }
@@ -308,504 +307,27 @@ function renderBatchSummary(summary) {
     `;
 }
 
-// Open packing modal
-async function openPackingModal(orderId) {
-    const modal = document.getElementById('packingModal');
-    if (!modal) return;
-
-    modal.classList.add('active');
-    document.body.style.overflow = 'hidden';
-
-    // Show loading state
-    document.getElementById('packingModalBody').innerHTML = '<div class="loading">Loading order...</div>';
-    document.getElementById('completeBtn').disabled = true;
-
-    try {
-        // Load order details
-        const response = await fetch(`/api/packing/${orderId}`, {
-            credentials: 'include'
-        });
-
-        if (!response.ok) throw new Error('Failed to load order');
-
-        const data = await response.json();
-        currentOrder = data.data;
-
-        // Start packing session if not already started
-        if (currentOrder.packingDetails.status === 'not_started') {
-            await startPackingSession(orderId);
-        } else if (currentOrder.packingDetails.status === 'on_hold') {
-            // Resume if on hold
-            await resumePackingSession(orderId);
-        }
-
-        currentPackingItems = currentOrder.packingDetails.items || [];
-        renderPackingModal();
-    } catch (error) {
-        console.error('Error loading order:', error);
-        showToast('Failed to load order details', 'error');
-        closePackingModal();
+// Dismiss help banner
+function dismissPackingHelp() {
+    const banner = document.getElementById('packingHelpBanner');
+    if (banner) {
+        banner.style.display = 'none';
+        // Remember preference in localStorage
+        localStorage.setItem('packingHelpDismissed', 'true');
     }
 }
 
-// Start packing session
-async function startPackingSession(orderId) {
-    try {
-        const csrfToken = await Auth.ensureCsrfToken();
-        const response = await fetch(`/api/packing/${orderId}/start`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': csrfToken
-            },
-            credentials: 'include'
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to start packing');
-        }
-
-        const data = await response.json();
-        currentPackingItems = data.data.items || [];
-        currentOrder.packingDetails.status = 'in_progress';
-    } catch (error) {
-        console.error('Error starting packing:', error);
-        throw error;
+// Check if help banner should be shown
+function checkPackingHelpBanner() {
+    const dismissed = localStorage.getItem('packingHelpDismissed');
+    const banner = document.getElementById('packingHelpBanner');
+    if (banner && dismissed === 'true') {
+        banner.style.display = 'none';
     }
 }
 
-// Resume packing session
-async function resumePackingSession(orderId) {
-    try {
-        const csrfToken = await Auth.ensureCsrfToken();
-        const response = await fetch(`/api/packing/${orderId}/resume`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': csrfToken
-            },
-            credentials: 'include'
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to resume packing');
-        }
-
-        currentOrder.packingDetails.status = 'in_progress';
-    } catch (error) {
-        console.error('Error resuming packing:', error);
-        throw error;
-    }
-}
-
-// Render packing modal content
-function renderPackingModal() {
-    // Update title
-    document.getElementById('packingModalTitle').textContent = `Pack ${currentOrder.orderNumber}`;
-    document.getElementById('packingModalSubtitle').textContent =
-        `${currentOrder.customer?.name || 'Unknown'} • ${currentOrder.customer?.phone || ''}`;
-
-    // Update progress
-    updateProgress();
-
-    // Render body
-    const body = document.getElementById('packingModalBody');
-    body.innerHTML = `
-        <div class="order-details">
-            ${currentOrder.deliveryAddress ? `
-                <div class="delivery-info">
-                    <span class="label">Deliver to:</span>
-                    <span class="value">${currentOrder.deliveryAddress}</span>
-                </div>
-            ` : ''}
-            ${currentOrder.notes ? `
-                <div class="order-notes">
-                    <span class="label">Notes:</span>
-                    <span class="value">${currentOrder.notes}</span>
-                </div>
-            ` : ''}
-        </div>
-
-        <div class="checklist-header">
-            <span>Items to Pack</span>
-            <button class="btn-mini" onclick="markAllPacked()">Mark All Packed</button>
-        </div>
-
-        <div class="packing-checklist">
-            ${currentPackingItems.map((item, index) => renderChecklistItem(item, index)).join('')}
-        </div>
-    `;
-
-    // Setup event handlers
-    setupChecklistHandlers();
-
-    // Show issues if any
-    updateIssuesDisplay();
-
-    // Show acknowledgement checkbox if needed
-    const hasIssues = currentOrder.packingDetails.issues?.length > 0 ||
-        currentPackingItems.some(i => i.status !== 'packed' && i.status !== 'pending');
-
-    const ackSection = document.getElementById('packingAcknowledgement');
-    if (hasIssues) {
-        ackSection.style.display = 'block';
-    } else {
-        ackSection.style.display = 'none';
-    }
-}
-
-// Render single checklist item
-function renderChecklistItem(item, index) {
-    const isVerified = item.status !== 'pending';
-    const statusIcon = getStatusIcon(item.status);
-    const statusClass = getItemStatusClass(item.status);
-
-    return `
-        <div class="checklist-item ${statusClass}" data-index="${index}" data-product-id="${item.product}">
-            <div class="item-main">
-                <div class="item-check ${isVerified ? 'checked' : ''}" onclick="toggleItemStatus(${index})">
-                    ${statusIcon}
-                </div>
-                <div class="item-details">
-                    <span class="item-name">${item.productName}</span>
-                    <span class="item-qty">Ordered: ${item.orderedQuantity} ${item.unit}</span>
-                </div>
-            </div>
-
-            <div class="item-input">
-                <input type="number"
-                    class="qty-input"
-                    placeholder="Qty"
-                    value="${item.packedQuantity ?? ''}"
-                    data-index="${index}"
-                    step="0.01"
-                    min="0"
-                    ${isVerified && item.status === 'packed' ? '' : ''}
-                >
-                <span class="unit-label">${item.unit}</span>
-            </div>
-
-            <div class="item-status">
-                <select class="status-select" data-index="${index}" onchange="updateItemStatus(${index}, this.value)">
-                    <option value="pending" ${item.status === 'pending' ? 'selected' : ''}>Pending</option>
-                    <option value="packed" ${item.status === 'packed' ? 'selected' : ''}>Packed</option>
-                    <option value="short" ${item.status === 'short' ? 'selected' : ''}>Short</option>
-                    <option value="damaged" ${item.status === 'damaged' ? 'selected' : ''}>Damaged</option>
-                    <option value="unavailable" ${item.status === 'unavailable' ? 'selected' : ''}>Unavailable</option>
-                </select>
-            </div>
-
-            ${item.status !== 'packed' && item.status !== 'pending' ? `
-                <div class="item-notes">
-                    <input type="text"
-                        class="notes-input"
-                        placeholder="Add note..."
-                        value="${item.notes || ''}"
-                        data-index="${index}"
-                    >
-                </div>
-            ` : ''}
-        </div>
-    `;
-}
-
-// Get status icon
-function getStatusIcon(status) {
-    switch (status) {
-        case 'packed': return '&#10003;';
-        case 'short': return '&#9888;';
-        case 'damaged': return '&#10006;';
-        case 'unavailable': return '&#8709;';
-        default: return '';
-    }
-}
-
-// Get item status class
-function getItemStatusClass(status) {
-    switch (status) {
-        case 'packed': return 'item-packed';
-        case 'short': return 'item-short';
-        case 'damaged': return 'item-damaged';
-        case 'unavailable': return 'item-unavailable';
-        default: return 'item-pending';
-    }
-}
-
-// Setup checklist handlers
-function setupChecklistHandlers() {
-    // Quantity input handlers
-    document.querySelectorAll('.qty-input').forEach(input => {
-        input.addEventListener('change', async (e) => {
-            const index = parseInt(e.target.dataset.index);
-            const qty = parseFloat(e.target.value) || 0;
-
-            currentPackingItems[index].packedQuantity = qty;
-
-            // Auto-detect if short
-            const item = currentPackingItems[index];
-            if (qty > 0 && qty < item.orderedQuantity && item.status === 'pending') {
-                item.status = 'short';
-                renderPackingModal();
-            }
-
-            await saveItemUpdate(index);
-        });
-    });
-
-    // Notes input handlers
-    document.querySelectorAll('.notes-input').forEach(input => {
-        input.addEventListener('change', async (e) => {
-            const index = parseInt(e.target.dataset.index);
-            currentPackingItems[index].notes = e.target.value;
-            await saveItemUpdate(index);
-        });
-    });
-}
-
-// Toggle item status (quick action)
-async function toggleItemStatus(index) {
-    const item = currentPackingItems[index];
-
-    if (item.status === 'pending') {
-        // Get quantity from input
-        const qtyInput = document.querySelector(`.qty-input[data-index="${index}"]`);
-        const qty = parseFloat(qtyInput?.value) || item.orderedQuantity;
-
-        item.packedQuantity = qty;
-
-        if (qty >= item.orderedQuantity) {
-            item.status = 'packed';
-        } else if (qty > 0) {
-            item.status = 'short';
-        }
-    } else if (item.status === 'packed') {
-        // Toggle back to pending
-        item.status = 'pending';
-    }
-
-    await saveItemUpdate(index);
-    renderPackingModal();
-}
-
-// Update item status from dropdown
-async function updateItemStatus(index, status) {
-    const item = currentPackingItems[index];
-    item.status = status;
-
-    // Get packed quantity
-    const qtyInput = document.querySelector(`.qty-input[data-index="${index}"]`);
-    if (status === 'packed') {
-        item.packedQuantity = parseFloat(qtyInput?.value) || item.orderedQuantity;
-    } else if (status === 'unavailable') {
-        item.packedQuantity = 0;
-    }
-
-    await saveItemUpdate(index);
-    renderPackingModal();
-}
-
-// Save item update to server
-async function saveItemUpdate(index) {
-    const item = currentPackingItems[index];
-
-    try {
-        const csrfToken = await Auth.ensureCsrfToken();
-        const response = await fetch(`/api/packing/${currentOrder._id}/item/${item.product}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': csrfToken
-            },
-            credentials: 'include',
-            body: JSON.stringify({
-                status: item.status,
-                packedQuantity: item.packedQuantity,
-                notes: item.notes
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to save');
-        }
-
-        const data = await response.json();
-
-        // Update issues from response
-        if (data.data.issues) {
-            currentOrder.packingDetails.issues = data.data.issues;
-        }
-
-        updateProgress();
-        updateIssuesDisplay();
-        updateCompleteButton();
-    } catch (error) {
-        console.error('Error saving item:', error);
-        showToast('Failed to save changes', 'error');
-    }
-}
-
-// Mark all items as packed
-async function markAllPacked() {
-    for (let i = 0; i < currentPackingItems.length; i++) {
-        const item = currentPackingItems[i];
-        if (item.status === 'pending') {
-            item.status = 'packed';
-            item.packedQuantity = item.orderedQuantity;
-            await saveItemUpdate(i);
-        }
-    }
-    renderPackingModal();
-}
-
-// Update progress bar
-function updateProgress() {
-    const total = currentPackingItems.length;
-    const verified = currentPackingItems.filter(i => i.status !== 'pending').length;
-    const percentage = total > 0 ? Math.round((verified / total) * 100) : 0;
-
-    document.getElementById('progressFill').style.width = `${percentage}%`;
-    document.getElementById('progressText').textContent = `${verified}/${total} items`;
-}
-
-// Update issues display
-function updateIssuesDisplay() {
-    const issues = currentOrder.packingDetails.issues || [];
-    const issuesSection = document.getElementById('packingIssues');
-    const issuesList = document.getElementById('issuesList');
-
-    if (issues.length > 0) {
-        issuesSection.style.display = 'block';
-        issuesList.innerHTML = issues.map(issue => `
-            <div class="issue-item issue-${issue.issueType}">
-                <span class="issue-product">${issue.productName}</span>
-                <span class="issue-type">${issue.issueType}</span>
-                <span class="issue-qty">${issue.quantityAffected} affected</span>
-                ${issue.description ? `<span class="issue-desc">${issue.description}</span>` : ''}
-            </div>
-        `).join('');
-    } else {
-        issuesSection.style.display = 'none';
-    }
-
-    // Update acknowledgement visibility
-    const ackSection = document.getElementById('packingAcknowledgement');
-    const hasIssues = issues.length > 0 ||
-        currentPackingItems.some(i => i.status !== 'packed' && i.status !== 'pending');
-
-    if (hasIssues) {
-        ackSection.style.display = 'block';
-    } else {
-        ackSection.style.display = 'none';
-    }
-
-    updateCompleteButton();
-}
-
-// Update complete button state
-function updateCompleteButton() {
-    const completeBtn = document.getElementById('completeBtn');
-    const allVerified = currentPackingItems.every(i => i.status !== 'pending');
-    const hasIssues = currentOrder.packingDetails.issues?.length > 0 ||
-        currentPackingItems.some(i => i.status !== 'packed' && i.status !== 'pending');
-    const acknowledged = document.getElementById('acknowledgeCheckbox')?.checked || !hasIssues;
-
-    completeBtn.disabled = !allVerified || (hasIssues && !acknowledged);
-}
-
-// Hold order
-function holdOrder() {
-    document.getElementById('holdModal').classList.add('active');
-}
-
-// Close hold modal
-function closeHoldModal() {
-    document.getElementById('holdModal').classList.remove('active');
-    document.getElementById('holdReason').value = '';
-}
-
-// Confirm hold
-async function confirmHold() {
-    const reason = document.getElementById('holdReason').value.trim();
-    if (!reason) {
-        showToast('Please provide a reason', 'error');
-        return;
-    }
-
-    try {
-        const csrfToken = await Auth.ensureCsrfToken();
-        const response = await fetch(`/api/packing/${currentOrder._id}/hold`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': csrfToken
-            },
-            credentials: 'include',
-            body: JSON.stringify({ reason })
-        });
-
-        if (!response.ok) throw new Error('Failed to hold order');
-
-        showToast('Order put on hold', 'warning');
-        closeHoldModal();
-        closePackingModal();
-        await loadQueue();
-        await loadStats();
-    } catch (error) {
-        console.error('Error holding order:', error);
-        showToast('Failed to hold order', 'error');
-    }
-}
-
-// Complete packing
-async function completePacking() {
-    const hasIssues = currentOrder.packingDetails.issues?.length > 0 ||
-        currentPackingItems.some(i => i.status !== 'packed' && i.status !== 'pending');
-    const acknowledged = document.getElementById('acknowledgeCheckbox')?.checked;
-
-    if (hasIssues && !acknowledged) {
-        showToast('Please acknowledge issues before completing', 'error');
-        return;
-    }
-
-    try {
-        const csrfToken = await Auth.ensureCsrfToken();
-        const response = await fetch(`/api/packing/${currentOrder._id}/complete`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': csrfToken
-            },
-            credentials: 'include',
-            body: JSON.stringify({
-                acknowledgeIssues: acknowledged || false
-            })
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to complete packing');
-        }
-
-        showToast('Packing completed!', 'success');
-        closePackingModal();
-        await loadQueue();
-        await loadStats();
-    } catch (error) {
-        console.error('Error completing packing:', error);
-        showToast(error.message || 'Failed to complete packing', 'error');
-    }
-}
-
-// Close packing modal
-function closePackingModal() {
-    const modal = document.getElementById('packingModal');
-    modal.classList.remove('active');
-    document.body.style.overflow = '';
-    currentOrder = null;
-    currentPackingItems = [];
-}
+// Initialize help banner visibility on load
+checkPackingHelpBanner();
 
 // Close print modal
 function closePrintModal() {
@@ -818,20 +340,9 @@ function printSlip() {
 }
 
 // Make functions globally available
-window.openPackingModal = openPackingModal;
-window.closePackingModal = closePackingModal;
-window.closeHoldModal = closeHoldModal;
-window.confirmHold = confirmHold;
-window.holdOrder = holdOrder;
-window.completePacking = completePacking;
-window.toggleItemStatus = toggleItemStatus;
-window.updateItemStatus = updateItemStatus;
-window.markAllPacked = markAllPacked;
 window.closePrintModal = closePrintModal;
 window.printSlip = printSlip;
-
-// Setup acknowledgement checkbox listener
-document.getElementById('acknowledgeCheckbox')?.addEventListener('change', updateCompleteButton);
+window.dismissPackingHelp = dismissPackingHelp;
 
 // Initialize
 init();

@@ -197,7 +197,38 @@ const orderSchema = new mongoose.Schema({
     holdReason: String
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
+
+// Virtual field: displayStatus - combines Order.status with packingDetails.status for UI
+// This provides a unified view of the order's current state
+orderSchema.virtual('displayStatus').get(function() {
+  const packingStatus = this.packingDetails?.status || 'not_started';
+
+  // If order is cancelled or delivered, that takes precedence
+  if (this.status === 'cancelled' || this.status === 'delivered') {
+    return this.status;
+  }
+
+  // For orders in packing flow, show packing status
+  if (['confirmed', 'processing'].includes(this.status)) {
+    if (packingStatus === 'in_progress') return 'packing';
+    if (packingStatus === 'on_hold') return 'on_hold';
+    if (packingStatus === 'completed') return 'packed';
+  }
+
+  // Default to order status
+  return this.status;
+});
+
+// Virtual field: packingProgress - returns item counts for packing progress display
+orderSchema.virtual('packingProgress').get(function() {
+  const items = this.packingDetails?.items || [];
+  const total = items.length;
+  const verified = items.filter(i => i.status !== 'pending').length;
+  return { total, verified, percentage: total > 0 ? Math.round((verified / total) * 100) : 0 };
 });
 
 // Generate order number before saving using atomic counter to avoid race conditions

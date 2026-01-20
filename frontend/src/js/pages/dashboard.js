@@ -735,10 +735,10 @@ async function loadBatches() {
         batchInfo.innerHTML = '';
         batchInfo.appendChild(createElement('span', { className: 'badge badge-info' }, `Currently accepting: ${data.currentBatch}`));
 
-        // Update time display
+        // Update time display - use Asia/Kolkata timezone for proper IST
         const currentTime = new Date(data.currentTime);
         document.getElementById('batchCurrentTime').textContent =
-            currentTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) + ' IST';
+            currentTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' }) + ' IST';
 
         const batches = data.data || [];
 
@@ -768,7 +768,7 @@ async function loadBatches() {
 
             if (isConfirmed && batch.confirmedAt) {
                 const confirmedText = [
-                    `Confirmed at ${new Date(batch.confirmedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`
+                    `Confirmed at ${new Date(batch.confirmedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })}`
                 ];
                 if (batch.confirmedBy?.name) {
                     confirmedText.push(` by ${batch.confirmedBy.name}`);

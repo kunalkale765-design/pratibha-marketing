@@ -77,6 +77,44 @@
     font-size: var(--text-lg);
 }
 
+/* Help Banner */
+.packing-help-banner {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    background: linear-gradient(135deg, rgba(126, 145, 129, 0.15), rgba(126, 145, 129, 0.08));
+    border-bottom: 1px solid rgba(126, 145, 129, 0.2);
+}
+
+.packing-help-banner .help-icon {
+    font-size: var(--text-lg);
+}
+
+.packing-help-banner .help-text {
+    flex: 1;
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+}
+
+.packing-help-banner .help-dismiss {
+    width: 24px;
+    height: 24px;
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    font-size: var(--text-base);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.packing-help-banner .help-dismiss:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
 /* Main Content */
 .packing-content {
     padding: var(--space-md);

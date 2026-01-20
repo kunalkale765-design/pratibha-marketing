@@ -22,6 +22,11 @@ let isSaving = false; // Prevent concurrent saves
 // Track if global listeners have been initialized (prevents memory leak)
 let globalListenersInitialized = false;
 
+// Packing panel state
+let packingOrder = null;
+let packingItems = [];
+let isPackingPanelOpen = false;
+
 async function init() {
     currentUser = await Auth.requireAuth();
     if (!currentUser) return;
@@ -38,6 +43,29 @@ async function init() {
     await Promise.all([loadOrders(), loadMarketRates(), loadProducts()]);
     setupFilters();
     setupSearch();
+
+    // Handle deep links: /pages/orders/?order=<id>&action=pack
+    handleDeepLink();
+}
+
+// Handle deep links from Packing Station or other pages
+function handleDeepLink() {
+    const params = new URLSearchParams(window.location.search);
+    const orderId = params.get('order');
+    const action = params.get('action');
+
+    if (orderId) {
+        // Clear URL params without reload
+        window.history.replaceState({}, '', window.location.pathname);
+
+        if (action === 'pack') {
+            // Open packing panel directly
+            openPackingPanel(orderId);
+        } else {
+            // Open order detail modal
+            viewOrder(orderId);
+        }
+    }
 }
 
 // Initialize listeners that should only be added once (not per render)
@@ -236,6 +264,24 @@ function renderOrders() {
             ]);
         }
 
+        // Packing Status Badge - show for confirmed/processing orders
+        let packingBadge = null;
+        if (isStaff && ['confirmed', 'processing', 'packed'].includes(o.status)) {
+            const packingStatus = o.packingDetails?.status || 'not_started';
+            const packingProgress = o.packingProgress || { total: 0, verified: 0 };
+
+            if (packingStatus === 'in_progress') {
+                packingBadge = createElement('span', { className: 'packing-status-badge status-packing' },
+                    `📦 ${packingProgress.verified}/${packingProgress.total}`);
+            } else if (packingStatus === 'completed' || o.status === 'packed') {
+                packingBadge = createElement('span', { className: 'packing-status-badge status-packed' }, '✓ Packed');
+            } else if (packingStatus === 'on_hold') {
+                packingBadge = createElement('span', { className: 'packing-status-badge status-on-hold' }, '⏸ Hold');
+            } else if (['confirmed', 'processing'].includes(o.status)) {
+                packingBadge = createElement('span', { className: 'packing-status-badge status-ready' }, 'Ready');
+            }
+        }
+
         // Swipe Content
         const swipeContent = createElement('div', {
             className: 'swipe-content',
@@ -247,14 +293,27 @@ function renderOrders() {
                 o.notes ? createElement('div', { className: 'order-notes' }, o.notes) : null,
                 createElement('div', { className: 'order-meta-row' }, [
                     createElement('span', { className: 'order-number' }, `Order #${o.orderNumber}`),
-                    batchBadge
+                    batchBadge,
+                    packingBadge
                 ])
             ]),
             createElement('div', { className: 'order-amount-pill' }, `₹${(o.totalAmount || 0).toLocaleString('en-IN')}`)
         ]);
 
-        // Swipe Actions
+        // Swipe Actions - add Pack action for packable orders
         const actions = [];
+        const isPackable = isStaff && ['confirmed', 'processing'].includes(o.status);
+        const packingStatus = o.packingDetails?.status || 'not_started';
+        const canPack = isPackable && packingStatus !== 'completed';
+
+        if (canPack) {
+            const packLabel = packingStatus === 'in_progress' ? 'Resume' :
+                             packingStatus === 'on_hold' ? 'Resume' : 'Pack';
+            actions.push(createElement('button', {
+                className: 'swipe-action pack',
+                onclick: (e) => { e.stopPropagation(); window.openPackingPanel(o._id); }
+            }, packLabel));
+        }
         if (isStaff) {
             actions.push(createElement('button', {
                 className: 'swipe-action edit',
@@ -928,6 +987,21 @@ async function viewOrder(id) {
                     footer.appendChild(deliverBtn);
                 }
 
+                // Pack Order button (for confirmed/processing orders)
+                const packingStatus = order.packingDetails?.status || 'not_started';
+                const canPack = ['confirmed', 'processing'].includes(order.status) && packingStatus !== 'completed';
+
+                if (canPack) {
+                    const packLabel = packingStatus === 'in_progress' ? 'Resume Packing' :
+                                     packingStatus === 'on_hold' ? 'Resume Packing' : 'Start Packing';
+                    const packBtn = createElement('button', {
+                        className: 'btn-modal secondary btn-animated',
+                        style: { background: 'var(--dusty-olive)', color: 'white', border: 'none' },
+                        onclick: () => { window.closeModal(); setTimeout(() => window.openPackingPanel(order._id), 200); }
+                    }, packLabel);
+                    footer.appendChild(packBtn);
+                }
+
                 // 3. Save Changes Button (Always present but maybe hidden/disabled until changes)
                 // Actually, let's keep it simple: Save Button is always there but disabled if no changes
                 // But we want prominent status buttons. 
@@ -1584,5 +1658,540 @@ async function updateOrderStatus(orderId, newStatus) {
 }
 
 window.updateOrderStatus = updateOrderStatus;
+
+// ============================================
+// PACKING PANEL FUNCTIONS
+// ============================================
+
+// Open packing panel for an order
+async function openPackingPanel(orderId) {
+    const panel = document.getElementById('packingPanel');
+    const overlay = document.getElementById('packingPanelOverlay');
+    if (!panel || !overlay) return;
+
+    // Close any open swipe items
+    document.querySelectorAll('.swipe-item.swiped, .swipe-item.swiped-single').forEach(item => {
+        item.classList.remove('swiped', 'swiped-single');
+    });
+
+    // Show panel with loading state
+    panel.classList.add('active');
+    overlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    isPackingPanelOpen = true;
+
+    document.getElementById('packingPanelBody').innerHTML = '<div class="packing-loading">Loading order...</div>';
+    document.getElementById('packingCompleteBtn').disabled = true;
+
+    try {
+        // Load packing details
+        const response = await fetch(`/api/packing/${orderId}`, { credentials: 'include' });
+        if (!response.ok) throw new Error('Failed to load order');
+
+        const data = await response.json();
+        packingOrder = data.data;
+
+        // Start or resume packing session
+        const packingStatus = packingOrder.packingDetails?.status || 'not_started';
+
+        if (packingStatus === 'not_started') {
+            await startPackingSession(orderId);
+        } else if (packingStatus === 'on_hold') {
+            await resumePackingSession(orderId);
+        }
+
+        packingItems = packingOrder.packingDetails?.items || [];
+        renderPackingPanel();
+    } catch (error) {
+        console.error('Error loading packing order:', error);
+        showToast('Failed to load order details', 'error');
+        closePackingPanel();
+    }
+}
+
+// Start a new packing session
+async function startPackingSession(orderId) {
+    try {
+        const csrfToken = await Auth.ensureCsrfToken();
+        const response = await fetch(`/api/packing/${orderId}/start`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to start packing');
+        }
+
+        const data = await response.json();
+        packingItems = data.data.items || [];
+        packingOrder.packingDetails.status = 'in_progress';
+    } catch (error) {
+        console.error('Error starting packing:', error);
+        throw error;
+    }
+}
+
+// Resume packing session from hold
+async function resumePackingSession(orderId) {
+    try {
+        const csrfToken = await Auth.ensureCsrfToken();
+        const response = await fetch(`/api/packing/${orderId}/resume`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to resume packing');
+        }
+
+        packingOrder.packingDetails.status = 'in_progress';
+    } catch (error) {
+        console.error('Error resuming packing:', error);
+        throw error;
+    }
+}
+
+// Render the packing panel content
+function renderPackingPanel() {
+    // Update title
+    document.getElementById('packingPanelTitle').textContent = `Pack ${packingOrder.orderNumber}`;
+    document.getElementById('packingPanelSubtitle').textContent =
+        `${packingOrder.customer?.name || 'Unknown'} • ${packingOrder.customer?.phone || ''}`;
+
+    // Update progress
+    updatePackingProgress();
+
+    // Render body
+    const body = document.getElementById('packingPanelBody');
+
+    let orderDetailsHtml = '';
+    if (packingOrder.deliveryAddress || packingOrder.notes) {
+        orderDetailsHtml = `<div class="packing-order-details">`;
+        if (packingOrder.deliveryAddress) {
+            orderDetailsHtml += `
+                <div class="packing-delivery-info">
+                    <span class="packing-label">Deliver to</span>
+                    <span class="packing-value">${packingOrder.deliveryAddress}</span>
+                </div>`;
+        }
+        if (packingOrder.notes) {
+            orderDetailsHtml += `
+                <div class="packing-order-notes">
+                    <span class="packing-label">Notes</span>
+                    <span class="packing-value">${packingOrder.notes}</span>
+                </div>`;
+        }
+        orderDetailsHtml += `</div>`;
+    }
+
+    const checklistItems = packingItems.map((item, index) => {
+        const isVerified = item.status !== 'pending';
+        const statusIcon = getPackingStatusIcon(item.status);
+        const statusClass = getPackingItemStatusClass(item.status);
+
+        return `
+            <div class="packing-checklist-item ${statusClass}" data-index="${index}" data-product-id="${item.product}">
+                <div class="packing-item-main">
+                    <div class="packing-item-check ${isVerified ? 'checked' : ''}" onclick="togglePackingItemStatus(${index})">
+                        ${statusIcon}
+                    </div>
+                    <div class="packing-item-details">
+                        <span class="packing-item-name">${item.productName}</span>
+                        <span class="packing-item-qty">Ordered: ${item.orderedQuantity} ${item.unit}</span>
+                    </div>
+                </div>
+
+                <div class="packing-item-input">
+                    <input type="number"
+                        class="packing-qty-input"
+                        placeholder="Qty"
+                        value="${item.packedQuantity ?? ''}"
+                        data-index="${index}"
+                        step="0.01"
+                        min="0"
+                        onchange="handlePackingQtyChange(${index})"
+                    >
+                    <span class="packing-unit-label">${item.unit}</span>
+                </div>
+
+                <div class="packing-item-status">
+                    <select class="packing-status-select" data-index="${index}" onchange="updatePackingItemStatus(${index}, this.value)">
+                        <option value="pending" ${item.status === 'pending' ? 'selected' : ''}>Pending</option>
+                        <option value="packed" ${item.status === 'packed' ? 'selected' : ''}>Packed</option>
+                        <option value="short" ${item.status === 'short' ? 'selected' : ''}>Short</option>
+                        <option value="damaged" ${item.status === 'damaged' ? 'selected' : ''}>Damaged</option>
+                        <option value="unavailable" ${item.status === 'unavailable' ? 'selected' : ''}>Unavailable</option>
+                    </select>
+                </div>
+
+                ${item.status !== 'packed' && item.status !== 'pending' ? `
+                    <div class="packing-item-notes">
+                        <input type="text"
+                            class="packing-notes-input"
+                            placeholder="Add note..."
+                            value="${item.notes || ''}"
+                            data-index="${index}"
+                            onchange="handlePackingNotesChange(${index})"
+                        >
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }).join('');
+
+    body.innerHTML = `
+        ${orderDetailsHtml}
+        <div class="packing-checklist-header">
+            <span>Items to Pack</span>
+            <button class="packing-btn-mini" onclick="markAllPacked()">Mark All Packed</button>
+        </div>
+        <div class="packing-checklist">
+            ${checklistItems}
+        </div>
+    `;
+
+    // Update issues display
+    updatePackingIssues();
+
+    // Update acknowledgement visibility
+    const hasIssues = (packingOrder.packingDetails?.issues?.length > 0) ||
+        packingItems.some(i => i.status !== 'packed' && i.status !== 'pending');
+
+    const ackSection = document.getElementById('packingPanelAcknowledgement');
+    if (hasIssues) {
+        ackSection.style.display = 'block';
+    } else {
+        ackSection.style.display = 'none';
+    }
+
+    // Setup acknowledgement checkbox listener
+    const ackCheckbox = document.getElementById('packingAcknowledgeCheckbox');
+    if (ackCheckbox) {
+        ackCheckbox.onchange = updatePackingCompleteButton;
+    }
+
+    updatePackingCompleteButton();
+}
+
+// Get status icon for packing item
+function getPackingStatusIcon(status) {
+    switch (status) {
+        case 'packed': return '✓';
+        case 'short': return '⚠';
+        case 'damaged': return '✕';
+        case 'unavailable': return '∅';
+        default: return '';
+    }
+}
+
+// Get status class for packing item
+function getPackingItemStatusClass(status) {
+    switch (status) {
+        case 'packed': return 'item-packed';
+        case 'short': return 'item-short';
+        case 'damaged': return 'item-damaged';
+        case 'unavailable': return 'item-unavailable';
+        default: return 'item-pending';
+    }
+}
+
+// Toggle item status (quick action - click on check circle)
+async function togglePackingItemStatus(index) {
+    const item = packingItems[index];
+
+    if (item.status === 'pending') {
+        // Get quantity from input
+        const qtyInput = document.querySelector(`.packing-qty-input[data-index="${index}"]`);
+        const qty = parseFloat(qtyInput?.value) || item.orderedQuantity;
+
+        item.packedQuantity = qty;
+
+        if (qty >= item.orderedQuantity) {
+            item.status = 'packed';
+        } else if (qty > 0) {
+            item.status = 'short';
+        }
+    } else if (item.status === 'packed') {
+        // Toggle back to pending
+        item.status = 'pending';
+    }
+
+    await savePackingItemUpdate(index);
+    renderPackingPanel();
+}
+
+// Update item status from dropdown
+async function updatePackingItemStatus(index, status) {
+    const item = packingItems[index];
+    item.status = status;
+
+    // Get packed quantity
+    const qtyInput = document.querySelector(`.packing-qty-input[data-index="${index}"]`);
+    if (status === 'packed') {
+        item.packedQuantity = parseFloat(qtyInput?.value) || item.orderedQuantity;
+    } else if (status === 'unavailable') {
+        item.packedQuantity = 0;
+    }
+
+    await savePackingItemUpdate(index);
+    renderPackingPanel();
+}
+
+// Handle quantity change
+async function handlePackingQtyChange(index) {
+    const qtyInput = document.querySelector(`.packing-qty-input[data-index="${index}"]`);
+    const qty = parseFloat(qtyInput?.value) || 0;
+    const item = packingItems[index];
+
+    item.packedQuantity = qty;
+
+    // Auto-detect if short
+    if (qty > 0 && qty < item.orderedQuantity && item.status === 'pending') {
+        item.status = 'short';
+        renderPackingPanel();
+    }
+
+    await savePackingItemUpdate(index);
+}
+
+// Handle notes change
+async function handlePackingNotesChange(index) {
+    const notesInput = document.querySelector(`.packing-notes-input[data-index="${index}"]`);
+    packingItems[index].notes = notesInput?.value || '';
+    await savePackingItemUpdate(index);
+}
+
+// Save item update to server
+async function savePackingItemUpdate(index) {
+    const item = packingItems[index];
+
+    try {
+        const csrfToken = await Auth.ensureCsrfToken();
+        const response = await fetch(`/api/packing/${packingOrder._id}/item/${item.product}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+                status: item.status,
+                packedQuantity: item.packedQuantity,
+                notes: item.notes
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to save');
+        }
+
+        const data = await response.json();
+
+        // Update issues from response
+        if (data.data?.issues) {
+            packingOrder.packingDetails.issues = data.data.issues;
+        }
+
+        updatePackingProgress();
+        updatePackingIssues();
+        updatePackingCompleteButton();
+    } catch (error) {
+        console.error('Error saving packing item:', error);
+        showToast('Failed to save changes', 'error');
+    }
+}
+
+// Mark all items as packed
+async function markAllPacked() {
+    for (let i = 0; i < packingItems.length; i++) {
+        const item = packingItems[i];
+        if (item.status === 'pending') {
+            item.status = 'packed';
+            item.packedQuantity = item.orderedQuantity;
+            await savePackingItemUpdate(i);
+        }
+    }
+    renderPackingPanel();
+}
+
+// Update progress bar
+function updatePackingProgress() {
+    const total = packingItems.length;
+    const verified = packingItems.filter(i => i.status !== 'pending').length;
+    const percentage = total > 0 ? Math.round((verified / total) * 100) : 0;
+
+    document.getElementById('packingProgressFill').style.width = `${percentage}%`;
+    document.getElementById('packingProgressText').textContent = `${verified}/${total} items`;
+}
+
+// Update issues display
+function updatePackingIssues() {
+    const issues = packingOrder.packingDetails?.issues || [];
+    const issuesSection = document.getElementById('packingPanelIssues');
+    const issuesList = document.getElementById('packingIssuesList');
+
+    if (issues.length > 0) {
+        issuesSection.style.display = 'block';
+        issuesList.innerHTML = issues.map(issue => `
+            <div class="packing-issue-item issue-${issue.issueType}">
+                <span class="packing-issue-product">${issue.productName}</span>
+                <span class="packing-issue-type">${issue.issueType}</span>
+                <span class="packing-issue-qty">${issue.quantityAffected} affected</span>
+                ${issue.description ? `<span class="packing-issue-desc">${issue.description}</span>` : ''}
+            </div>
+        `).join('');
+    } else {
+        issuesSection.style.display = 'none';
+    }
+
+    // Update acknowledgement visibility
+    const ackSection = document.getElementById('packingPanelAcknowledgement');
+    const hasIssues = issues.length > 0 ||
+        packingItems.some(i => i.status !== 'packed' && i.status !== 'pending');
+
+    if (hasIssues) {
+        ackSection.style.display = 'block';
+    } else {
+        ackSection.style.display = 'none';
+    }
+
+    updatePackingCompleteButton();
+}
+
+// Update complete button state
+function updatePackingCompleteButton() {
+    const completeBtn = document.getElementById('packingCompleteBtn');
+    const allVerified = packingItems.every(i => i.status !== 'pending');
+    const hasIssues = (packingOrder.packingDetails?.issues?.length > 0) ||
+        packingItems.some(i => i.status !== 'packed' && i.status !== 'pending');
+    const acknowledged = document.getElementById('packingAcknowledgeCheckbox')?.checked || !hasIssues;
+
+    completeBtn.disabled = !allVerified || (hasIssues && !acknowledged);
+}
+
+// Hold packing order
+function holdPackingOrder() {
+    document.getElementById('packingHoldModal').classList.add('show');
+}
+
+// Close hold modal
+function closePackingHoldModal() {
+    document.getElementById('packingHoldModal').classList.remove('show');
+    document.getElementById('packingHoldReason').value = '';
+}
+
+// Confirm hold
+async function confirmPackingHold() {
+    const reason = document.getElementById('packingHoldReason').value.trim();
+    if (!reason) {
+        showToast('Please provide a reason', 'error');
+        return;
+    }
+
+    try {
+        const csrfToken = await Auth.ensureCsrfToken();
+        const response = await fetch(`/api/packing/${packingOrder._id}/hold`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            credentials: 'include',
+            body: JSON.stringify({ reason })
+        });
+
+        if (!response.ok) throw new Error('Failed to hold order');
+
+        showToast('Order put on hold', 'warning');
+        closePackingHoldModal();
+        closePackingPanel();
+        await loadOrders();
+    } catch (error) {
+        console.error('Error holding order:', error);
+        showToast('Failed to hold order', 'error');
+    }
+}
+
+// Complete packing session
+async function completePackingSession() {
+    const hasIssues = (packingOrder.packingDetails?.issues?.length > 0) ||
+        packingItems.some(i => i.status !== 'packed' && i.status !== 'pending');
+    const acknowledged = document.getElementById('packingAcknowledgeCheckbox')?.checked;
+
+    if (hasIssues && !acknowledged) {
+        showToast('Please acknowledge issues before completing', 'error');
+        return;
+    }
+
+    const completeBtn = document.getElementById('packingCompleteBtn');
+    completeBtn.disabled = true;
+    completeBtn.innerHTML = '<span class="btn-text">Completing...</span>';
+
+    try {
+        const csrfToken = await Auth.ensureCsrfToken();
+        const response = await fetch(`/api/packing/${packingOrder._id}/complete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+                acknowledgeIssues: acknowledged || false
+            })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to complete packing');
+        }
+
+        showToast('Packing completed!', 'success');
+        closePackingPanel();
+        await loadOrders();
+    } catch (error) {
+        console.error('Error completing packing:', error);
+        showToast(error.message || 'Failed to complete packing', 'error');
+        completeBtn.disabled = false;
+        completeBtn.innerHTML = '<span class="btn-text">Complete Packing</span>';
+    }
+}
+
+// Close packing panel
+function closePackingPanel() {
+    const panel = document.getElementById('packingPanel');
+    const overlay = document.getElementById('packingPanelOverlay');
+
+    panel.classList.remove('active');
+    overlay.classList.remove('active');
+    document.body.style.overflow = '';
+    isPackingPanelOpen = false;
+
+    packingOrder = null;
+    packingItems = [];
+}
+
+// Expose packing functions to window
+window.openPackingPanel = openPackingPanel;
+window.closePackingPanel = closePackingPanel;
+window.togglePackingItemStatus = togglePackingItemStatus;
+window.updatePackingItemStatus = updatePackingItemStatus;
+window.handlePackingQtyChange = handlePackingQtyChange;
+window.handlePackingNotesChange = handlePackingNotesChange;
+window.markAllPacked = markAllPacked;
+window.holdPackingOrder = holdPackingOrder;
+window.closePackingHoldModal = closePackingHoldModal;
+window.confirmPackingHold = confirmPackingHold;
+window.completePackingSession = completePackingSession;
 
 init();

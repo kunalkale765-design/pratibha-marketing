@@ -136,7 +136,7 @@ router.get('/today', protect, authorize('admin', 'staff'), async (req, res, next
 
     res.json({
       success: true,
-      currentTime: ist.date.toISOString(),
+      currentTime: new Date().toISOString(),  // Send actual UTC time, frontend converts to IST
       currentBatch: currentBatchInfo,
       data: batchesWithCounts
     });

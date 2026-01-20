@@ -193,7 +193,7 @@ router.get('/batch-summary', protect, authorize('admin', 'staff'), async (req, r
     if (batches.length === 0) {
       return res.json({
         success: true,
-        currentTime: ist.date.toISOString(),
+        currentTime: new Date().toISOString(),  // Send actual UTC time, frontend converts to IST
         data: []
       });
     }
@@ -251,7 +251,7 @@ router.get('/batch-summary', protect, authorize('admin', 'staff'), async (req, r
 
     res.json({
       success: true,
-      currentTime: ist.date.toISOString(),
+      currentTime: new Date().toISOString(),  // Send actual UTC time, frontend converts to IST
       date: today.toISOString().split('T')[0],
       data: batchSummaries
     });

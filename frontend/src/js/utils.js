@@ -27,10 +27,10 @@ export function formatDate(date, format = 'short') {
   if (isNaN(d.getTime())) return '';
 
   const options = {
-    short: { month: 'short', day: 'numeric', year: 'numeric' },
-    long: { month: 'long', day: 'numeric', year: 'numeric' },
-    time: { hour: 'numeric', minute: '2-digit', hour12: true },
-    datetime: { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true },
+    short: { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'Asia/Kolkata' },
+    long: { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'Asia/Kolkata' },
+    time: { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' },
+    datetime: { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' },
     iso: null // Special case
   };
 
