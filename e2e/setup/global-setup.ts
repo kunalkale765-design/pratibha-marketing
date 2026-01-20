@@ -8,7 +8,8 @@ import { TEST_USERS, TEST_PRODUCTS, TEST_CUSTOMERS, TEST_MARKET_RATES, AUTH_STOR
  * - Pre-authenticates users and saves session storage
  */
 async function globalSetup(config: FullConfig) {
-  const baseURL = config.projects[0].use?.baseURL || 'http://localhost:5000';
+  // Use the webServer URL or the top-level use.baseURL
+  const baseURL = process.env.BASE_URL || config.webServer?.url?.replace('/api/health', '') || 'http://localhost:3000';
 
   console.log('Starting global setup...');
   console.log(`Using base URL: ${baseURL}`);
