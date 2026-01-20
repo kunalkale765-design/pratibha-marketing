@@ -7,17 +7,17 @@
 // Test user credentials - using actual seed data users
 export const TEST_USERS = {
   admin: {
-    email: 'kunal@pm.in',
-    password: 'Kunal786',
-    name: 'Kunal',
+    email: 'admin@pratibhamarketing.in',
+    password: 'Admin123!',
+    name: 'Admin',
     role: 'admin'
   },
   staff: {
     // Using admin as staff since seed doesn't create staff users
     // In real tests, you'd create a staff user in the seed
-    email: 'kunal@pm.in',
-    password: 'Kunal786',
-    name: 'Kunal',
+    email: 'admin@pratibhamarketing.in',
+    password: 'Admin123!',
+    name: 'Admin',
     role: 'admin'  // Will act as staff
   },
   customer: {

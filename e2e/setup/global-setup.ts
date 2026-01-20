@@ -60,7 +60,6 @@ async function createTestUsers(baseURL: string) {
 
   // Try to login as existing admin (from seed data)
   const adminCreds = [
-    { email: 'kunal@pm.in', password: 'Kunal786' },
     { email: 'admin@pratibhamarketing.in', password: 'Admin123!' }
   ];
 

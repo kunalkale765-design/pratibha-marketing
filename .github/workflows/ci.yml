@@ -53,6 +53,12 @@ jobs:
       - name: Build frontend
         run: npm run build:frontend
 
+      - name: Seed test database
+        run: node backend/seed.js --force
+        env:
+          MONGODB_URI: mongodb://localhost:27017/pratibha-test
+          ADMIN_TEMP_PASSWORD: Admin123!
+
       - name: Run E2E tests
         run: npm run test:e2e
         env:
