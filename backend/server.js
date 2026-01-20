@@ -1,3 +1,12 @@
+// Debug: Log startup environment (for CI troubleshooting)
+if (process.env.CI || process.env.DEBUG_STARTUP) {
+  console.log('[DEBUG] Server starting...');
+  console.log('[DEBUG] NODE_ENV:', process.env.NODE_ENV);
+  console.log('[DEBUG] PORT:', process.env.PORT);
+  console.log('[DEBUG] MONGODB_URI:', process.env.MONGODB_URI ? 'SET' : 'NOT SET');
+  console.log('[DEBUG] JWT_SECRET:', process.env.JWT_SECRET ? 'SET' : 'NOT SET');
+}
+
 // Preserve NODE_ENV if set (for tests)
 const preservedNodeEnv = process.env.NODE_ENV;
 require('dotenv').config();

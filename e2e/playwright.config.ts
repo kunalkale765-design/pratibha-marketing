@@ -101,10 +101,12 @@ export default defineConfig({
 
   // Run your local dev server before starting the tests
   webServer: {
-    command: 'npm start',
+    command: 'node backend/server.js',
     url: 'http://localhost:3000/api/health',
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
+    stdout: 'pipe',
+    stderr: 'pipe',
     env: {
       ...process.env,
       NODE_ENV: 'test',
