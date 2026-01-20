@@ -333,15 +333,15 @@ const startServer = async () => {
 };
 
 // Only start server if not in Jest test mode (Supertest handles server in unit tests)
-// Allow server to start in CI for E2E tests, or when explicitly requested
-if (process.env.NODE_ENV !== 'test' || process.env.CI || process.env.START_SERVER) {
+// Allow server to start for E2E tests (E2E_TEST=true) or when explicitly requested (START_SERVER=true)
+if (process.env.NODE_ENV !== 'test' || process.env.E2E_TEST || process.env.START_SERVER) {
   if (process.env.CI || process.env.DEBUG_STARTUP) {
     console.log('[DEBUG] Starting server...');
   }
   startServer();
 } else {
   if (process.env.CI || process.env.DEBUG_STARTUP) {
-    console.log('[DEBUG] NODE_ENV=test and no CI/START_SERVER flag, skipping startServer()');
+    console.log('[DEBUG] NODE_ENV=test without E2E_TEST/START_SERVER, skipping startServer()');
   }
 }
 

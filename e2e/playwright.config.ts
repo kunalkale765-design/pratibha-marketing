@@ -111,6 +111,7 @@ export default defineConfig({
     env: {
       ...process.env,
       NODE_ENV: 'test',
+      E2E_TEST: 'true',  // Tell server.js to start even when NODE_ENV=test
       PORT: '3000',
       JWT_SECRET: 'test-jwt-secret-for-e2e-tests',
       MONGODB_URI: process.env.MONGODB_URI || 'mongodb://localhost:27017/pratibha-test',
