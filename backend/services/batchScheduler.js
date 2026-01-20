@@ -1,6 +1,7 @@
 const cron = require('node-cron');
 const Batch = require('../models/Batch');
 const Order = require('../models/Order');
+const JobLog = require('../models/JobLog');
 
 // Import Sentry if available (optional dependency)
 let Sentry;
@@ -21,6 +22,10 @@ const BATCH_CONFIG = {
   BATCH_1_CUTOFF_HOUR: 8,   // 8:00 AM IST
   BATCH_2_CUTOFF_HOUR: 12   // 12:00 PM IST (noon)
 };
+
+// Job names for logging
+const JOB_AUTO_CONFIRM = 'AutoConfirmFirstBatch';
+const JOB_CREATE_BATCHES = 'CreateNextDayBatches';
 
 /**
  * Convert a date to IST timezone
@@ -149,6 +154,14 @@ async function autoConfirmFirstBatch() {
 
     if (!batch) {
       console.log('[BatchScheduler] No open 1st batch found for today, skipping');
+
+      // Log skipped execution
+      await JobLog.create({
+        jobName: JOB_AUTO_CONFIRM,
+        status: 'success',
+        result: { message: 'No open batch', date: today }
+      });
+
       return { success: true, ordersConfirmed: 0, message: 'No open batch' };
     }
 
@@ -161,6 +174,17 @@ async function autoConfirmFirstBatch() {
     if (pendingOrders.length === 0) {
       console.log('[BatchScheduler] No pending orders in 1st batch, confirming batch');
       await batch.confirmBatch(null); // null = auto-confirmed
+
+      // Log successful execution (empty)
+      await JobLog.create({
+        jobName: JOB_AUTO_CONFIRM,
+        status: 'success',
+        result: {
+          message: 'Batch confirmed (no pending orders)',
+          batchNumber: batch.batchNumber
+        }
+      });
+
       return { success: true, ordersConfirmed: 0, message: 'Batch confirmed (no pending orders)' };
     }
 
@@ -182,6 +206,17 @@ async function autoConfirmFirstBatch() {
     const duration = Date.now() - startTime;
     console.log(`[BatchScheduler] Auto-confirm complete: ${updateResult.modifiedCount} orders confirmed in ${duration}ms`);
 
+    // Log successful execution
+    await JobLog.create({
+      jobName: JOB_AUTO_CONFIRM,
+      status: 'success',
+      result: {
+        ordersConfirmed: updateResult.modifiedCount,
+        batchNumber: batch.batchNumber,
+        duration
+      }
+    });
+
     return {
       success: true,
       ordersConfirmed: updateResult.modifiedCount,
@@ -194,6 +229,17 @@ async function autoConfirmFirstBatch() {
     // Report to Sentry if available
     if (Sentry && process.env.SENTRY_DSN) {
       Sentry.captureException(error);
+    }
+
+    // Log failed execution
+    try {
+      await JobLog.create({
+        jobName: JOB_AUTO_CONFIRM,
+        status: 'failed',
+        error: error.message
+      });
+    } catch (logError) {
+      console.error('[BatchScheduler] Failed to write to JobLog:', logError);
     }
 
     throw error;
@@ -235,6 +281,13 @@ async function createNextDayBatches() {
 
     console.log(`[BatchScheduler] Created batches for ${tomorrow.toISOString().split('T')[0]}`);
 
+    // Log successful execution
+    await JobLog.create({
+      jobName: JOB_CREATE_BATCHES,
+      status: 'success',
+      result: { date: tomorrow }
+    });
+
     return { success: true, date: tomorrow };
   } catch (error) {
     console.error('[BatchScheduler] Error creating next day batches:', error);
@@ -243,7 +296,67 @@ async function createNextDayBatches() {
       Sentry.captureException(error);
     }
 
+    // Log failed execution
+    try {
+      await JobLog.create({
+        jobName: JOB_CREATE_BATCHES,
+        status: 'failed',
+        error: error.message
+      });
+    } catch (logError) {
+      console.error('[BatchScheduler] Failed to write to JobLog:', logError);
+    }
+
     throw error;
+  }
+}
+
+/**
+ * Check for missed jobs on startup (catch-up logic)
+ */
+async function checkMissedJobs() {
+  console.log('[BatchScheduler] Checking for missed jobs...');
+
+  try {
+    const ist = getISTTime();
+    const today = ist.dateOnly;
+    const hour = ist.hour;
+
+    // Check Auto Confirm (should run at 8:00 AM)
+    // Only check if it's currently past 8:00 AM
+    if (hour >= BATCH_CONFIG.BATCH_1_CUTOFF_HOUR) {
+      // Find execution for today
+      const confirmLog = await JobLog.findOne({
+        jobName: JOB_AUTO_CONFIRM,
+        executedAt: { $gte: today }
+      });
+
+      if (!confirmLog) {
+        console.log('[BatchScheduler] Auto-confirm job missed, running catch-up...');
+        await autoConfirmFirstBatch();
+      } else {
+        console.log('[BatchScheduler] Auto-confirm already ran today.');
+      }
+    }
+
+    // Check Batch Creation (should run at 12:00 PM)
+    // Only check if it's currently past 12:00 PM
+    if (hour >= BATCH_CONFIG.BATCH_2_CUTOFF_HOUR) {
+      const createLog = await JobLog.findOne({
+        jobName: JOB_CREATE_BATCHES,
+        executedAt: { $gte: today }
+      });
+
+      if (!createLog) {
+        console.log('[BatchScheduler] Batch creation job missed, running catch-up...');
+        await createNextDayBatches();
+      } else {
+        console.log('[BatchScheduler] Batch creation already ran today.');
+      }
+    }
+
+  } catch (error) {
+    console.error('[BatchScheduler] Error checking missed jobs:', error);
   }
 }
 
@@ -258,6 +371,9 @@ function startScheduler() {
     console.log('[BatchScheduler] Skipping scheduler in test mode');
     return;
   }
+
+  // Run catch-up logic
+  checkMissedJobs();
 
   // Schedule 1st batch auto-confirmation at 8:00 AM IST daily
   // Format: minute hour day-of-month month day-of-week

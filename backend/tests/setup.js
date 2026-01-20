@@ -185,14 +185,15 @@ const testUtils = {
   },
 
   // Create market rate for a product
-  async createMarketRate(product, rate = 100) {
+  async createMarketRate(product, rate = 100, overrides = {}) {
     await ensureDbConnected();
 
     return MarketRate.create({
       product: product._id,
       productName: product.name,
       rate: rate,
-      effectiveDate: new Date()
+      effectiveDate: new Date(),
+      ...overrides
     });
   },
 

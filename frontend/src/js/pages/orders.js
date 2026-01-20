@@ -12,6 +12,9 @@ let marketRates = {};
 let allProducts = []; // All available products for adding to orders
 let addedProducts = []; // Newly added products (not yet saved)
 let currentFilter = 'all';
+let currentPage = 1;
+let totalPages = 1;
+let currentLimit = 50;
 let currentOrderId = null;
 let currentOrder = null;
 let currentUser = null;
@@ -39,6 +42,7 @@ async function init() {
 
     // Initialize global event listeners ONCE
     initGlobalListeners();
+    setupPaginationControls();
 
     await Promise.all([loadOrders(), loadMarketRates(), loadProducts()]);
     setupFilters();
@@ -170,9 +174,29 @@ async function loadProducts() {
     }
 }
 
-async function loadOrders() {
+async function loadOrders(page = 1) {
     try {
-        const res = await fetch('/api/orders?limit=100', { credentials: 'include' });
+        // Construct query string
+        const params = new URLSearchParams({
+            limit: currentLimit,
+            page: page
+        });
+
+        // Add filters if active
+        if (currentFilter !== 'all') {
+            params.append('status', currentFilter);
+        }
+
+        // Add search if active (basic filtering is done on client side for now unless search param is supported by API)
+        // Wait, the API supports pagination but search is implemented client-side in renderOrders currently?
+        // Actually, for pagination to work properly with search/filter, search should be backend-side or we must fetch all.
+        // The current implementation fetches a page. Client-side filtering on a single page is wrong.
+        // However, the task is to fix pagination UI.
+        // For now, let's pass the basic pagination params.
+        // Ideally search should be passed to backend too but the backend might not support it fully yet (customers.js supports search, orders.js checks date/status).
+        // Let's stick to what orders.js supported: status, customer, date.
+
+        const res = await fetch(`/api/orders?${params.toString()}`, { credentials: 'include' });
         if (!res.ok) {
             throw new Error(`Server returned ${res.status}`);
         }
@@ -181,6 +205,12 @@ async function loadOrders() {
             throw new Error(data.message || 'Orders temporarily unavailable');
         }
         orders = data.data || [];
+
+        // Update pagination state
+        currentPage = data.page || 1;
+        totalPages = data.pages || 1;
+        updatePaginationUI();
+
         // Debug: Log any orders with missing or invalid IDs
         const invalidOrders = orders.filter(o => !o._id || !/^[a-f\d]{24}$/i.test(o._id));
         if (invalidOrders.length > 0) {
@@ -199,10 +229,47 @@ async function loadOrders() {
                 createElement('button', {
                     id: 'retryOrdersBtn',
                     style: { marginTop: '1rem', padding: '0.5rem 1rem', background: 'var(--dusty-olive)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' },
-                    onclick: loadOrders
+                    onclick: () => loadOrders(currentPage)
                 }, 'Try Again')
             ]));
         }
+    }
+}
+
+function updatePaginationUI() {
+    const controls = document.getElementById('paginationControls');
+    const prevBtn = document.getElementById('prevPageBtn');
+    const nextBtn = document.getElementById('nextPageBtn');
+    const info = document.getElementById('pageInfo');
+
+    if (!controls || !prevBtn || !nextBtn || !info) return;
+
+    if (totalPages <= 1) {
+        controls.style.display = 'none';
+        return;
+    }
+
+    controls.style.display = 'flex';
+    info.textContent = `Page ${currentPage} of ${totalPages}`;
+
+    prevBtn.disabled = currentPage <= 1;
+    nextBtn.disabled = currentPage >= totalPages;
+}
+
+function setupPaginationControls() {
+    const prevBtn = document.getElementById('prevPageBtn');
+    const nextBtn = document.getElementById('nextPageBtn');
+
+    if (prevBtn) {
+        prevBtn.onclick = () => {
+            if (currentPage > 1) loadOrders(currentPage - 1);
+        };
+    }
+
+    if (nextBtn) {
+        nextBtn.onclick = () => {
+            if (currentPage < totalPages) loadOrders(currentPage + 1);
+        };
     }
 }
 
@@ -227,20 +294,34 @@ function renderOrders() {
     // Filter out orders without valid _id first
     let filtered = orders.filter(o => o._id && /^[a-f\d]{24}$/i.test(o._id));
 
-    // Filter by status
-    if (currentFilter === 'all') {
-        // "All" shows everything except cancelled (there's a dedicated Cancelled tab)
-        filtered = filtered.filter(o => o.status !== 'cancelled');
-    } else {
-        filtered = filtered.filter(o => o.status === currentFilter);
-    }
+    // Client-side filtering is mostly redundant with server-side filtering
+    // but useful if current page has mixed results or for search highlighting.
+    // However, since we are now filtering on server (status), we should trust the server response.
+    // The 'search' filter on client side only filters the CURRENT PAGE.
+    // This is a known limitation until backend search is implemented.
+    // TODO: Implement backend search to allow searching across all pages.
 
-    // Filter by search
     if (search) {
         filtered = filtered.filter(o =>
             o.orderNumber?.toLowerCase().includes(search) ||
             o.customer?.name?.toLowerCase().includes(search)
         );
+
+        // Show warning if searching
+        if (search.length > 0 && !document.getElementById('searchWarning')) {
+            const warning = createElement('div', {
+                id: 'searchWarning',
+                className: 'info-box',
+                style: { margin: '0 1rem 1rem', fontSize: '0.85rem' }
+            }, 'Note: Search only filters orders on the current page.');
+            container.before(warning);
+        } else if (search.length === 0) {
+            const warning = document.getElementById('searchWarning');
+            if (warning) warning.remove();
+        }
+    } else {
+        const warning = document.getElementById('searchWarning');
+        if (warning) warning.remove();
     }
 
     if (!filtered.length) {
@@ -377,11 +458,14 @@ function setupFilters() {
             // Slide the indicator
             moveIndicator(btn);
 
-            // Update filter and re-render with animation
+            // Update filter and re-load from server (page 1)
             currentFilter = btn.dataset.filter;
             const container = document.getElementById('ordersList');
             container.classList.add('segment-content');
-            renderOrders();
+
+            // Reset to page 1 when filter changes
+            currentPage = 1;
+            loadOrders(1);
 
             // Remove animation class after it plays
             setTimeout(() => container.classList.remove('segment-content'), 300);
