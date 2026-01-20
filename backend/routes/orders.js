@@ -1046,6 +1046,61 @@ router.put('/:id/status', protect, authorize('admin', 'staff'), [
       updateData.cancelledBy = req.user._id;
     }
 
+    // Auto-update zero rates when confirming order for market/markup customers
+    if (newStatus === 'confirmed') {
+      const hasZeroRates = order.products.some(p => p.rate === 0);
+      if (hasZeroRates) {
+        // Populate customer to check pricing type
+        await order.populate('customer');
+        const customer = order.customer;
+
+        if (customer && (customer.pricingType === 'market' || customer.pricingType === 'markup')) {
+          // Fetch current market rates for products with zero rates
+          const zeroRateProductIds = order.products
+            .filter(p => p.rate === 0)
+            .map(p => p.product);
+
+          const marketRates = await MarketRate.find({ product: { $in: zeroRateProductIds } })
+            .sort({ effectiveDate: -1 });
+
+          // Build rate map (latest rate per product)
+          const rateMap = new Map();
+          for (const rate of marketRates) {
+            const productId = rate.product.toString();
+            if (!rateMap.has(productId)) {
+              rateMap.set(productId, rate.rate);
+            }
+          }
+
+          // Update products with zero rates
+          let totalAmount = 0;
+          let ratesUpdated = false;
+
+          for (const item of order.products) {
+            if (item.rate === 0) {
+              const marketRate = rateMap.get(item.product.toString()) || 0;
+              if (marketRate > 0) {
+                let newRate = marketRate;
+                if (customer.pricingType === 'markup') {
+                  const markup = customer.markupPercentage || 0;
+                  newRate = roundTo2Decimals(marketRate * (1 + markup / 100));
+                }
+                item.rate = newRate;
+                item.amount = roundTo2Decimals(item.quantity * newRate);
+                ratesUpdated = true;
+              }
+            }
+            totalAmount += item.amount;
+          }
+
+          if (ratesUpdated) {
+            order.totalAmount = roundTo2Decimals(totalAmount);
+            await order.save();
+          }
+        }
+      }
+    }
+
     const updatedOrder = await Order.findByIdAndUpdate(
       req.params.id,
       updateData,
