@@ -126,7 +126,76 @@ const orderSchema = new mongoose.Schema({
     oldTotal: Number,
     newTotal: Number,
     reason: String
-  }]
+  }],
+
+  // Packing details - tracks item-by-item verification during packing
+  packingDetails: {
+    status: {
+      type: String,
+      enum: ['not_started', 'in_progress', 'completed', 'on_hold'],
+      default: 'not_started'
+    },
+    startedAt: Date,
+    completedAt: Date,
+    packedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    packerName: String,
+
+    // Per-item packing verification
+    items: [{
+      product: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Product'
+      },
+      productName: String,
+      orderedQuantity: Number,
+      packedQuantity: Number,
+      unit: String,
+      status: {
+        type: String,
+        enum: ['pending', 'packed', 'short', 'damaged', 'unavailable'],
+        default: 'pending'
+      },
+      notes: String,
+      verifiedAt: Date,
+      verifiedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      }
+    }],
+
+    // Issues encountered during packing
+    issues: [{
+      product: mongoose.Schema.Types.ObjectId,
+      productName: String,
+      issueType: {
+        type: String,
+        enum: ['short', 'damaged', 'unavailable', 'other']
+      },
+      description: String,
+      quantityAffected: Number,
+      reportedAt: {
+        type: Date,
+        default: Date.now
+      },
+      reportedBy: mongoose.Schema.Types.ObjectId
+    }],
+
+    // Adjusted total if items were short/unavailable
+    adjustedTotal: Number,
+
+    // Acknowledgement of issues before completing
+    acknowledgement: {
+      acknowledged: { type: Boolean, default: false },
+      acknowledgedAt: Date,
+      acknowledgedBy: mongoose.Schema.Types.ObjectId
+    },
+
+    // Hold reason if order is on hold
+    holdReason: String
+  }
 }, {
   timestamps: true
 });
@@ -169,5 +238,8 @@ orderSchema.index({ batch: 1, status: 1 });
 
 // Index for finding editable orders
 orderSchema.index({ batchLocked: 1, status: 1 });
+
+// Index for packing queue queries
+orderSchema.index({ 'packingDetails.status': 1, status: 1 });
 
 module.exports = mongoose.model('Order', orderSchema);

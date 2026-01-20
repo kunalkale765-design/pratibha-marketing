@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Packing Station - Pratibha Marketing</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#2e3532">
+
+    <!-- Shared CSS -->
+    <link rel="stylesheet" href="/assets/css/variables.css">
+    <link rel="stylesheet" href="/assets/css/base.css">
+    <link rel="stylesheet" href="/assets/css/components.css">
+    <link rel="stylesheet" href="/assets/css/utilities.css">
+    <link rel="stylesheet" href="/assets/css/responsive.css">
+
+    <!-- Animations -->
+    <link rel="stylesheet" href="/assets/css/animations/skeleton.css">
+    <link rel="stylesheet" href="/assets/css/animations/cards.css">
+    <link rel="stylesheet" href="/assets/css/animations/inputs.css">
+    <link rel="stylesheet" href="/assets/css/animations/buttons.css">
+    <link rel="stylesheet" href="/assets/css/animations/badges.css">
+    <link rel="stylesheet" href="/assets/css/animations/page.css">
+
+    <!-- Page-specific styles -->
+    <link rel="stylesheet" href="/assets/css/pages/packing.css">
+</head>
+
+<body>
+    <header class="header header-animated">
+        <div class="header-content">
+            <a href="/" class="logo">Packing <span>Station</span></a>
+            <div class="header-btns">
+                <a href="/pages/orders/" class="btn-header">Orders</a>
+                <a href="/" class="btn-header">Home</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Stats Bar -->
+    <div class="stats-bar" id="statsBar">
+        <div class="stat-item">
+            <span class="stat-value" id="statTotal">-</span>
+            <span class="stat-label">Total</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-value" id="statPending">-</span>
+            <span class="stat-label">To Pack</span>
+        </div>
+        <div class="stat-item stat-highlight">
+            <span class="stat-value" id="statInProgress">-</span>
+            <span class="stat-label">In Progress</span>
+        </div>
+        <div class="stat-item stat-success">
+            <span class="stat-value" id="statCompleted">-</span>
+            <span class="stat-label">Done</span>
+        </div>
+    </div>
+
+    <!-- View Toggle -->
+    <div class="view-toggle">
+        <button class="view-btn active" data-view="queue" id="queueViewBtn">
+            <span class="view-icon">&#9776;</span> Queue
+        </button>
+        <button class="view-btn" data-view="batch" id="batchViewBtn">
+            <span class="view-icon">&#128230;</span> By Batch
+        </button>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <!-- Main Content -->
+    <main class="packing-content">
+        <!-- Queue View -->
+        <div id="queueView" class="view-container active">
+            <div class="queue-list" id="queueList">
+                <!-- Skeleton loading -->
+                <div class="skeleton-card">
+                    <div class="skeleton" style="width: 100%; height: 80px; border-radius: 12px;"></div>
+                </div>
+                <div class="skeleton-card">
+                    <div class="skeleton" style="width: 100%; height: 80px; border-radius: 12px;"></div>
+                </div>
+                <div class="skeleton-card">
+                    <div class="skeleton" style="width: 100%; height: 80px; border-radius: 12px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Batch View -->
+        <div id="batchView" class="view-container">
+            <div class="batch-list" id="batchList">
+                <!-- Batches will be rendered here -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Packing Modal -->
+    <div id="packingModal" class="modal-overlay">
+        <div class="modal packing-modal">
+            <div class="modal-header">
+                <div>
+                    <div class="modal-title" id="packingModalTitle">Pack Order</div>
+                    <div class="modal-subtitle" id="packingModalSubtitle"></div>
+                </div>
+                <button class="btn-close" onclick="closePackingModal()">&times;</button>
+            </div>
+
+            <div class="packing-progress" id="packingProgress">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <span class="progress-text" id="progressText">0/0 items</span>
+            </div>
+
+            <div class="modal-body packing-body" id="packingModalBody">
+                <!-- Order info and checklist will be rendered here -->
+            </div>
+
+            <div class="packing-issues" id="packingIssues" style="display: none;">
+                <h4>Issues</h4>
+                <div id="issuesList"></div>
+            </div>
+
+            <div class="packing-acknowledgement" id="packingAcknowledgement" style="display: none;">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="acknowledgeCheckbox">
+                    <span>I confirm all items have been verified and acknowledge any issues listed above</span>
+                </label>
+            </div>
+
+            <div class="modal-footer packing-footer">
+                <button class="btn-modal secondary btn-animated" id="holdBtn" onclick="holdOrder()">
+                    <span class="btn-text">Hold for Review</span>
+                </button>
+                <button class="btn-modal primary btn-animated" id="completeBtn" onclick="completePacking()" disabled>
+                    <span class="btn-text">Complete Packing</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hold Reason Modal -->
+    <div id="holdModal" class="modal-overlay">
+        <div class="modal modal-sm">
+            <div class="modal-header">
+                <div class="modal-title">Hold Order</div>
+                <button class="btn-close" onclick="closeHoldModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <label class="input-label">Reason for hold:</label>
+                <textarea id="holdReason" class="input-textarea" rows="3" placeholder="Why is this order being held?"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modal secondary" onclick="closeHoldModal()">Cancel</button>
+                <button class="btn-modal primary" onclick="confirmHold()">Confirm Hold</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Print Slip Modal -->
+    <div id="printModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">Packing Slip</div>
+                <button class="btn-close" onclick="closePrintModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="printModalBody">
+                <!-- Packing slip content -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modal primary" onclick="printSlip()">Print</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/js/auth.js"></script>
+    <script type="module" src="/js/api.js"></script>
+    <script type="module" src="/js/pages/packing.js"></script>
+</body>
+
+</html>

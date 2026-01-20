@@ -57,27 +57,23 @@ export default [
     }
   },
 
-  // Frontend browser scripts (non-module)
+  // Frontend ES modules (all frontend JS files)
   {
-    files: ['frontend/js/api.js', 'frontend/js/auth.js'],
+    files: ['frontend/src/js/**/*.js'],
     languageOptions: {
       ecmaVersion: 2022,
-      sourceType: 'script',
+      sourceType: 'module',
       globals: {
         ...globals.browser,
-        API: 'writable',
-        Auth: 'writable',
-        module: 'readonly',
-        showSuccess: 'readonly',
-        showError: 'readonly',
-        showToast: 'readonly',
+        Auth: 'readonly',
+        API: 'readonly',
+        Chart: 'readonly',
       }
     },
     rules: {
       'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       'no-console': 'off',
       'no-undef': 'error',
-      'no-redeclare': 'off',
       'eqeqeq': ['error', 'always', { null: 'ignore' }],
       'no-var': 'warn',
       'prefer-const': 'warn',
@@ -86,16 +82,14 @@ export default [
     }
   },
 
-  // Frontend ES modules
+  // Frontend service worker
   {
-    files: ['frontend/js/init.js', 'frontend/js/ui.js', 'frontend/js/utils.js'],
+    files: ['frontend/src/service-worker.js'],
     languageOptions: {
       ecmaVersion: 2022,
-      sourceType: 'module',
+      sourceType: 'script',
       globals: {
-        ...globals.browser,
-        Auth: 'readonly',
-        API: 'readonly',
+        ...globals.serviceworker,
       }
     },
     rules: {
@@ -116,6 +110,7 @@ export default [
       'node_modules/**',
       'coverage/**',
       'stitch_order_management/**',
+      'frontend/dist/**',
       '**/*.min.js',
     ]
   }

@@ -151,3 +151,47 @@ function hideNotice() {
         noticeMessage.classList.remove('show');
     }
 }
+
+// Forgot password handler
+const forgotLink = document.getElementById('forgotPasswordLink');
+if (forgotLink) {
+    forgotLink.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('email').value.trim();
+
+        if (!email) {
+            showNotice('Please enter your username first');
+            return;
+        }
+
+        try {
+            const headers = { 'Content-Type': 'application/json' };
+            const csrfToken = await Auth.ensureCsrfToken();
+            if (csrfToken) {
+                headers['X-CSRF-Token'] = csrfToken;
+            }
+
+            const response = await fetch('/api/auth/forgot-password', {
+                method: 'POST',
+                headers,
+                credentials: 'include',
+                body: JSON.stringify({ email })
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.resetUrl) {
+                // For development: show the reset link
+                // In production with email, this would just show a success message
+                noticeMessage.innerHTML = `Reset link generated! <a href="${data.resetUrl}" style="color: var(--dusty-olive); text-decoration: underline;">Click here to reset</a>`;
+                noticeMessage.classList.add('show');
+                noticeMessage.classList.remove('error');
+            } else {
+                showNotice(data.message || 'If an account exists, a reset link has been generated');
+            }
+        } catch (error) {
+            console.error('Forgot password error:', error);
+            showNotice('Could not process request. Try again.');
+        }
+    });
+}

@@ -17,6 +17,7 @@ export default defineConfig({
         marketRates: resolve(__dirname, 'src/pages/market-rates/index.html'),
         login: resolve(__dirname, 'src/pages/auth/login.html'),
         signup: resolve(__dirname, 'src/pages/auth/signup.html'),
+        resetPassword: resolve(__dirname, 'src/pages/auth/reset-password.html'),
         orderForm: resolve(__dirname, 'src/pages/order-form/index.html'),
       }
     }

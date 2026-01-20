@@ -15,13 +15,13 @@ import { setupModalCloseOnEscape } from './ui.js';
    =================== */
 
 // Catch uncaught errors silently (prevent browser error dialogs)
-window.onerror = function(message, source, lineno, colno, _error) {
+window.onerror = function (message, source, lineno, colno, _error) {
   console.error('Uncaught error:', message, 'at', source, lineno, colno);
   return true; // Prevents the browser's default error handling
 };
 
 // Catch unhandled promise rejections silently
-window.addEventListener('unhandledrejection', function(event) {
+window.addEventListener('unhandledrejection', function (event) {
   console.error('Unhandled promise rejection:', event.reason);
   event.preventDefault(); // Prevents the browser's default handling
 });
@@ -162,7 +162,9 @@ export function getUser() {
   try {
     const user = localStorage.getItem('user');
     return user ? JSON.parse(user) : null;
-  } catch {
+  } catch (e) {
+    console.warn('Corrupted user data in localStorage, clearing:', e.message);
+    localStorage.removeItem('user');
     return null;
   }
 }

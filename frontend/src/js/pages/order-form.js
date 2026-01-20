@@ -703,7 +703,8 @@ async function openOrderDetail(orderId) {
             try {
                 const invoicesData = await invoicesRes.json();
                 orderInvoices = invoicesRes.ok ? (invoicesData.data || []) : [];
-            } catch {
+            } catch (invoiceParseError) {
+                console.warn('Failed to load invoices:', invoiceParseError.message);
                 orderInvoices = [];
             }
 
@@ -934,8 +935,9 @@ async function downloadInvoice(invoiceNumber) {
             try {
                 const error = await res.json();
                 errorMessage = error.message || errorMessage;
-            } catch {
-                // Response might not be JSON
+            } catch (parseError) {
+                console.warn('Failed to parse invoice download error:', parseError.message);
+                // Response might not be JSON - use status-based fallback
                 errorMessage = res.status === 404 ? 'Invoice not ready yet' :
                     res.status === 403 ? 'Invoice access pending' :
                         'Invoice temporarily unavailable';

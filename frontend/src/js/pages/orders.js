@@ -1397,8 +1397,9 @@ async function savePrices() {
             let errData;
             try {
                 errData = await res.json();
-            } catch {
-                errData = { message: 'Access denied' };
+            } catch (parseError) {
+                console.warn('Failed to parse CSRF error response:', parseError.message);
+                errData = { message: `Access denied (code: ${res.status})` };
             }
 
             if (errData.message?.toLowerCase().includes('csrf')) {
@@ -1474,7 +1475,8 @@ async function savePrices() {
             let errData;
             try {
                 errData = await res.json();
-            } catch {
+            } catch (parseError) {
+                console.warn('Failed to parse order save error response:', parseError.message);
                 errData = { message: `Server error (${res.status})` };
             }
             showToast(errData.message || 'Could not update', 'info');

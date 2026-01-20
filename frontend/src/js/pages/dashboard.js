@@ -444,7 +444,7 @@ async function loadAnalytics(ordersList) {
         };
 
         ordersList.forEach(order => {
-            if (statusCounts.hasOwnProperty(order.status)) {
+            if (Object.hasOwn(statusCounts, order.status)) {
                 statusCounts[order.status]++;
             }
         });
@@ -498,7 +498,7 @@ async function loadAnalytics(ordersList) {
         ordersList.forEach(order => {
             if (order.status !== 'cancelled') {
                 const orderDate = new Date(order.createdAt).toISOString().split('T')[0];
-                if (revenueByDay.hasOwnProperty(orderDate)) {
+                if (Object.hasOwn(revenueByDay, orderDate)) {
                     revenueByDay[orderDate] += order.totalAmount || 0;
                 }
             }
@@ -627,12 +627,12 @@ window.openLedgerModal = function () {
 
     document.getElementById('ledgerModal').classList.add('show');
     document.body.style.overflow = 'hidden';
-}
+};
 
 window.closeLedgerModal = function () {
     document.getElementById('ledgerModal').classList.remove('show');
     document.body.style.overflow = '';
-}
+};
 
 window.downloadLedger = async function () {
     const customerId = document.getElementById('ledgerCustomer').value;
@@ -676,12 +676,12 @@ window.downloadLedger = async function () {
         window.URL.revokeObjectURL(url);
 
         showToast('Ledger downloaded!', 'success');
-        closeLedgerModal();
+        window.closeLedgerModal();
     } catch (e) {
         console.error('Download ledger error:', e);
         showToast(e.message || 'Could not download', 'info');
     }
-}
+};
 
 // ========================
 // BATCH MANAGEMENT

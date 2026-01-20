@@ -5,6 +5,7 @@
 
 // Import CSRF functions from shared module (single source of truth)
 import { getCsrfToken, refreshCsrfToken, ensureCsrfToken } from './csrf.js';
+import { showToast, showSuccess } from './ui.js';
 
 const API = {
     // Re-export CSRF functions for backwards compatibility
@@ -309,21 +310,13 @@ const API = {
 // Offline/Online event handlers
 window.addEventListener('online', () => {
     console.log('Connection restored');
-    // Optionally show a notification
-    if (typeof showSuccess === 'function') {
-        showSuccess('Connection restored');
-    }
+    showSuccess('Connection restored');
 });
 
 window.addEventListener('offline', () => {
     console.log('Connection lost');
-    // Show a soft notification (not an error)
-    if (typeof showToast === 'function') {
-        showToast('No internet connection', 'info');
-    }
+    showToast('No internet connection', 'info');
 });
 
 // Export for use in other modules
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = API;
-}
+export default API;

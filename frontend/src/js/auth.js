@@ -255,7 +255,6 @@ if (typeof window !== 'undefined') {
     window.Auth = Auth;
 }
 
-// Export for use in other modules (Node.js)
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = Auth;
-}
+// Export for use in other modules
+export default Auth;
+

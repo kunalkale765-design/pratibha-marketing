@@ -6,8 +6,9 @@ const Order = require('../models/Order');
 let Sentry;
 try {
   Sentry = require('@sentry/node');
-} catch {
-  // Sentry not installed, monitoring disabled
+} catch (e) {
+  console.log('[BatchScheduler] Sentry not available:', e.message);
+  // Monitoring disabled - errors will only be logged to console
 }
 
 let scheduledTask = null;

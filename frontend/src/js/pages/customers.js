@@ -638,7 +638,6 @@ window.filterContractProducts = filterContractProducts;
 window.filterByContractCategory = filterByContractCategory;
 window.saveContractPrices = saveContractPrices;
 window.closeContractModal = closeContractModal;
-window.changeAddedQty = window.changeAddedQty; // Preserving existing overrides if any
 // ... add others if needed, but the HTML uses them directly from window.
 
 // Modals overlay click handlers - Initialize in a setup function calling after DOM load if needed,

@@ -210,6 +210,7 @@ app.use('/api/supplier', require('./routes/supplier'));
 app.use('/api/invoices', require('./routes/invoices'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/batches', require('./routes/batches'));
+app.use('/api/packing', require('./routes/packing'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

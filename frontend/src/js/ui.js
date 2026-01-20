@@ -339,7 +339,8 @@ export async function copyToClipboard(text) {
     await navigator.clipboard.writeText(text);
     showSuccess('Copied to clipboard!');
     return true;
-  } catch {
+  } catch (e) {
+    console.debug('Clipboard copy failed:', e.message);
     showToast('Could not copy to clipboard', 'info');
     return false;
   }
