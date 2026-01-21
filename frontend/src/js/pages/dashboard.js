@@ -267,26 +267,173 @@ window.handleRateChange = function (input) {
 };
 
 function printList() {
-    const printContent = document.getElementById('procurementList').innerHTML;
+    const rateMap = {};
+    rates.forEach(rate => { rateMap[rate.product] = rate; });
+
+    // Get procurement data based on selected batch
+    let activeProcurement = procurement;
+    if (selectedBatch !== 'all') {
+        const batchData = batchSummary.find(b => b.batchType === selectedBatch);
+        if (batchData && batchData.products) {
+            activeProcurement = batchData.products.map(p => ({
+                productName: p.productName,
+                totalQuantity: p.totalQuantity,
+                unit: p.unit,
+                orderCount: p.orderCount
+            }));
+        } else {
+            activeProcurement = [];
+        }
+    }
+
+    const procurementMap = {};
+    activeProcurement.forEach(item => { procurementMap[item.productName] = item; });
+
+    // Filter to only Indian Vegetables and Fruits
+    const filteredProducts = products.filter(p =>
+        p.category === 'Indian Vegetables' || p.category === 'Fruits'
+    );
+
+    // Sort: Indian Vegetables first, then Fruits; within each, by quantity needed (descending)
+    const sortedProducts = [...filteredProducts].sort((a, b) => {
+        if (a.category === 'Indian Vegetables' && b.category === 'Fruits') return -1;
+        if (a.category === 'Fruits' && b.category === 'Indian Vegetables') return 1;
+        const qtyA = procurementMap[a.name]?.totalQuantity || 0;
+        const qtyB = procurementMap[b.name]?.totalQuantity || 0;
+        return qtyB - qtyA;
+    });
+
+    // Build table rows grouped by category
+    let tableRows = '';
+    let currentCategory = '';
+
+    sortedProducts.forEach(product => {
+        const rate = rateMap[product._id];
+        const currentRate = rate ? rate.rate : 0;
+        const procItem = procurementMap[product.name];
+        const qtyNeeded = procItem ? procItem.totalQuantity : 0;
+
+        // Add category header row when category changes
+        if (product.category !== currentCategory) {
+            currentCategory = product.category;
+            tableRows += `
+                <tr class="category-row">
+                    <td colspan="4" class="category-header">${currentCategory}</td>
+                </tr>
+            `;
+        }
+
+        tableRows += `
+            <tr>
+                <td class="product-name">${product.name}</td>
+                <td class="qty">${qtyNeeded}</td>
+                <td class="unit">${product.unit}</td>
+                <td class="price">${currentRate > 0 ? '₹' + currentRate.toFixed(0) : ''}</td>
+            </tr>
+        `;
+    });
+
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
         <html>
         <head>
             <title>Purchase List - Pratibha Marketing</title>
             <style>
-                body { font-family: Arial, sans-serif; padding: 20px; }
-                h1 { font-size: 18px; margin-bottom: 10px; }
-                .date { color: #666; margin-bottom: 20px; }
-                .item { padding: 10px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; }
-                .item-name { font-weight: bold; }
-                .item-qty { font-family: monospace; }
-                .item-details, .item-expand, .item-rate-input, button { display: none !important; }
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body {
+                    font-family: Arial, sans-serif;
+                    padding: 20px;
+                    font-size: 14px;
+                }
+                h1 {
+                    font-size: 18px;
+                    margin-bottom: 5px;
+                    font-weight: bold;
+                }
+                .date {
+                    color: #666;
+                    margin-bottom: 15px;
+                    font-size: 13px;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    font-size: 13px;
+                }
+                th {
+                    background: #f5f5f5;
+                    padding: 8px 10px;
+                    text-align: left;
+                    border-bottom: 2px solid #333;
+                    font-weight: bold;
+                }
+                th.qty, th.price {
+                    text-align: right;
+                    width: 100px;
+                }
+                th.unit {
+                    text-align: center;
+                    width: 60px;
+                }
+                td {
+                    padding: 6px 10px;
+                    border-bottom: 1px solid #ddd;
+                }
+                td.product-name {
+                    font-weight: 500;
+                }
+                td.qty {
+                    text-align: right;
+                    font-family: 'Courier New', monospace;
+                    font-weight: bold;
+                }
+                td.unit {
+                    text-align: center;
+                    color: #666;
+                    font-size: 12px;
+                }
+                td.price {
+                    text-align: right;
+                    font-family: 'Courier New', monospace;
+                    color: #666;
+                }
+                .category-row td {
+                    padding: 0;
+                    border: none;
+                }
+                .category-header {
+                    background: #e8e8e8;
+                    padding: 8px 10px !important;
+                    font-weight: bold;
+                    font-size: 12px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    color: #555;
+                    border-bottom: 1px solid #ccc !important;
+                    margin-top: 10px;
+                }
+                @media print {
+                    body { padding: 10px; }
+                    .category-row { break-inside: avoid; }
+                }
             </style>
         </head>
         <body>
             <h1>Purchase List - Pratibha Marketing</h1>
             <div class="date">${new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
-            ${printContent}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th class="qty">Purchase Qty</th>
+                        <th class="unit">Unit</th>
+                        <th class="price">Purchase Price</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${tableRows}
+                </tbody>
+            </table>
         </body>
         </html>
     `);
