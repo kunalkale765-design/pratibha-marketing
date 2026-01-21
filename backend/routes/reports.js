@@ -5,7 +5,7 @@ const router = express.Router();
 // which is a lower-risk operation. Do NOT use xlsx to parse user-uploaded files.
 const XLSX = require('xlsx');
 const { query, validationResult } = require('express-validator');
-const Invoice = require('../models/Invoice');
+const LedgerEntry = require('../models/LedgerEntry');
 const Customer = require('../models/Customer');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -36,11 +36,11 @@ const { protect, authorize } = require('../middleware/auth');
  *       200:
  *         description: Excel file
  */
-// Maximum invoices to export (prevent memory exhaustion)
+// Maximum entries to export (prevent memory exhaustion)
 const MAX_EXPORT_LIMIT = 10000;
 
 // @route   GET /api/reports/ledger
-// @desc    Download customer ledger as Excel (Date, Invoice No, Customer, Firm, Amount)
+// @desc    Download customer ledger as Excel (Date, Type, Description, Order#, Debit, Credit, Balance)
 // @access  Private (Staff, Admin)
 router.get('/ledger',
   protect,
@@ -58,72 +58,89 @@ router.get('/ledger',
 
       const { customerId, fromDate, toDate } = req.query;
       let customerForFilename = null;
+      let customerName = null;
 
-      // Build query
-      const query = {};
+      // Build query for LedgerEntry
+      const ledgerQuery = {};
 
       if (customerId) {
-        // Get customer name to filter invoices
         const customer = await Customer.findById(customerId);
         if (!customer) {
           res.status(404);
           throw new Error('Customer not found');
         }
         customerForFilename = customer;
-        query['customer.name'] = customer.name;
+        customerName = customer.name;
+        ledgerQuery.customer = customerId;
       }
 
       if (fromDate || toDate) {
-        query.generatedAt = {};
-        if (fromDate) query.generatedAt.$gte = new Date(fromDate);
+        ledgerQuery.date = {};
+        if (fromDate) {
+          const start = new Date(fromDate);
+          start.setHours(0, 0, 0, 0);
+          ledgerQuery.date.$gte = start;
+        }
         if (toDate) {
-          const endDate = new Date(toDate);
-          endDate.setHours(23, 59, 59, 999);
-          query.generatedAt.$lte = endDate;
+          const end = new Date(toDate);
+          end.setHours(23, 59, 59, 999);
+          ledgerQuery.date.$lte = end;
         }
       }
 
       // Check count first to prevent memory exhaustion
-      const count = await Invoice.countDocuments(query);
+      const count = await LedgerEntry.countDocuments(ledgerQuery);
       if (count > MAX_EXPORT_LIMIT) {
         res.status(400);
-        throw new Error(`Too many invoices to export (${count}). Please narrow your date range. Maximum: ${MAX_EXPORT_LIMIT}`);
+        throw new Error(`Too many entries to export (${count}). Please narrow your date range. Maximum: ${MAX_EXPORT_LIMIT}`);
       }
 
-      // Use aggregation for total calculation (more efficient)
-      const [totalsResult] = await Invoice.aggregate([
-        { $match: query },
-        { $group: { _id: null, totalAmount: { $sum: '$total' } } }
-      ]);
-      const totalAmount = totalsResult?.totalAmount || 0;
-
-      // Get invoices with limit
-      const invoices = await Invoice.find(query)
-        .sort({ generatedAt: -1 })
+      // Get ledger entries with customer info
+      const entries = await LedgerEntry.find(ledgerQuery)
+        .populate('customer', 'name')
+        .sort({ date: 1, createdAt: 1 })
         .limit(MAX_EXPORT_LIMIT)
         .lean();
 
-      // Format data for Excel
-      const data = invoices.map(inv => ({
-        'Date': new Date(inv.generatedAt).toLocaleDateString('en-IN', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric'
-        }),
-        'Invoice No': inv.invoiceNumber,
-        'Customer': inv.customer?.name || 'Unknown',
-        'Firm': inv.firm?.name || 'Unknown',
-        'Amount (Rs.)': inv.total || 0
-      }));
+      // Calculate totals
+      let totalDebit = 0;
+      let totalCredit = 0;
+
+      // Format data for Excel - proper ledger format with Debit/Credit columns
+      const data = entries.map(entry => {
+        const debit = entry.amount > 0 ? entry.amount : '';
+        const credit = entry.amount < 0 ? Math.abs(entry.amount) : '';
+
+        if (entry.amount > 0) totalDebit += entry.amount;
+        if (entry.amount < 0) totalCredit += Math.abs(entry.amount);
+
+        return {
+          'Date': new Date(entry.date).toLocaleDateString('en-IN', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+          }),
+          'Customer': entry.customer?.name || customerName || 'Unknown',
+          'Type': entry.type.charAt(0).toUpperCase() + entry.type.slice(1),
+          'Order No': entry.orderNumber || '',
+          'Description': entry.description || '',
+          'Debit (Rs.)': debit,
+          'Credit (Rs.)': credit,
+          'Balance (Rs.)': entry.balance
+        };
+      });
 
       // Add totals row if there's data
       if (data.length > 0) {
         data.push({
           'Date': '',
-          'Invoice No': '',
           'Customer': '',
-          'Firm': 'TOTAL',
-          'Amount (Rs.)': totalAmount
+          'Type': '',
+          'Order No': '',
+          'Description': 'TOTAL',
+          'Debit (Rs.)': totalDebit,
+          'Credit (Rs.)': totalCredit,
+          'Balance (Rs.)': entries.length > 0 ? entries[entries.length - 1].balance : 0
         });
       }
 
@@ -134,10 +151,13 @@ router.get('/ledger',
       // Set column widths
       ws['!cols'] = [
         { wch: 12 },  // Date
-        { wch: 15 },  // Invoice No
         { wch: 25 },  // Customer
-        { wch: 20 },  // Firm
-        { wch: 15 }   // Amount
+        { wch: 12 },  // Type
+        { wch: 15 },  // Order No
+        { wch: 30 },  // Description
+        { wch: 12 },  // Debit
+        { wch: 12 },  // Credit
+        { wch: 12 }   // Balance
       ];
 
       XLSX.utils.book_append_sheet(wb, ws, 'Ledger');
@@ -145,7 +165,7 @@ router.get('/ledger',
       // Generate buffer
       const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
 
-      // Generate filename (reuse customer from earlier query)
+      // Generate filename
       const dateStr = new Date().toISOString().split('T')[0];
       let filename = `ledger_${dateStr}`;
       if (customerForFilename) {
@@ -193,8 +213,8 @@ router.get('/ledger/preview',
 
       const { customerId, fromDate, toDate, limit = 20 } = req.query;
 
-      // Build query
-      const query = {};
+      // Build query for LedgerEntry
+      const ledgerQuery = {};
 
       if (customerId) {
         const customer = await Customer.findById(customerId);
@@ -202,47 +222,63 @@ router.get('/ledger/preview',
           res.status(404);
           throw new Error('Customer not found');
         }
-        query['customer.name'] = customer.name;
+        ledgerQuery.customer = customerId;
       }
 
       if (fromDate || toDate) {
-        query.generatedAt = {};
-        if (fromDate) query.generatedAt.$gte = new Date(fromDate);
+        ledgerQuery.date = {};
+        if (fromDate) {
+          const start = new Date(fromDate);
+          start.setHours(0, 0, 0, 0);
+          ledgerQuery.date.$gte = start;
+        }
         if (toDate) {
-          const endDate = new Date(toDate);
-          endDate.setHours(23, 59, 59, 999);
-          query.generatedAt.$lte = endDate;
+          const end = new Date(toDate);
+          end.setHours(23, 59, 59, 999);
+          ledgerQuery.date.$lte = end;
         }
       }
 
-      // Get count and invoices
-      const total = await Invoice.countDocuments(query);
-      const invoices = await Invoice.find(query)
-        .sort({ generatedAt: -1 })
+      // Get count and entries
+      const total = await LedgerEntry.countDocuments(ledgerQuery);
+      const entries = await LedgerEntry.find(ledgerQuery)
+        .populate('customer', 'name')
+        .sort({ date: -1, createdAt: -1 })
         .limit(parseInt(limit))
         .lean();
 
-      // Calculate total amount using aggregation (more efficient)
-      const [totalsResult] = await Invoice.aggregate([
-        { $match: query },
-        { $group: { _id: null, totalAmount: { $sum: '$total' } } }
+      // Calculate totals using aggregation
+      const [totalsResult] = await LedgerEntry.aggregate([
+        { $match: ledgerQuery },
+        {
+          $group: {
+            _id: null,
+            totalDebit: { $sum: { $cond: [{ $gt: ['$amount', 0] }, '$amount', 0] } },
+            totalCredit: { $sum: { $cond: [{ $lt: ['$amount', 0] }, { $abs: '$amount' }, 0] } }
+          }
+        }
       ]);
-      const totalAmount = totalsResult?.totalAmount || 0;
+      const totalDebit = totalsResult?.totalDebit || 0;
+      const totalCredit = totalsResult?.totalCredit || 0;
 
       res.json({
         success: true,
         data: {
-          invoices: invoices.map(inv => ({
-            date: inv.generatedAt,
-            invoiceNumber: inv.invoiceNumber,
-            customer: inv.customer?.name,
-            firm: inv.firm?.name,
-            amount: inv.total
+          entries: entries.map(entry => ({
+            date: entry.date,
+            type: entry.type,
+            orderNumber: entry.orderNumber,
+            customer: entry.customer?.name,
+            description: entry.description,
+            amount: entry.amount,
+            balance: entry.balance
           })),
           summary: {
-            totalInvoices: total,
-            totalAmount,
-            showing: invoices.length
+            totalEntries: total,
+            totalDebit,
+            totalCredit,
+            netBalance: totalDebit - totalCredit,
+            showing: entries.length
           }
         }
       });
