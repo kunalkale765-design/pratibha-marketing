@@ -485,70 +485,12 @@ describe('Order Endpoints', () => {
       expect(res.body.data.status).toBe('confirmed');
     });
 
-    it('should update to packed and set packedAt timestamp', async () => {
-      // Follow proper state transition: pending -> confirmed -> processing -> packed
-      await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${staffToken}`)
-        .send({ status: 'confirmed' });
-      await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${staffToken}`)
-        .send({ status: 'processing' });
-
-      const res = await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${staffToken}`)
-        .send({ status: 'packed' });
-
-      expect(res.statusCode).toBe(200);
-      expect(res.body.data.status).toBe('packed');
-      expect(res.body.data.packedAt).toBeDefined();
-    });
-
-    it('should update to shipped and set shippedAt timestamp', async () => {
-      // Follow proper state transition: pending -> confirmed -> processing -> packed -> shipped
-      await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${staffToken}`)
-        .send({ status: 'confirmed' });
-      await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${staffToken}`)
-        .send({ status: 'processing' });
-      await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${staffToken}`)
-        .send({ status: 'packed' });
-
-      const res = await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${staffToken}`)
-        .send({ status: 'shipped' });
-
-      expect(res.statusCode).toBe(200);
-      expect(res.body.data.status).toBe('shipped');
-      expect(res.body.data.shippedAt).toBeDefined();
-    });
-
     it('should update to delivered and set deliveredAt timestamp', async () => {
-      // Follow proper state transition: pending -> confirmed -> processing -> packed -> shipped -> delivered
+      // Simplified flow: pending -> confirmed -> delivered
       await request(app)
         .put(`/api/orders/${testOrder._id}/status`)
         .set('Authorization', `Bearer ${staffToken}`)
         .send({ status: 'confirmed' });
-      await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${staffToken}`)
-        .send({ status: 'processing' });
-      await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${staffToken}`)
-        .send({ status: 'packed' });
-      await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${staffToken}`)
-        .send({ status: 'shipped' });
 
       const res = await request(app)
         .put(`/api/orders/${testOrder._id}/status`)
@@ -650,12 +592,12 @@ describe('Order Endpoints', () => {
       expect(cancelled.status).toBe('cancelled');
     });
 
-    it('should cancel an order as staff', async () => {
+    it('should reject cancellation by staff (admin only)', async () => {
       const res = await request(app)
         .delete(`/api/orders/${testOrder._id}`)
         .set('Authorization', `Bearer ${staffToken}`);
 
-      expect(res.statusCode).toBe(200);
+      expect(res.statusCode).toBe(403);
     });
 
     it('should reject cancellation by customer', async () => {
@@ -721,120 +663,43 @@ describe('Order Endpoints', () => {
     });
   });
 
-  describe('Order Status State Machine - Transition Rules', () => {
+  describe('Order Status State Machine - Simplified Flow', () => {
     let testOrder;
 
     beforeEach(async () => {
       testOrder = await testUtils.createTestOrder(testCustomer, testProduct);
     });
 
-    it('should reject pending -> processing (must confirm first)', async () => {
-      const res = await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ status: 'processing' });
-
-      expect(res.statusCode).toBe(400);
-      expect(res.body.message).toMatch(/invalid.*transition|cannot.*transition/i);
-    });
-
-    it('should reject pending -> packed (must go through confirm, processing)', async () => {
-      const res = await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ status: 'packed' });
-
-      expect(res.statusCode).toBe(400);
-    });
-
-    it('should reject pending -> shipped', async () => {
-      const res = await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ status: 'shipped' });
-
-      expect(res.statusCode).toBe(400);
-    });
-
-    it('should reject pending -> delivered', async () => {
+    it('should reject pending -> delivered (must confirm first)', async () => {
       const res = await request(app)
         .put(`/api/orders/${testOrder._id}/status`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ status: 'delivered' });
 
       expect(res.statusCode).toBe(400);
+      expect(res.body.message).toMatch(/invalid.*transition|cannot.*transition/i);
     });
 
-    it('should allow confirmed -> packed (direct jump)', async () => {
+    it('should reject invalid statuses (removed: processing, packed, shipped)', async () => {
+      const invalidStatuses = ['processing', 'packed', 'shipped'];
+      for (const status of invalidStatuses) {
+        const res = await request(app)
+          .put(`/api/orders/${testOrder._id}/status`)
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send({ status });
+
+        expect(res.statusCode).toBe(400);
+      }
+    });
+
+    it('should allow confirmed -> delivered (simplified flow)', async () => {
       // First confirm the order
       await request(app)
         .put(`/api/orders/${testOrder._id}/status`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ status: 'confirmed' });
 
-      // Direct jump to packed is allowed
-      const res = await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ status: 'packed' });
-
-      expect(res.statusCode).toBe(200);
-      expect(res.body.data.status).toBe('packed');
-    });
-
-    it('should allow confirmed -> shipped (direct jump)', async () => {
-      await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ status: 'confirmed' });
-
-      const res = await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ status: 'shipped' });
-
-      expect(res.statusCode).toBe(200);
-      expect(res.body.data.status).toBe('shipped');
-    });
-
-    it('should allow processing -> shipped (direct jump)', async () => {
-      await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ status: 'confirmed' });
-
-      await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ status: 'processing' });
-
-      const res = await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ status: 'shipped' });
-
-      expect(res.statusCode).toBe(200);
-      expect(res.body.data.status).toBe('shipped');
-    });
-
-    it('should allow packed -> delivered (direct jump)', async () => {
-      // Go through: pending -> confirmed -> processing -> packed
-      await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ status: 'confirmed' });
-
-      await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ status: 'processing' });
-
-      await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ status: 'packed' });
-
-      // Direct jump to delivered is allowed
+      // Direct transition to delivered
       const res = await request(app)
         .put(`/api/orders/${testOrder._id}/status`)
         .set('Authorization', `Bearer ${adminToken}`)
@@ -845,26 +710,11 @@ describe('Order Endpoints', () => {
     });
 
     it('should reject transition from delivered (terminal state)', async () => {
-      // Go through full flow to delivered
+      // Go through simplified flow to delivered
       await request(app)
         .put(`/api/orders/${testOrder._id}/status`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ status: 'confirmed' });
-
-      await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ status: 'processing' });
-
-      await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ status: 'packed' });
-
-      await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ status: 'shipped' });
 
       await request(app)
         .put(`/api/orders/${testOrder._id}/status`)
@@ -933,79 +783,14 @@ describe('Order Endpoints', () => {
       expect(res.body.data.status).toBe('cancelled');
     });
 
-    it('should allow cancellation from processing', async () => {
-      await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ status: 'confirmed' });
-
-      await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ status: 'processing' });
-
+    it('should reject cancellation by staff via status endpoint', async () => {
+      // Staff cannot cancel orders via status endpoint (admin only)
       const res = await request(app)
         .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${adminToken}`)
+        .set('Authorization', `Bearer ${staffToken}`)
         .send({ status: 'cancelled' });
 
-      expect(res.statusCode).toBe(200);
-      expect(res.body.data.status).toBe('cancelled');
-    });
-
-    it('should allow cancellation from packed', async () => {
-      await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ status: 'confirmed' });
-
-      await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ status: 'processing' });
-
-      await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ status: 'packed' });
-
-      const res = await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ status: 'cancelled' });
-
-      expect(res.statusCode).toBe(200);
-      expect(res.body.data.status).toBe('cancelled');
-    });
-
-    it('should allow cancellation from shipped', async () => {
-      await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ status: 'confirmed' });
-
-      await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ status: 'processing' });
-
-      await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ status: 'packed' });
-
-      await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ status: 'shipped' });
-
-      const res = await request(app)
-        .put(`/api/orders/${testOrder._id}/status`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ status: 'cancelled' });
-
-      expect(res.statusCode).toBe(200);
-      expect(res.body.data.status).toBe('cancelled');
+      expect(res.statusCode).toBe(403);
     });
   });
 

@@ -235,6 +235,8 @@ app.use('/api/invoices', require('./routes/invoices'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/batches', require('./routes/batches'));
 app.use('/api/packing', require('./routes/packing'));
+app.use('/api/reconciliation', require('./routes/reconciliation'));
+app.use('/api/ledger', require('./routes/ledger'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

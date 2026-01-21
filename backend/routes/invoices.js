@@ -118,6 +118,12 @@ router.get('/:orderId/split',
         throw new Error('Cannot generate invoice for cancelled orders');
       }
 
+      // Require order to be delivered (reconciled) before generating invoice
+      if (order.status !== 'delivered') {
+        res.status(400);
+        throw new Error('Invoice can only be generated after order is delivered and reconciled. Current status: ' + order.status);
+      }
+
       // Get product categories for the order items
       const productIds = order.products.map(p => p.product);
       const products = await Product.find({ _id: { $in: productIds } }).select('_id category');
@@ -250,6 +256,12 @@ router.post('/:orderId/pdf',
       if (order.status === 'cancelled') {
         res.status(400);
         throw new Error('Cannot generate invoice for cancelled orders');
+      }
+
+      // Require order to be delivered (reconciled) before generating invoice
+      if (order.status !== 'delivered') {
+        res.status(400);
+        throw new Error('Invoice can only be generated after order is delivered and reconciled. Current status: ' + order.status);
       }
 
       // Generate unique invoice number
@@ -404,6 +416,12 @@ router.post('/:orderId/data',
       if (order.status === 'cancelled') {
         res.status(400);
         throw new Error('Cannot generate invoice for cancelled orders');
+      }
+
+      // Require order to be delivered (reconciled) before generating invoice
+      if (order.status !== 'delivered') {
+        res.status(400);
+        throw new Error('Invoice can only be generated after order is delivered and reconciled. Current status: ' + order.status);
       }
 
       // Get invoice data

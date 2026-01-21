@@ -518,7 +518,8 @@ describe('Market Rates Endpoints', () => {
       const staff = await testUtils.createStaffUser();
       adminToken = admin.token;
       staffToken = staff.token;
-      product = await testUtils.createTestProduct({ name: 'Test Product' });
+      // Create product in 'Indian Vegetables' category for reset tests
+      product = await testUtils.createTestProduct({ name: 'Test Product', category: 'Indian Vegetables' });
     });
 
     it('should allow admin to reset all rates', async () => {
@@ -877,10 +878,10 @@ describe('Market Rates Endpoints', () => {
       expect(unchangedOrder.totalAmount).toBe(0);
     });
 
-    it('should NOT auto-update orders that are already processing or beyond', async () => {
+    it('should NOT auto-update orders that are already delivered', async () => {
       const customer = await testUtils.createTestCustomer({ pricingType: 'market' });
 
-      // Create an order in 'processing' status with rate=0
+      // Create an order in 'delivered' status with rate=0
       const order = await Order.create({
         customer: customer._id,
         products: [{
@@ -892,7 +893,8 @@ describe('Market Rates Endpoints', () => {
           amount: 0
         }],
         totalAmount: 0,
-        status: 'processing'
+        status: 'delivered',
+        deliveredAt: new Date()
       });
 
       // Set market rate
@@ -904,7 +906,7 @@ describe('Market Rates Endpoints', () => {
           rate: 100
         });
 
-      // Verify order was NOT updated (already processing)
+      // Verify order was NOT updated (already delivered)
       const unchangedOrder = await Order.findById(order._id);
       expect(unchangedOrder.products[0].rate).toBe(0);
     });

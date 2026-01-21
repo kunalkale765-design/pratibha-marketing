@@ -52,6 +52,12 @@ const customerSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  // Customer's outstanding balance
+  // Positive = customer owes money, Negative = credit/overpayment
+  balance: {
+    type: Number,
+    default: 0
+  },
   // Magic link for passwordless authentication
   magicLinkToken: {
     type: String,

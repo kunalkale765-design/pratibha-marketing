@@ -54,17 +54,26 @@ backend/
 │   └── errorHandler.js    # Global error handling
 ├── models/
 │   ├── User.js            # Users with roles: admin, staff, customer
-│   ├── Customer.js        # Business customers with pricing tiers
-│   ├── Order.js           # Orders with items, status, payment tracking
+│   ├── Customer.js        # Business customers with pricing tiers + balance
+│   ├── Order.js           # Orders with items, status, reconciliation
 │   ├── Product.js         # Product inventory
-│   └── MarketRate.js      # Daily market pricing
+│   ├── MarketRate.js      # Daily market pricing
+│   └── LedgerEntry.js     # Customer ledger entries (invoices, payments)
 ├── routes/
 │   ├── auth.js            # /api/auth - login, register, logout, /me
 │   ├── customers.js       # /api/customers - CRUD + payments
 │   ├── orders.js          # /api/orders - CRUD + status/payment updates
 │   ├── products.js        # /api/products - CRUD + stock management
 │   ├── marketRates.js     # /api/market-rates - pricing updates
-│   └── supplier.js        # /api/supplier - supplier dashboard data
+│   ├── supplier.js        # /api/supplier - supplier dashboard data
+│   ├── batches.js         # /api/batches - batch management + bill generation
+│   ├── packing.js         # /api/packing - simplified packing workflow
+│   ├── reconciliation.js  # /api/reconciliation - delivery reconciliation
+│   └── ledger.js          # /api/ledger - customer balance & payment tracking
+├── services/
+│   ├── batchScheduler.js      # Auto-confirm batches at 8 AM
+│   ├── deliveryBillService.js # Generate delivery bill PDFs
+│   └── invoiceService.js      # Generate invoice PDFs
 └── seed.js                # Database seeding script
 ```
 
@@ -116,6 +125,7 @@ frontend/
 | pricingType | Enum | `market`, `markup`, `contract` |
 | markupPercentage | Number | 0-200% (for markup pricing) |
 | contractPrices | Map | ProductId → Price (for contract pricing) |
+| balance | Number | Outstanding balance (positive = owes money) |
 | magicLinkToken | String | Unique token for passwordless auth (sparse) |
 | magicLinkCreatedAt | Date | When magic link was generated |
 
@@ -123,7 +133,7 @@ frontend/
 | Field | Type | Notes |
 |-------|------|-------|
 | name | String | Unique |
-| unit | Enum | `quintal`, `bag`, `kg`, `piece`, `ton`, `bunch`, `box` |
+| unit | Enum | `kg`, `piece`, `bunch`, `box` |
 | category | String | Free-form category (user-manageable) |
 | isActive | Boolean | Soft delete flag |
 
@@ -134,12 +144,31 @@ frontend/
 | customer | ObjectId | Ref to Customer |
 | products | Array | [{product, productName, quantity, unit, rate, amount}] |
 | totalAmount | Number | Sum of all items |
-| status | Enum | `pending`, `confirmed`, `processing`, `packed`, `shipped`, `delivered`, `cancelled` |
+| status | Enum | `pending`, `confirmed`, `delivered`, `cancelled` (simplified) |
 | paymentStatus | Enum | `unpaid`, `partial`, `paid` |
 | paidAmount | Number | Amount received |
 | deliveryAddress | String | |
 | notes | String | Order notes |
-| packedAt/shippedAt/deliveredAt | Date | Status timestamps |
+| deliveredAt | Date | When order was delivered |
+| cancelledAt | Date | When order was cancelled |
+| packingDone | Boolean | Whether packing is complete |
+| packingDoneAt | Date | When packing was completed |
+| reconciliation | Object | {completedAt, completedBy, changes[], originalTotal} |
+| deliveryBillGenerated | Boolean | Whether delivery bill was generated |
+
+### LedgerEntry
+| Field | Type | Notes |
+|-------|------|-------|
+| customer | ObjectId | Ref to Customer |
+| type | Enum | `invoice`, `payment`, `adjustment` |
+| date | Date | Entry date |
+| order | ObjectId | Ref to Order (optional) |
+| orderNumber | String | For display |
+| description | String | Entry description |
+| amount | Number | Positive = owes, Negative = payment |
+| balance | Number | Running balance after entry |
+| notes | String | Additional notes |
+| createdBy | ObjectId | Ref to User |
 
 ### MarketRate
 | Field | Type | Notes |
@@ -184,9 +213,9 @@ frontend/
 | POST | / | Private | Create order (supports idempotencyKey) |
 | PUT | /:id | Admin/Staff | Update order prices only |
 | PUT | /:id/customer-edit | Private | Customer edit pending order (products/quantities) |
-| PUT | /:id/status | Admin/Staff | Update status (enforces state machine) |
+| PUT | /:id/status | Admin/Staff | Update status (simplified: pending→confirmed→delivered) |
 | PUT | /:id/payment | Admin/Staff | Update payment |
-| DELETE | /:id | Admin/Staff | Cancel order |
+| DELETE | /:id | Admin only | Cancel order (admin only)
 
 ### Products `/api/products`
 | Method | Endpoint | Access | Description |
@@ -215,23 +244,39 @@ frontend/
 | GET | / | Admin/Staff | List batches with filters |
 | GET | /today | Admin/Staff | Get today's batches with counts |
 | GET | /:id | Admin/Staff | Get batch details |
-| POST | /:id/confirm | Admin/Staff | Manually confirm batch |
+| POST | /:id/confirm | Admin/Staff | Confirm batch + generate delivery bills |
 | GET | /:id/orders | Admin/Staff | Get orders in batch |
 | GET | /:id/quantity-summary | Admin/Staff | Get product quantities for batch |
 | GET | /date/:date | Admin/Staff | Get batches for specific date |
+| POST | /:id/bills | Admin/Staff | Generate delivery bills for batch |
+| GET | /:id/bills/:orderId/download | Admin/Staff | Download delivery bill PDF |
 
-### Packing `/api/packing`
+### Packing `/api/packing` (Simplified)
 | Method | Endpoint | Access | Description |
 |--------|----------|--------|-------------|
-| GET | /queue | Admin/Staff | Get orders ready for packing |
+| GET | /queue | Admin/Staff | Get confirmed orders ready for packing |
 | GET | /stats | Admin/Staff | Get packing statistics for today |
 | GET | /:orderId | Admin/Staff | Get packing details for order |
-| POST | /:orderId/start | Admin/Staff | Start packing session |
-| PUT | /:orderId/item/:productId | Admin/Staff | Update item packing status |
-| POST | /:orderId/complete | Admin/Staff | Complete packing session |
-| POST | /:orderId/hold | Admin/Staff | Put order on hold for review |
-| POST | /:orderId/resume | Admin/Staff | Resume packing from hold |
-| GET | /batch/:batchId/summary | Admin/Staff | Get batch packing summary |
+| PUT | /:orderId/item/:productId | Admin/Staff | Update item quantity (immediately updates order) |
+| POST | /:orderId/done | Admin/Staff | Mark packing as done |
+| POST | /:orderId/reprint-bill | Admin/Staff | Reprint delivery bill with current quantities |
+
+### Reconciliation `/api/reconciliation`
+| Method | Endpoint | Access | Description |
+|--------|----------|--------|-------------|
+| GET | /pending | Admin/Staff | Get orders awaiting reconciliation |
+| GET | /:orderId | Admin/Staff | Get order details for reconciliation |
+| POST | /:orderId/complete | Admin/Staff | Complete reconciliation (updates quantities, creates ledger entry) |
+
+### Ledger `/api/ledger`
+| Method | Endpoint | Access | Description |
+|--------|----------|--------|-------------|
+| GET | / | Admin/Staff | List all ledger entries |
+| GET | /balances | Admin/Staff | Get all customer balances |
+| GET | /customer/:customerId | Admin/Staff | Get customer's ledger history |
+| POST | /payment | Admin/Staff | Record payment from customer |
+| POST | /adjustment | Admin only | Make manual adjustment |
+| GET | /statement/:customerId | Admin/Staff | Generate monthly statement data |
 
 ### Invoices `/api/invoices`
 | Method | Endpoint | Access | Description |
@@ -267,11 +312,18 @@ frontend/
 | `markup` | Market rate + markupPercentage% |
 | `contract` | Fixed price from customer.contractPrices map |
 
-### Order Flow
+### Order Flow (Simplified)
 ```
-pending → confirmed → processing → packed → shipped → delivered
-                                                    ↘ cancelled
+pending → confirmed → delivered
+                   ↘ cancelled (admin only)
 ```
+
+**Workflow:**
+1. Customer places order → status: `pending`
+2. Batch confirms (auto at 8 AM or manual) → status: `confirmed`, delivery bills generated
+3. Staff packs order → marks `packingDone: true`
+4. Staff reconciles (verify delivered quantities) → status: `delivered`, ledger entry created
+5. Staff generates invoice (from reconciled data)
 
 ### Payment Flow
 ```
@@ -281,8 +333,8 @@ unpaid → partial → paid
 ### Role Permissions
 | Role | Permissions |
 |------|-------------|
-| `admin` | Full access to everything |
-| `staff` | CRUD on orders, customers, products, market rates |
+| `admin` | Full access to everything, including order cancellation |
+| `staff` | CRUD on orders, customers, products, market rates (cannot cancel orders) |
 | `customer` | View/create own orders only |
 
 ### Customer-Facing UI Rules
@@ -313,6 +365,39 @@ Two firms are configured for invoice generation based on product categories:
 **Customer Access:** Customers can download invoices after staff generates them
 
 **Configuration:** `backend/config/companies.js` - Firm details and category mappings
+
+### Delivery Bills
+Delivery bills are generated when a batch is confirmed (before invoices).
+
+**Delivery Bill Flow:**
+1. Batch confirms (auto at 8 AM or manual)
+2. System updates prices for market/markup customers with latest rates
+3. Generates delivery bill PDFs (ORIGINAL + DUPLICATE copies) per firm
+4. Bills stored in `backend/storage/delivery-bills/`
+
+**Bill Number Format:** `BILL{YYMM}{0001}` (unique sequential)
+
+**Difference from Invoices:**
+- Delivery bills use ordered quantities (generated before packing)
+- Invoices use reconciled quantities (generated after delivery confirmation)
+
+### Reconciliation & Ledger
+After packing and delivery, staff reconciles each order:
+
+**Reconciliation Flow:**
+1. Staff opens order in reconciliation screen
+2. Enters final delivered quantities (may differ from ordered)
+3. System updates order products with delivered quantities
+4. Order status changes to `delivered`
+5. Ledger entry created automatically (type: `invoice`)
+6. Customer balance updated
+
+**Ledger Entry Types:**
+| Type | Description |
+|------|-------------|
+| `invoice` | Created when order is reconciled (positive = customer owes) |
+| `payment` | Manual entry when payment received (reduces balance) |
+| `adjustment` | Admin-only adjustments (corrections, credits) |
 
 ## Key Patterns
 

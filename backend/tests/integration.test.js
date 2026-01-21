@@ -20,7 +20,7 @@ describe('Integration Tests', () => {
       await testUtils.createMarketRate(product, 50);
     });
 
-    it('should complete full order lifecycle: create -> confirm -> process -> pack -> ship -> deliver', async () => {
+    it('should complete simplified order lifecycle: create -> confirm -> deliver', async () => {
       // Step 1: Create order
       const createRes = await request(app)
         .post('/api/orders')
@@ -49,36 +49,7 @@ describe('Integration Tests', () => {
       expect(confirmRes.status).toBe(200);
       expect(confirmRes.body.data.status).toBe('confirmed');
 
-      // Step 3: Process order
-      const processRes = await request(app)
-        .put(`/api/orders/${orderId}/status`)
-        .set('Cookie', `token=${adminToken}`)
-        .send({ status: 'processing' });
-
-      expect(processRes.status).toBe(200);
-      expect(processRes.body.data.status).toBe('processing');
-
-      // Step 4: Pack order
-      const packRes = await request(app)
-        .put(`/api/orders/${orderId}/status`)
-        .set('Cookie', `token=${adminToken}`)
-        .send({ status: 'packed' });
-
-      expect(packRes.status).toBe(200);
-      expect(packRes.body.data.status).toBe('packed');
-      expect(packRes.body.data.packedAt).toBeDefined();
-
-      // Step 5: Ship order
-      const shipRes = await request(app)
-        .put(`/api/orders/${orderId}/status`)
-        .set('Cookie', `token=${adminToken}`)
-        .send({ status: 'shipped' });
-
-      expect(shipRes.status).toBe(200);
-      expect(shipRes.body.data.status).toBe('shipped');
-      expect(shipRes.body.data.shippedAt).toBeDefined();
-
-      // Step 6: Deliver order
+      // Step 3: Deliver order (simplified flow - no processing/packed/shipped)
       const deliverRes = await request(app)
         .put(`/api/orders/${orderId}/status`)
         .set('Cookie', `token=${adminToken}`)
@@ -94,8 +65,6 @@ describe('Integration Tests', () => {
         .set('Cookie', `token=${adminToken}`);
 
       expect(finalOrder.body.data.status).toBe('delivered');
-      expect(finalOrder.body.data.packedAt).toBeDefined();
-      expect(finalOrder.body.data.shippedAt).toBeDefined();
       expect(finalOrder.body.data.deliveredAt).toBeDefined();
     });
 

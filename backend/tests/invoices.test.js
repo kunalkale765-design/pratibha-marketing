@@ -6,12 +6,21 @@
 require('./setup');
 const request = require('supertest');
 const app = require('../server');
+const Order = require('../models/Order');
 
 describe('Invoice System', () => {
   let adminToken;
   let staffToken;
   let customerToken;
   let customer;
+
+  // Helper to mark order as delivered (required for invoice generation)
+  const markOrderDelivered = async (orderId) => {
+    await Order.findByIdAndUpdate(orderId, {
+      status: 'delivered',
+      deliveredAt: new Date()
+    });
+  };
 
   beforeEach(async () => {
     const admin = await testUtils.createAdminUser();
@@ -99,6 +108,9 @@ describe('Invoice System', () => {
       expect(orderRes.status).toBe(201);
       const orderId = orderRes.body.data._id;
 
+      // Mark as delivered (required for invoice operations)
+      await markOrderDelivered(orderId);
+
       // Get split
       const res = await request(app)
         .get(`/api/invoices/${orderId}/split`)
@@ -133,6 +145,7 @@ describe('Invoice System', () => {
         });
 
       const orderId = orderRes.body.data._id;
+      await markOrderDelivered(orderId);
 
       const res = await request(app)
         .get(`/api/invoices/${orderId}/split`)
@@ -158,6 +171,7 @@ describe('Invoice System', () => {
         });
 
       const orderId = orderRes.body.data._id;
+      await markOrderDelivered(orderId);
 
       const res = await request(app)
         .get(`/api/invoices/${orderId}/split`)
@@ -182,6 +196,7 @@ describe('Invoice System', () => {
         });
 
       const orderId = orderRes.body.data._id;
+      await markOrderDelivered(orderId);
 
       const res = await request(app)
         .get(`/api/invoices/${orderId}/split`)
@@ -206,6 +221,7 @@ describe('Invoice System', () => {
         });
 
       const orderId = orderRes.body.data._id;
+      await markOrderDelivered(orderId);
 
       const res = await request(app)
         .get(`/api/invoices/${orderId}/split`)
@@ -250,6 +266,7 @@ describe('Invoice System', () => {
         });
 
       const orderId = orderRes.body.data._id;
+      await markOrderDelivered(orderId);
 
       const res = await request(app)
         .get(`/api/invoices/${orderId}/split`)
@@ -277,6 +294,7 @@ describe('Invoice System', () => {
         });
 
       const orderId = orderRes.body.data._id;
+      await markOrderDelivered(orderId);
 
       const res = await request(app)
         .get(`/api/invoices/${orderId}/split`)
@@ -333,6 +351,7 @@ describe('Invoice System', () => {
         });
 
       const orderId = orderRes.body.data._id;
+      await markOrderDelivered(orderId);
 
       const res = await request(app)
         .post(`/api/invoices/${orderId}/pdf`)
@@ -363,6 +382,7 @@ describe('Invoice System', () => {
         });
 
       const orderId = orderRes.body.data._id;
+      await markOrderDelivered(orderId);
 
       // Request PDF for only product1
       const res = await request(app)
@@ -390,6 +410,7 @@ describe('Invoice System', () => {
         });
 
       const orderId = orderRes.body.data._id;
+      await markOrderDelivered(orderId);
 
       const res = await request(app)
         .post(`/api/invoices/${orderId}/pdf`)
@@ -413,6 +434,7 @@ describe('Invoice System', () => {
         });
 
       const orderId = orderRes.body.data._id;
+      await markOrderDelivered(orderId);
 
       // Request with non-existent product ID
       const res = await request(app)
@@ -451,6 +473,7 @@ describe('Invoice System', () => {
         });
 
       const orderId = orderRes.body.data._id;
+      await markOrderDelivered(orderId);
 
       const res = await request(app)
         .post(`/api/invoices/${orderId}/pdf`)
@@ -504,6 +527,7 @@ describe('Invoice System', () => {
         });
 
       const orderId = orderRes.body.data._id;
+      await markOrderDelivered(orderId);
 
       const res = await request(app)
         .post(`/api/invoices/${orderId}/data`)
@@ -532,7 +556,7 @@ describe('Invoice System', () => {
         });
 
       const orderId = orderRes.body.data._id;
-      const orderNumber = orderRes.body.data.orderNumber;
+      await markOrderDelivered(orderId);
 
       const res = await request(app)
         .post(`/api/invoices/${orderId}/data`)
@@ -557,6 +581,7 @@ describe('Invoice System', () => {
         });
 
       const orderId = orderRes.body.data._id;
+      await markOrderDelivered(orderId);
 
       const res = await request(app)
         .post(`/api/invoices/${orderId}/data`)
@@ -581,6 +606,7 @@ describe('Invoice System', () => {
         });
 
       const orderId = orderRes.body.data._id;
+      await markOrderDelivered(orderId);
 
       const res = await request(app)
         .post(`/api/invoices/${orderId}/data`)
@@ -605,6 +631,7 @@ describe('Invoice System', () => {
         });
 
       const orderId = orderRes.body.data._id;
+      await markOrderDelivered(orderId);
 
       const res = await request(app)
         .post(`/api/invoices/${orderId}/data`)
@@ -628,6 +655,7 @@ describe('Invoice System', () => {
         });
 
       const orderId = orderRes.body.data._id;
+      await markOrderDelivered(orderId);
 
       const res = await request(app)
         .post(`/api/invoices/${orderId}/data`)

@@ -13,12 +13,12 @@
     <!-- Animations -->
 
     <!-- Page-specific styles -->
-  <script type="module" crossorigin src="/assets/orders-DPpK3XDo.js"></script>
+  <script type="module" crossorigin src="/assets/orders-Ct7p7STM.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/responsive-D1ZTW0b0.js">
   <link rel="modulepreload" crossorigin href="/assets/ui-D1Am529b.js">
   <link rel="modulepreload" crossorigin href="/assets/api-BqPqbFNt.js">
   <link rel="stylesheet" crossorigin href="/assets/responsive-BaXdD4wa.css">
-  <link rel="stylesheet" crossorigin href="/assets/orders-KB8bqRL0.css">
+  <link rel="stylesheet" crossorigin href="/assets/orders-DG7mprLR.css">
   <link rel="stylesheet" crossorigin href="/assets/page-BklDA2cI.css">
   <link rel="stylesheet" crossorigin href="/assets/inputs-Djo_6IW1.css">
   <link rel="stylesheet" crossorigin href="/assets/buttons-CLMBJEwY.css">
@@ -96,6 +96,68 @@
                 <button class="btn-save-prices btn-animated" id="savePricesBtn" onclick="savePrices()">
                     <span class="btn-text">Save Changes</span>
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Packing Panel (Slide-in from right) -->
+    <div id="packingPanel" class="packing-panel">
+        <div class="packing-panel-header">
+            <div>
+                <div class="packing-panel-title" id="packingPanelTitle">Pack Order</div>
+                <div class="packing-panel-subtitle" id="packingPanelSubtitle"></div>
+            </div>
+            <button class="btn-close" onclick="closePackingPanel()">&times;</button>
+        </div>
+
+        <div class="packing-panel-progress" id="packingPanelProgress">
+            <div class="packing-progress-bar">
+                <div class="packing-progress-fill" id="packingProgressFill"></div>
+            </div>
+            <span class="packing-progress-text" id="packingProgressText">0/0 items</span>
+        </div>
+
+        <div class="packing-panel-body" id="packingPanelBody">
+            <!-- Packing checklist will be rendered here -->
+        </div>
+
+        <div class="packing-panel-issues" id="packingPanelIssues" style="display: none;">
+            <h4>Issues</h4>
+            <div id="packingIssuesList"></div>
+        </div>
+
+        <div class="packing-panel-acknowledgement" id="packingPanelAcknowledgement" style="display: none;">
+            <label class="packing-checkbox-label">
+                <input type="checkbox" id="packingAcknowledgeCheckbox">
+                <span>I confirm all items have been verified and acknowledge any issues listed above</span>
+            </label>
+        </div>
+
+        <div class="packing-panel-footer">
+            <button class="btn-modal secondary btn-animated" id="packingHoldBtn" onclick="holdPackingOrder()">
+                <span class="btn-text">Hold</span>
+            </button>
+            <button class="btn-modal primary btn-animated" id="packingCompleteBtn" onclick="completePackingSession()" disabled>
+                <span class="btn-text">Complete Packing</span>
+            </button>
+        </div>
+    </div>
+    <div id="packingPanelOverlay" class="packing-panel-overlay" onclick="closePackingPanel()"></div>
+
+    <!-- Hold Reason Modal (for packing) -->
+    <div id="packingHoldModal" class="modal-overlay">
+        <div class="modal modal-sm">
+            <div class="modal-header">
+                <div class="modal-title">Hold Order</div>
+                <button class="btn-close" onclick="closePackingHoldModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <label class="input-label">Reason for hold:</label>
+                <textarea id="packingHoldReason" class="input-textarea" rows="3" placeholder="Why is this order being held?"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modal secondary" onclick="closePackingHoldModal()">Cancel</button>
+                <button class="btn-modal primary" onclick="confirmPackingHold()">Confirm Hold</button>
             </div>
         </div>
     </div>

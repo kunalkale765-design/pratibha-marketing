@@ -948,26 +948,23 @@ router.put('/:id/customer-edit',
     }
   });
 
-// Valid status transitions (state machine)
-// Flow: pending → confirmed → processing → packed → shipped → delivered
-// Cancellation: any status except 'delivered' can go to 'cancelled'
+// Valid status transitions (simplified state machine)
+// Flow: pending → confirmed → delivered
+// Cancellation: admin only, any status except 'delivered' can go to 'cancelled'
 const VALID_STATUS_TRANSITIONS = {
   pending: ['confirmed', 'cancelled'],
-  confirmed: ['processing', 'packed', 'shipped', 'delivered', 'cancelled'], // Allow direct jump to delivered
-  processing: ['packed', 'shipped', 'delivered', 'cancelled'],
-  packed: ['shipped', 'delivered', 'cancelled'],
-  shipped: ['delivered', 'cancelled'],
+  confirmed: ['delivered', 'cancelled'],
   delivered: [], // Terminal state
   cancelled: []  // Terminal state
 };
 
 // @route   PUT /api/orders/:id/status
 // @desc    Update order status (enforces valid state transitions)
-// @access  Private (Admin, Staff)
+// @access  Private (Admin, Staff - but cancellation is admin only)
 router.put('/:id/status', protect, authorize('admin', 'staff'), [
   param('id').isMongoId().withMessage('Invalid order ID'),
-  body('status').isIn(['pending', 'confirmed', 'processing', 'packed', 'shipped', 'delivered', 'cancelled'])
-    .withMessage('Invalid status'),
+  body('status').isIn(['pending', 'confirmed', 'delivered', 'cancelled'])
+    .withMessage('Invalid status. Allowed values: pending, confirmed, delivered, cancelled'),
   body('assignedWorker')
     .optional()
     .isString()
@@ -1012,33 +1009,19 @@ router.put('/:id/status', protect, authorize('admin', 'staff'), [
       });
     }
 
+    // SECURITY: Only admin can cancel orders
+    if (newStatus === 'cancelled' && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only administrators can cancel orders'
+      });
+    }
+
     const updateData = { status: newStatus };
     const now = new Date();
 
-    // Update timestamps based on status with validation
-    if (newStatus === 'packed') {
-      updateData.packedAt = now;
-      // Validate and sanitize assignedWorker
-      if (req.body.assignedWorker) {
-        updateData.assignedWorker = req.body.assignedWorker.trim();
-      }
-    } else if (newStatus === 'shipped') {
-      // Ensure shipped is after packed
-      if (order.packedAt && now < order.packedAt) {
-        return res.status(400).json({
-          success: false,
-          message: 'Shipped time cannot be before packed time'
-        });
-      }
-      updateData.shippedAt = now;
-    } else if (newStatus === 'delivered') {
-      // Ensure delivered is after shipped (and packed)
-      if (order.shippedAt && now < order.shippedAt) {
-        return res.status(400).json({
-          success: false,
-          message: 'Delivered time cannot be before shipped time'
-        });
-      }
+    // Update timestamps based on status
+    if (newStatus === 'delivered') {
       updateData.deliveredAt = now;
     } else if (newStatus === 'cancelled') {
       updateData.cancelledAt = now;
@@ -1178,10 +1161,10 @@ router.put('/:id/payment', protect, authorize('admin', 'staff'), [
 
 // @route   DELETE /api/orders/:id
 // @desc    Cancel order
-// @access  Private (Admin, Staff)
+// @access  Private (Admin only)
 router.delete('/:id',
   protect,
-  authorize('admin', 'staff'),
+  authorize('admin'),
   param('id').isMongoId().withMessage('Invalid order ID'),
   async (req, res, next) => {
     try {

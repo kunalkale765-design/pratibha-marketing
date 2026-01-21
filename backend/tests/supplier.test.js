@@ -101,7 +101,7 @@ describe('Supplier Endpoints', () => {
       });
 
       await testUtils.createTestOrder(customer, product1, {
-        status: 'processing',
+        status: 'confirmed',
         products: [{
           product: product1._id,
           productName: product1.name,
@@ -363,7 +363,7 @@ describe('Supplier Endpoints', () => {
     it('should only include pending and confirmed orders', async () => {
       await testUtils.createTestOrder(customer, product1, { status: 'pending' });
       await testUtils.createTestOrder(customer, product1, { status: 'delivered' });
-      await testUtils.createTestOrder(customer, product1, { status: 'shipped' });
+      await testUtils.createTestOrder(customer, product1, { status: 'cancelled' });
 
       const res = await request(app)
         .get('/api/supplier/daily-requirements')

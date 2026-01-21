@@ -3,14 +3,17 @@ const Product = require('../models/Product');
 const MarketRate = require('../models/MarketRate');
 
 // Import the scheduler functions directly for unit testing
-const { resetAllMarketRates, startScheduler, stopScheduler } = require('../services/marketRateScheduler');
+const { resetAllMarketRates, startScheduler, stopScheduler, CATEGORIES_TO_RESET } = require('../services/marketRateScheduler');
+
+// Helper to create products in reset category
+const RESET_CATEGORY = CATEGORIES_TO_RESET[0]; // 'Indian Vegetables'
 
 describe('Market Rate Scheduler', () => {
   describe('resetAllMarketRates', () => {
     it('should reset all active product rates to 0', async () => {
-      // Create products
-      const product1 = await testUtils.createTestProduct({ name: 'Rice', isActive: true });
-      const product2 = await testUtils.createTestProduct({ name: 'Wheat', isActive: true });
+      // Create products in reset category
+      const product1 = await testUtils.createTestProduct({ name: 'Rice', isActive: true, category: RESET_CATEGORY });
+      const product2 = await testUtils.createTestProduct({ name: 'Wheat', isActive: true, category: RESET_CATEGORY });
 
       // Create initial market rates
       await testUtils.createMarketRate(product1, 2500);
@@ -29,7 +32,7 @@ describe('Market Rate Scheduler', () => {
     });
 
     it('should preserve previous rate in new record', async () => {
-      const product = await testUtils.createTestProduct({ name: 'Sugar', isActive: true });
+      const product = await testUtils.createTestProduct({ name: 'Sugar', isActive: true, category: RESET_CATEGORY });
       await testUtils.createMarketRate(product, 3500);
 
       await resetAllMarketRates();
@@ -45,20 +48,20 @@ describe('Market Rate Scheduler', () => {
       expect(resetRate.previousRate).toBe(3500);
     });
 
-    it('should return success with count 0 when no active products', async () => {
-      // Create inactive product only
-      await testUtils.createTestProduct({ name: 'Inactive Product', isActive: false });
+    it('should return success with count 0 when no active products in reset categories', async () => {
+      // Create inactive product only in reset category
+      await testUtils.createTestProduct({ name: 'Inactive Product', isActive: false, category: RESET_CATEGORY });
 
       const result = await resetAllMarketRates();
 
       expect(result.success).toBe(true);
       expect(result.count).toBe(0);
-      expect(result.message).toBe('No active products');
+      expect(result.message).toBe('No active products in reset categories');
     });
 
     it('should skip inactive products', async () => {
-      await testUtils.createTestProduct({ name: 'Active', isActive: true });
-      await testUtils.createTestProduct({ name: 'Inactive', isActive: false });
+      await testUtils.createTestProduct({ name: 'Active', isActive: true, category: RESET_CATEGORY });
+      await testUtils.createTestProduct({ name: 'Inactive', isActive: false, category: RESET_CATEGORY });
 
       const result = await resetAllMarketRates();
 
@@ -67,7 +70,7 @@ describe('Market Rate Scheduler', () => {
     });
 
     it('should set effectiveDate to today midnight', async () => {
-      const product = await testUtils.createTestProduct({ name: 'Test', isActive: true });
+      const product = await testUtils.createTestProduct({ name: 'Test', isActive: true, category: RESET_CATEGORY });
 
       await resetAllMarketRates();
 
@@ -81,7 +84,7 @@ describe('Market Rate Scheduler', () => {
     });
 
     it('should set source to Daily Reset', async () => {
-      const product = await testUtils.createTestProduct({ name: 'Test', isActive: true });
+      const product = await testUtils.createTestProduct({ name: 'Test', isActive: true, category: RESET_CATEGORY });
 
       await resetAllMarketRates();
 
@@ -92,7 +95,7 @@ describe('Market Rate Scheduler', () => {
     });
 
     it('should set updatedBy to system_scheduler', async () => {
-      const product = await testUtils.createTestProduct({ name: 'Test', isActive: true });
+      const product = await testUtils.createTestProduct({ name: 'Test', isActive: true, category: RESET_CATEGORY });
 
       await resetAllMarketRates();
 
@@ -103,7 +106,7 @@ describe('Market Rate Scheduler', () => {
     });
 
     it('should return duration in result', async () => {
-      const product = await testUtils.createTestProduct({ name: 'Test', isActive: true });
+      const product = await testUtils.createTestProduct({ name: 'Test', isActive: true, category: RESET_CATEGORY });
 
       const result = await resetAllMarketRates();
 
@@ -113,8 +116,8 @@ describe('Market Rate Scheduler', () => {
     });
 
     it('should handle products without existing market rates', async () => {
-      // Create product without any market rate
-      const product = await testUtils.createTestProduct({ name: 'NewProduct', isActive: true });
+      // Create product in reset category without any market rate
+      const product = await testUtils.createTestProduct({ name: 'NewProduct', isActive: true, category: RESET_CATEGORY });
 
       const result = await resetAllMarketRates();
 
@@ -127,12 +130,13 @@ describe('Market Rate Scheduler', () => {
     });
 
     it('should reset multiple products in sequence', async () => {
-      // Create 5 products
+      // Create 5 products in reset category
       const products = [];
       for (let i = 0; i < 5; i++) {
         const product = await testUtils.createTestProduct({
           name: `Product${i}`,
-          isActive: true
+          isActive: true,
+          category: RESET_CATEGORY
         });
         await testUtils.createMarketRate(product, 1000 + i * 100);
         products.push(product);
@@ -153,7 +157,7 @@ describe('Market Rate Scheduler', () => {
     });
 
     it('should include notes in reset record', async () => {
-      const product = await testUtils.createTestProduct({ name: 'Test', isActive: true });
+      const product = await testUtils.createTestProduct({ name: 'Test', isActive: true, category: RESET_CATEGORY });
 
       await resetAllMarketRates();
 
@@ -161,6 +165,55 @@ describe('Market Rate Scheduler', () => {
         .sort({ effectiveDate: -1 });
 
       expect(latestRate.notes).toBe('Automatically reset by system scheduler');
+    });
+
+    it('should NOT reset products in other categories', async () => {
+      // Create products in non-reset categories
+      const fruit = await testUtils.createTestProduct({ name: 'Mango', category: 'Fruits', isActive: true });
+      const exotic = await testUtils.createTestProduct({ name: 'Zucchini', category: 'Exotic Vegetables', isActive: true });
+      const dairy = await testUtils.createTestProduct({ name: 'Paneer', category: 'Dairy', isActive: true });
+
+      // Set initial rates
+      await testUtils.createMarketRate(fruit, 8000);
+      await testUtils.createMarketRate(exotic, 12000);
+      await testUtils.createMarketRate(dairy, 5000);
+
+      const result = await resetAllMarketRates();
+
+      // No products in reset categories
+      expect(result.count).toBe(0);
+
+      // Verify rates are unchanged
+      const fruitRate = await MarketRate.findOne({ product: fruit._id });
+      const exoticRate = await MarketRate.findOne({ product: exotic._id });
+      const dairyRate = await MarketRate.findOne({ product: dairy._id });
+
+      expect(fruitRate.rate).toBe(8000);
+      expect(exoticRate.rate).toBe(12000);
+      expect(dairyRate.rate).toBe(5000);
+    });
+
+    it('should reset Indian Vegetables but leave other categories unchanged', async () => {
+      // Create mixed products
+      const indianVeg = await testUtils.createTestProduct({ name: 'Potato', category: RESET_CATEGORY, isActive: true });
+      const fruit = await testUtils.createTestProduct({ name: 'Apple', category: 'Fruits', isActive: true });
+
+      await testUtils.createMarketRate(indianVeg, 3000);
+      await testUtils.createMarketRate(fruit, 10000);
+
+      const result = await resetAllMarketRates();
+
+      expect(result.count).toBe(1); // Only Indian Vegetable
+
+      // Indian Vegetable should be reset to 0
+      const indianVegRates = await MarketRate.find({ product: indianVeg._id }).sort({ createdAt: -1 });
+      expect(indianVegRates[0].rate).toBe(0);
+      expect(indianVegRates[0].previousRate).toBe(3000);
+
+      // Fruit should remain unchanged
+      const fruitRates = await MarketRate.find({ product: fruit._id });
+      expect(fruitRates.length).toBe(1);
+      expect(fruitRates[0].rate).toBe(10000);
     });
   });
 

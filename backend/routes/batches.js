@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const path = require('path');
 const { param, validationResult } = require('express-validator');
 const Batch = require('../models/Batch');
 const Order = require('../models/Order');
@@ -10,6 +11,7 @@ const {
   getISTTime,
   BATCH_CONFIG
 } = require('../services/batchScheduler');
+const deliveryBillService = require('../services/deliveryBillService');
 
 /**
  * @swagger
@@ -287,7 +289,7 @@ router.get('/:id/orders',
  *         description: Batch confirmed
  */
 // @route   POST /api/batches/:id/confirm
-// @desc    Manually confirm a batch (for 2nd batch or emergency)
+// @desc    Manually confirm a batch (for 2nd batch or emergency) and generate delivery bills
 // @access  Private (Admin, Staff)
 router.post('/:id/confirm',
   protect,
@@ -300,14 +302,29 @@ router.post('/:id/confirm',
         return res.status(400).json({ success: false, errors: errors.array() });
       }
 
+      const { generateBills = true } = req.body;
+
       const result = await manuallyConfirmBatch(req.params.id, req.user._id);
+
+      // Generate delivery bills if requested
+      let billsResult = null;
+      if (generateBills) {
+        try {
+          billsResult = await deliveryBillService.generateBillsForBatch(result.batch);
+        } catch (billError) {
+          console.error('Error generating delivery bills:', billError);
+          // Don't fail the confirm, just log the error
+          billsResult = { error: billError.message };
+        }
+      }
 
       res.json({
         success: true,
-        message: `Batch confirmed. ${result.ordersConfirmed} orders locked.`,
+        message: `Batch confirmed. ${result.ordersConfirmed} orders locked.${billsResult ? ` ${billsResult.billsGenerated || 0} bills generated.` : ''}`,
         data: {
           batch: result.batch,
-          ordersConfirmed: result.ordersConfirmed
+          ordersConfirmed: result.ordersConfirmed,
+          bills: billsResult
         }
       });
     } catch (error) {
@@ -455,6 +472,203 @@ router.get('/date/:date',
         count: batches.length,
         data: batches
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/batches/{id}/bills:
+ *   post:
+ *     summary: Generate delivery bills for a batch
+ *     tags: [Batches]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Bills generated
+ */
+// @route   POST /api/batches/:id/bills
+// @desc    Generate delivery bills for all orders in a batch
+// @access  Private (Admin, Staff)
+router.post('/:id/bills',
+  protect,
+  authorize('admin', 'staff'),
+  param('id').isMongoId().withMessage('Invalid batch ID'),
+  async (req, res, next) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ success: false, errors: errors.array() });
+      }
+
+      const batch = await Batch.findById(req.params.id);
+      if (!batch) {
+        return res.status(404).json({
+          success: false,
+          message: 'Batch not found'
+        });
+      }
+
+      // Batch must be confirmed to generate bills
+      if (batch.status !== 'confirmed') {
+        return res.status(400).json({
+          success: false,
+          message: 'Batch must be confirmed before generating bills'
+        });
+      }
+
+      const result = await deliveryBillService.generateBillsForBatch(batch);
+
+      res.json({
+        success: true,
+        message: `Generated ${result.billsGenerated} bills for ${result.totalOrders} orders`,
+        data: result
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/batches/{id}/bills/{orderId}/download:
+ *   get:
+ *     summary: Download delivery bill for an order
+ *     tags: [Batches]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: orderId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: copy
+ *         schema:
+ *           type: string
+ *           enum: [original, duplicate]
+ *     responses:
+ *       200:
+ *         description: PDF file
+ */
+// @route   GET /api/batches/:id/bills/:orderId/download
+// @desc    Download delivery bill for a specific order in a batch
+// @access  Private (Admin, Staff)
+router.get('/:id/bills/:orderId/download',
+  protect,
+  authorize('admin', 'staff'),
+  param('id').isMongoId().withMessage('Invalid batch ID'),
+  param('orderId').isMongoId().withMessage('Invalid order ID'),
+  async (req, res, next) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ success: false, errors: errors.array() });
+      }
+
+      const { copy = 'original' } = req.query;
+      const copyType = copy.toUpperCase() === 'DUPLICATE' ? 'DUPLICATE' : 'ORIGINAL';
+
+      // Find the order
+      const order = await Order.findOne({
+        _id: req.params.orderId,
+        batch: req.params.id
+      });
+
+      if (!order) {
+        return res.status(404).json({
+          success: false,
+          message: 'Order not found in this batch'
+        });
+      }
+
+      if (!order.deliveryBillGenerated) {
+        return res.status(404).json({
+          success: false,
+          message: 'Delivery bill has not been generated for this order'
+        });
+      }
+
+      const batch = await Batch.findById(req.params.id);
+      const customer = await require('../models/Customer').findById(order.customer);
+
+      // Generate bill data
+      const firmSplit = await deliveryBillService.splitOrderByFirm(order);
+      const firmIds = Object.keys(firmSplit);
+
+      if (firmIds.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'No items to bill'
+        });
+      }
+
+      // Reuse existing bill number or generate one if not exists
+      // This ensures consistent bill numbers across multiple downloads
+      const firmId = firmIds[0];
+      const firmData = firmSplit[firmId];
+      let billNumber = order.deliveryBillNumber;
+
+      if (!billNumber) {
+        // First time generating bill for this order - generate and save bill number
+        billNumber = await deliveryBillService.generateBillNumber();
+        await Order.findByIdAndUpdate(order._id, {
+          $set: { deliveryBillNumber: billNumber }
+        });
+      }
+
+      const billData = {
+        billNumber: billNumber,
+        orderNumber: order.orderNumber,
+        batchNumber: batch?.batchNumber || 'N/A',
+        date: new Date(),
+        firm: {
+          id: firmId,
+          name: firmData.firm.name,
+          address: firmData.firm.address,
+          phone: firmData.firm.phone,
+          email: firmData.firm.email
+        },
+        customer: {
+          name: customer?.name || 'Unknown Customer',
+          phone: customer?.phone || '',
+          address: order.deliveryAddress || customer?.address || ''
+        },
+        items: firmData.items.map(item => ({
+          name: item.productName,
+          quantity: item.quantity,
+          unit: item.unit,
+          rate: item.rate,
+          amount: item.amount
+        })),
+        total: firmData.subtotal
+      };
+
+      const pdfBuffer = await deliveryBillService.generateBillPDF(billData, copyType);
+
+      res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="${billNumber}_${copyType}.pdf"`,
+        'Content-Length': pdfBuffer.length
+      });
+
+      res.send(pdfBuffer);
     } catch (error) {
       next(error);
     }

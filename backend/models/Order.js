@@ -49,7 +49,7 @@ const orderSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'confirmed', 'processing', 'packed', 'shipped', 'delivered', 'cancelled'],
+    enum: ['pending', 'confirmed', 'delivered', 'cancelled'],
     default: 'pending'
   },
   paymentStatus: {
@@ -75,8 +75,6 @@ const orderSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
-  packedAt: Date,
-  shippedAt: Date,
   deliveredAt: Date,
   // Cancellation audit
   cancelledAt: Date,
@@ -128,107 +126,58 @@ const orderSchema = new mongoose.Schema({
     reason: String
   }],
 
-  // Packing details - tracks item-by-item verification during packing
-  packingDetails: {
-    status: {
-      type: String,
-      enum: ['not_started', 'in_progress', 'completed', 'on_hold'],
-      default: 'not_started'
-    },
-    startedAt: Date,
+  // Simplified packing - tracks packed quantities per item
+  packingDone: {
+    type: Boolean,
+    default: false
+  },
+  packingDoneAt: Date,
+  packingDoneBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+
+  // Reconciliation details - tracks final delivered quantities
+  reconciliation: {
     completedAt: Date,
-    packedBy: {
+    completedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User'
     },
-    packerName: String,
-
-    // Per-item packing verification
-    items: [{
+    completedByName: String,
+    changes: [{
       product: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Product'
       },
       productName: String,
-      orderedQuantity: Number,
-      packedQuantity: Number,
-      unit: String,
-      status: {
-        type: String,
-        enum: ['pending', 'packed', 'short', 'damaged', 'unavailable'],
-        default: 'pending'
-      },
-      notes: String,
-      verifiedAt: Date,
-      verifiedBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
-      }
+      orderedQty: Number,
+      deliveredQty: Number,
+      reason: String
     }],
+    originalTotal: Number  // Total before reconciliation adjustments
+  },
 
-    // Issues encountered during packing
-    issues: [{
-      product: mongoose.Schema.Types.ObjectId,
-      productName: String,
-      issueType: {
-        type: String,
-        enum: ['short', 'damaged', 'unavailable', 'other']
-      },
-      description: String,
-      quantityAffected: Number,
-      reportedAt: {
-        type: Date,
-        default: Date.now
-      },
-      reportedBy: mongoose.Schema.Types.ObjectId
-    }],
-
-    // Adjusted total if items were short/unavailable
-    adjustedTotal: Number,
-
-    // Acknowledgement of issues before completing
-    acknowledgement: {
-      acknowledged: { type: Boolean, default: false },
-      acknowledgedAt: Date,
-      acknowledgedBy: mongoose.Schema.Types.ObjectId
-    },
-
-    // Hold reason if order is on hold
-    holdReason: String
-  }
+  // Delivery bill tracking
+  deliveryBillGenerated: {
+    type: Boolean,
+    default: false
+  },
+  deliveryBillGeneratedAt: Date,
+  deliveryBillNumber: String  // Store the bill number for consistency across downloads
 }, {
   timestamps: true,
   toJSON: { virtuals: true },
   toObject: { virtuals: true }
 });
 
-// Virtual field: displayStatus - combines Order.status with packingDetails.status for UI
-// This provides a unified view of the order's current state
+// Virtual field: displayStatus - simplified to match new order flow
 orderSchema.virtual('displayStatus').get(function() {
-  const packingStatus = this.packingDetails?.status || 'not_started';
-
-  // If order is cancelled or delivered, that takes precedence
-  if (this.status === 'cancelled' || this.status === 'delivered') {
-    return this.status;
+  // Direct mapping from status
+  if (this.status === 'confirmed' && this.packingDone) {
+    return 'ready_for_reconciliation';
   }
-
-  // For orders in packing flow, show packing status
-  if (['confirmed', 'processing'].includes(this.status)) {
-    if (packingStatus === 'in_progress') return 'packing';
-    if (packingStatus === 'on_hold') return 'on_hold';
-    if (packingStatus === 'completed') return 'packed';
-  }
-
-  // Default to order status
   return this.status;
-});
-
-// Virtual field: packingProgress - returns item counts for packing progress display
-orderSchema.virtual('packingProgress').get(function() {
-  const items = this.packingDetails?.items || [];
-  const total = items.length;
-  const verified = items.filter(i => i.status !== 'pending').length;
-  return { total, verified, percentage: total > 0 ? Math.round((verified / total) * 100) : 0 };
 });
 
 // Generate order number before saving using atomic counter to avoid race conditions
@@ -270,7 +219,7 @@ orderSchema.index({ batch: 1, status: 1 });
 // Index for finding editable orders
 orderSchema.index({ batchLocked: 1, status: 1 });
 
-// Index for packing queue queries
-orderSchema.index({ 'packingDetails.status': 1, status: 1 });
+// Index for packing and reconciliation queries
+orderSchema.index({ packingDone: 1, status: 1 });
 
 module.exports = mongoose.model('Order', orderSchema);

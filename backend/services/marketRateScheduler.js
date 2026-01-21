@@ -13,21 +13,29 @@ try {
 
 let scheduledTask = null;
 
+// Categories to reset daily - only these will have rates set to 0 at midnight
+const CATEGORIES_TO_RESET = ['Indian Vegetables'];
+
 /**
- * Reset all market rates to 0 for the new day
+ * Reset market rates to 0 for selected categories only
  * This creates new MarketRate records with rate=0, preserving history
+ * Only affects products in CATEGORIES_TO_RESET - all other products keep their rates
  */
 async function resetAllMarketRates() {
   const startTime = Date.now();
   console.log(`[MarketRateScheduler] Starting daily rate reset at ${new Date().toISOString()}`);
+  console.log(`[MarketRateScheduler] Resetting categories: ${CATEGORIES_TO_RESET.join(', ')}`);
 
   try {
-    // Get all active products
-    const products = await Product.find({ isActive: true });
+    // Get only active products in categories that need daily reset
+    const products = await Product.find({
+      isActive: true,
+      category: { $in: CATEGORIES_TO_RESET }
+    });
 
     if (products.length === 0) {
-      console.log('[MarketRateScheduler] No active products found, skipping reset');
-      return { success: true, count: 0, message: 'No active products' };
+      console.log(`[MarketRateScheduler] No active products found in categories: ${CATEGORIES_TO_RESET.join(', ')}`);
+      return { success: true, count: 0, message: 'No active products in reset categories' };
     }
 
     const today = new Date();
@@ -62,7 +70,7 @@ async function resetAllMarketRates() {
     }
 
     const duration = Date.now() - startTime;
-    console.log(`[MarketRateScheduler] Reset complete: ${resetCount}/${products.length} products in ${duration}ms`);
+    console.log(`[MarketRateScheduler] Reset complete: ${resetCount}/${products.length} products (${CATEGORIES_TO_RESET.join(', ')}) in ${duration}ms`);
 
     if (errors.length > 0) {
       console.error('[MarketRateScheduler] Errors during reset:', errors);
@@ -126,5 +134,6 @@ function stopScheduler() {
 module.exports = {
   startScheduler,
   stopScheduler,
-  resetAllMarketRates // Export for manual trigger via API
+  resetAllMarketRates, // Export for manual trigger via API
+  CATEGORIES_TO_RESET  // Export for reference/testing
 };
