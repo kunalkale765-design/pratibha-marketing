@@ -198,56 +198,67 @@ router.get('/batch-summary', protect, authorize('admin', 'staff'), async (req, r
       });
     }
 
-    // Get batch summaries with aggregated quantities
-    const batchSummaries = await Promise.all(
-      batches.map(async (batch) => {
-        // Get all non-cancelled orders in this batch
-        const orders = await Order.find({
-          batch: batch._id,
-          status: { $nin: ['cancelled'] }
-        }).populate('products.product', 'name unit');
+    // Fetch all orders for all batches in a single query (avoids N+1)
+    const batchIds = batches.map(b => b._id);
+    const allOrders = await Order.find({
+      batch: { $in: batchIds },
+      status: { $nin: ['cancelled'] }
+    }).populate('products.product', 'name unit');
 
-        // Aggregate quantities by product
-        const quantityMap = new Map();
+    // Group orders by batch
+    const ordersByBatch = new Map();
+    batchIds.forEach(id => ordersByBatch.set(id.toString(), []));
+    allOrders.forEach(order => {
+      const batchId = order.batch.toString();
+      if (ordersByBatch.has(batchId)) {
+        ordersByBatch.get(batchId).push(order);
+      }
+    });
 
-        orders.forEach(order => {
-          order.products.forEach(item => {
-            const productId = item.product?._id?.toString() || item.product?.toString();
-            if (!productId) return;
+    // Build batch summaries from grouped orders
+    const batchSummaries = batches.map(batch => {
+      const orders = ordersByBatch.get(batch._id.toString()) || [];
 
-            const productName = item.productName || item.product?.name || 'Unknown Product';
-            const unit = item.unit || item.product?.unit || 'unit';
+      // Aggregate quantities by product
+      const quantityMap = new Map();
 
-            if (quantityMap.has(productId)) {
-              const existing = quantityMap.get(productId);
-              existing.totalQuantity += item.quantity || 0;
-              existing.orderCount += 1;
-            } else {
-              quantityMap.set(productId, {
-                productId,
-                productName,
-                unit,
-                totalQuantity: item.quantity || 0,
-                orderCount: 1
-              });
-            }
-          });
+      orders.forEach(order => {
+        order.products.forEach(item => {
+          const productId = item.product?._id?.toString() || item.product?.toString();
+          if (!productId) return;
+
+          const productName = item.productName || item.product?.name || 'Unknown Product';
+          const unit = item.unit || item.product?.unit || 'unit';
+
+          if (quantityMap.has(productId)) {
+            const existing = quantityMap.get(productId);
+            existing.totalQuantity += item.quantity || 0;
+            existing.orderCount += 1;
+          } else {
+            quantityMap.set(productId, {
+              productId,
+              productName,
+              unit,
+              totalQuantity: item.quantity || 0,
+              orderCount: 1
+            });
+          }
         });
+      });
 
-        // Convert to array and sort by quantity
-        const products = Array.from(quantityMap.values())
-          .sort((a, b) => b.totalQuantity - a.totalQuantity);
+      // Convert to array and sort by quantity
+      const products = Array.from(quantityMap.values())
+        .sort((a, b) => b.totalQuantity - a.totalQuantity);
 
-        return {
-          batchNumber: batch.batchNumber,
-          batchType: batch.batchType,
-          status: batch.status,
-          confirmedAt: batch.confirmedAt,
-          orderCount: orders.length,
-          products
-        };
-      })
-    );
+      return {
+        batchNumber: batch.batchNumber,
+        batchType: batch.batchType,
+        status: batch.status,
+        confirmedAt: batch.confirmedAt,
+        orderCount: orders.length,
+        products
+      };
+    });
 
     res.json({
       success: true,

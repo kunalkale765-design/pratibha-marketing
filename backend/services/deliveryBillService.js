@@ -66,16 +66,6 @@ async function generateBillNumber() {
 }
 
 /**
- * Get market rate for a product
- */
-async function getMarketRate(productId) {
-  const rate = await MarketRate.findOne({ product: productId })
-    .sort({ effectiveDate: -1 })
-    .limit(1);
-  return rate ? rate.rate : null;
-}
-
-/**
  * Update order prices for market/markup customers using latest rates
  */
 async function updateOrderPrices(order) {
@@ -87,13 +77,27 @@ async function updateOrderPrices(order) {
     return order;
   }
 
+  // Batch fetch all market rates to avoid N+1 queries
+  const productIds = order.products.map(item => item.product);
+  const marketRates = await MarketRate.find({ product: { $in: productIds } })
+    .sort({ effectiveDate: -1 });
+
+  // Build rate map (first entry per product is latest due to sort)
+  const marketRateMap = new Map();
+  marketRates.forEach(mr => {
+    const pid = mr.product.toString();
+    if (!marketRateMap.has(pid)) {
+      marketRateMap.set(pid, mr.rate);
+    }
+  });
+
   let totalAmount = 0;
   const updatedProducts = [];
 
   for (const item of order.products) {
-    // Get current market rate
-    const marketRate = await getMarketRate(item.product);
-    if (marketRate === null) {
+    // Get market rate from pre-fetched map
+    const marketRate = marketRateMap.get(item.product.toString());
+    if (marketRate === null || marketRate === undefined) {
       // Keep original rate if no market rate available
       updatedProducts.push(item);
       totalAmount += item.amount;

@@ -13,19 +13,6 @@ function roundTo2Decimals(num) {
   return Math.round(num * 100) / 100;
 }
 
-// Helper function to get current market rate for a product
-async function getMarketRate(productId) {
-  try {
-    const rate = await MarketRate.findOne({ product: productId })
-      .sort({ effectiveDate: -1 })
-      .limit(1);
-    return rate ? rate.rate : null;
-  } catch (error) {
-    console.error('Failed to get market rate for product:', productId, error.message);
-    return null;
-  }
-}
-
 // Helper function to calculate price based on customer's pricing type
 // Uses pre-fetched market rate to avoid race conditions
 // Returns { rate: number, usedFallback: boolean, isContractPrice: boolean, saveAsContractPrice: boolean }
@@ -96,41 +83,6 @@ function calculatePriceWithRate(customer, product, prefetchedMarketRate, request
     isContractPrice: false,
     saveAsContractPrice: false
   };
-}
-
-// Legacy async function for customer-edit endpoint (single product updates)
-// Returns { rate: number, isContractPrice: boolean }
-async function calculatePrice(customer, product, requestedRate = null) {
-  const pricingType = customer.pricingType || 'market';
-  const productId = product._id.toString();
-
-  // For contract customers
-  if (pricingType === 'contract') {
-    const existingContractPrice = customer.contractPrices?.get(productId);
-    if (existingContractPrice !== undefined && existingContractPrice !== null) {
-      // Contract price exists - always use it (locked)
-      return { rate: existingContractPrice, isContractPrice: true };
-    }
-    // No contract price - fall back to market rate
-    const fallbackRate = await getMarketRate(product._id) || 0;
-    return { rate: fallbackRate, isContractPrice: false };
-  }
-
-  // For non-contract customers, use staff rate if provided
-  if (requestedRate !== null && requestedRate !== undefined && requestedRate > 0) {
-    return { rate: requestedRate, isContractPrice: false };
-  }
-
-  // Calculate based on pricing type
-  if (pricingType === 'markup') {
-    const marketRate = await getMarketRate(product._id) || 0;
-    const markup = customer.markupPercentage || 0;
-    return { rate: roundTo2Decimals(marketRate * (1 + markup / 100)), isContractPrice: false };
-  }
-
-  // Market pricing (default)
-  const currentRate = await getMarketRate(product._id);
-  return { rate: roundTo2Decimals(currentRate || 0), isContractPrice: false };
 }
 
 // Validation middleware
@@ -596,6 +548,28 @@ router.put('/:id',
           });
         }
 
+        // Batch fetch new products and their market rates to avoid N+1 queries
+        const newProductIds = req.body.products
+          .filter(item => !originalProductMap.has(item.product?.toString()))
+          .map(item => item.product);
+
+        // Batch fetch new products and market rates (empty arrays if no new products)
+        const [newProducts, newMarketRates] = newProductIds.length > 0
+          ? await Promise.all([
+              Product.find({ _id: { $in: newProductIds } }),
+              MarketRate.find({ product: { $in: newProductIds } }).sort({ effectiveDate: -1 })
+            ])
+          : [[], []];
+
+        const newProductMap = new Map(newProducts.map(p => [p._id.toString(), p]));
+        const newMarketRateMap = new Map();
+        newMarketRates.forEach(mr => {
+          const pid = mr.product.toString();
+          if (!newMarketRateMap.has(pid)) {
+            newMarketRateMap.set(pid, mr.rate); // First is latest due to sort
+          }
+        });
+
         // All validations passed - update prices and/or quantities
         let totalAmount = 0;
         const updatedProducts = [];
@@ -607,8 +581,8 @@ router.put('/:id',
 
           // Handle NEW product (not in original order)
           if (!original) {
-            // Fetch product from database
-            const product = await Product.findById(productId);
+            // Get product from pre-fetched map
+            const product = newProductMap.get(productId);
             if (!product) {
               return res.status(400).json({
                 success: false,
@@ -632,9 +606,10 @@ router.put('/:id',
             }
             if (quantity === 0) continue; // Skip if quantity is 0
 
-            // Calculate price based on customer's pricing type (or use provided rate for non-contract)
+            // Calculate price using pre-fetched market rate (avoids N+1)
             const requestedRate = item.priceAtTime || item.rate;
-            const priceResult = await calculatePrice(customer, product, requestedRate);
+            const prefetchedMarketRate = newMarketRateMap.get(productId) || 0;
+            const priceResult = calculatePriceWithRate(customer, product, prefetchedMarketRate, requestedRate);
             const rate = priceResult.rate;
             const amount = roundTo2Decimals(quantity * rate);
             totalAmount += amount;
@@ -900,34 +875,52 @@ router.put('/:id/customer-edit',
       }
 
       // Update products with recalculated prices
+      // Batch fetch all products and market rates to avoid N+1 queries
+      const productIds = req.body.products.map(p => p.product);
+      const [products, marketRates] = await Promise.all([
+        Product.find({ _id: { $in: productIds } }),
+        MarketRate.find({ product: { $in: productIds } }).sort({ effectiveDate: -1 })
+      ]);
+
+      // Build lookup maps for O(1) access
+      const productMap = new Map(products.map(p => [p._id.toString(), p]));
+      const marketRateMap = new Map();
+      marketRates.forEach(mr => {
+        const pid = mr.product.toString();
+        if (!marketRateMap.has(pid)) {
+          marketRateMap.set(pid, mr.rate); // First one is the latest due to sort
+        }
+      });
+
       let totalAmount = 0;
-      const updatedProducts = await Promise.all(
-        req.body.products.map(async (item) => {
-          const product = await Product.findById(item.product);
-          if (!product) {
-            throw new Error(`Product ${item.product} not found`);
-          }
+      const updatedProducts = [];
 
-          if (!item.quantity || item.quantity < 0.01) {
-            throw new Error(`Minimum quantity for "${product.name}" is 0.01 ${product.unit}`);
-          }
+      for (const item of req.body.products) {
+        const product = productMap.get(item.product.toString());
+        if (!product) {
+          throw new Error(`Product ${item.product} not found`);
+        }
 
-          // Recalculate rate based on customer's pricing type (never trust client prices)
-          const priceResult = await calculatePrice(customer, product);
-          const amount = roundTo2Decimals(item.quantity * priceResult.rate);
-          totalAmount += amount;
+        if (!item.quantity || item.quantity < 0.01) {
+          throw new Error(`Minimum quantity for "${product.name}" is 0.01 ${product.unit}`);
+        }
 
-          return {
-            product: item.product,
-            productName: product.name,
-            quantity: item.quantity,
-            unit: product.unit,
-            rate: priceResult.rate,
-            amount: amount,
-            isContractPrice: priceResult.isContractPrice
-          };
-        })
-      );
+        // Recalculate rate using pre-fetched market rate (avoids N+1)
+        const prefetchedRate = marketRateMap.get(item.product.toString()) || 0;
+        const priceResult = calculatePriceWithRate(customer, product, prefetchedRate);
+        const amount = roundTo2Decimals(item.quantity * priceResult.rate);
+        totalAmount += amount;
+
+        updatedProducts.push({
+          product: item.product,
+          productName: product.name,
+          quantity: item.quantity,
+          unit: product.unit,
+          rate: priceResult.rate,
+          amount: amount,
+          isContractPrice: priceResult.isContractPrice
+        });
+      }
 
       order.products = updatedProducts;
       order.totalAmount = totalAmount;

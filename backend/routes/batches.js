@@ -98,31 +98,37 @@ router.get('/today', protect, authorize('admin', 'staff'), async (req, res, next
       .sort({ batchType: 1 })
       .populate('confirmedBy', 'name');
 
-    // Get order counts for each batch
-    const batchesWithCounts = await Promise.all(
-      batches.map(async (batch) => {
-        const orderCounts = await Order.aggregate([
-          { $match: { batch: batch._id } },
-          {
-            $group: {
-              _id: '$status',
-              count: { $sum: 1 }
-            }
-          }
-        ]);
+    // Get order counts for all batches in a single aggregation (avoids N+1)
+    const batchIds = batches.map(b => b._id);
+    const orderCounts = await Order.aggregate([
+      { $match: { batch: { $in: batchIds } } },
+      {
+        $group: {
+          _id: { batch: '$batch', status: '$status' },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
 
-        const statusCounts = {};
-        orderCounts.forEach(item => {
-          statusCounts[item._id] = item.count;
-        });
+    // Build counts map: batchId -> { status: count }
+    const countsMap = new Map();
+    orderCounts.forEach(item => {
+      const batchId = item._id.batch.toString();
+      if (!countsMap.has(batchId)) {
+        countsMap.set(batchId, {});
+      }
+      countsMap.get(batchId)[item._id.status] = item.count;
+    });
 
-        return {
-          ...batch.toObject(),
-          orderCounts: statusCounts,
-          totalOrders: Object.values(statusCounts).reduce((a, b) => a + b, 0)
-        };
-      })
-    );
+    // Merge counts into batches
+    const batchesWithCounts = batches.map(batch => {
+      const statusCounts = countsMap.get(batch._id.toString()) || {};
+      return {
+        ...batch.toObject(),
+        orderCounts: statusCounts,
+        totalOrders: Object.values(statusCounts).reduce((a, b) => a + b, 0)
+      };
+    });
 
     // Add info about which batch is currently accepting orders
     const currentHour = ist.hour;
