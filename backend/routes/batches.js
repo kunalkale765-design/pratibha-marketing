@@ -594,10 +594,11 @@ router.get('/:id/bills/:orderId/download',
         });
       }
 
-      if (!order.deliveryBillGenerated) {
-        return res.status(404).json({
+      // Order must be confirmed to generate bill
+      if (order.status !== 'confirmed' && order.status !== 'delivered') {
+        return res.status(400).json({
           success: false,
-          message: 'Delivery bill has not been generated for this order'
+          message: 'Order must be confirmed before generating delivery bill'
         });
       }
 
@@ -624,8 +625,16 @@ router.get('/:id/bills/:orderId/download',
       if (!billNumber) {
         // First time generating bill for this order - generate and save bill number
         billNumber = await deliveryBillService.generateBillNumber();
+      }
+
+      // Mark order as having delivery bill generated (if not already)
+      if (!order.deliveryBillGenerated || !order.deliveryBillNumber) {
         await Order.findByIdAndUpdate(order._id, {
-          $set: { deliveryBillNumber: billNumber }
+          $set: {
+            deliveryBillGenerated: true,
+            deliveryBillGeneratedAt: new Date(),
+            deliveryBillNumber: billNumber
+          }
         });
       }
 
