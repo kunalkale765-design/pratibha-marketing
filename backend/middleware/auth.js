@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Customer = require('../models/Customer');
+const { JWT_SECRET } = require('../config/secrets');
 
 /**
  * Authentication Middleware
@@ -27,9 +28,8 @@ const protect = async (req, res, next) => {
       });
     }
 
-    // Verify token - use same secret as auth routes
-    const secret = process.env.JWT_SECRET || 'dev-secret-change-in-production';
-    const decoded = jwt.verify(token, secret);
+    // Verify token - use centralized secret from config
+    const decoded = jwt.verify(token, JWT_SECRET);
 
     // Handle magic link tokens (customer-only access)
     if (decoded.type === 'magic' && decoded.customerId) {
@@ -136,8 +136,7 @@ const optionalAuth = async (req, res, next) => {
     }
 
     if (token) {
-      const secret = process.env.JWT_SECRET || 'dev-secret-change-in-production';
-      const decoded = jwt.verify(token, secret);
+      const decoded = jwt.verify(token, JWT_SECRET);
       const user = await User.findById(decoded.id).select('-password');
       if (user && user.isActive) {
         req.user = user;

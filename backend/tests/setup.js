@@ -1,4 +1,9 @@
-// Load environment variables first (same as server.js)
+// SECURITY: Set test environment and JWT_SECRET BEFORE any imports
+// This ensures the centralized secrets module doesn't fail during tests
+process.env.NODE_ENV = 'test';
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-secret-for-automated-tests';
+
+// Load environment variables (won't override what we just set)
 require('dotenv').config();
 
 const mongoose = require('mongoose');
@@ -12,8 +17,8 @@ const Product = require('../models/Product');
 const Order = require('../models/Order');
 const MarketRate = require('../models/MarketRate');
 
-// JWT Secret for tests - use same secret as server (from .env or fallback)
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
+// JWT Secret for tests - now guaranteed to be set above
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // In-memory MongoDB server instance
 let mongoServer;

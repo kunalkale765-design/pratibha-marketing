@@ -5,17 +5,11 @@ const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
 const Customer = require('../models/Customer');
-
-// Validate JWT_SECRET is set in production
-if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
-  console.error('FATAL: JWT_SECRET must be set in production');
-  process.exit(1);
-}
+const { JWT_SECRET } = require('../config/secrets');
 
 // Generate JWT Token
 const generateToken = (userId) => {
-  const secret = process.env.JWT_SECRET || 'dev-secret-change-in-production';
-  return jwt.sign({ id: userId }, secret, {
+  return jwt.sign({ id: userId }, JWT_SECRET, {
     expiresIn: '30d'
   });
 };
@@ -245,8 +239,7 @@ router.get('/me', async (req, res, next) => {
     }
 
     // Verify token
-    const secret = process.env.JWT_SECRET || 'dev-secret-change-in-production';
-    const decoded = jwt.verify(token, secret);
+    const decoded = jwt.verify(token, JWT_SECRET);
 
     // Handle magic link tokens
     if (decoded.type === 'magic' && decoded.customerId) {
@@ -361,10 +354,9 @@ router.get('/magic/:token', async (req, res, next) => {
     // If no user exists, create a virtual session (customer-only access)
     if (!user) {
       // Create a temporary JWT for this customer
-      const secret = process.env.JWT_SECRET || 'dev-secret-change-in-production';
       const sessionToken = jwt.sign(
         { customerId: customer._id, type: 'magic' },
-        secret,
+        JWT_SECRET,
         { expiresIn: '24h' }
       );
 
