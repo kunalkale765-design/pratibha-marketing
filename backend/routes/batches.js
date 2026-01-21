@@ -304,27 +304,17 @@ router.post('/:id/confirm',
 
       const { generateBills = true } = req.body;
 
-      const result = await manuallyConfirmBatch(req.params.id, req.user._id);
-
-      // Generate delivery bills if requested
-      let billsResult = null;
-      if (generateBills) {
-        try {
-          billsResult = await deliveryBillService.generateBillsForBatch(result.batch);
-        } catch (billError) {
-          console.error('Error generating delivery bills:', billError);
-          // Don't fail the confirm, just log the error
-          billsResult = { error: billError.message };
-        }
-      }
+      // manuallyConfirmBatch now handles bill generation internally
+      const result = await manuallyConfirmBatch(req.params.id, req.user._id, { generateBills });
 
       res.json({
         success: true,
-        message: `Batch confirmed. ${result.ordersConfirmed} orders locked.${billsResult ? ` ${billsResult.billsGenerated || 0} bills generated.` : ''}`,
+        message: `Batch confirmed. ${result.ordersConfirmed} orders locked. ${result.billsGenerated || 0} bills generated.`,
         data: {
           batch: result.batch,
           ordersConfirmed: result.ordersConfirmed,
-          bills: billsResult
+          billsGenerated: result.billsGenerated,
+          billErrors: result.billErrors
         }
       });
     } catch (error) {

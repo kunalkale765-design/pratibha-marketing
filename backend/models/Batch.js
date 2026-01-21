@@ -131,11 +131,18 @@ batchSchema.statics.findOrCreateBatch = async function(date, batchType, cutoffTi
  * Static method to get today's batches (IST)
  */
 batchSchema.statics.getTodayBatches = async function() {
-  // Get today's date at midnight IST
+  // Get today's date at midnight IST (as UTC timestamp for consistent comparison)
   const now = new Date();
   const istOffset = 5.5 * 60 * 60 * 1000; // IST is UTC+5:30
-  const istNow = new Date(now.getTime() + istOffset);
-  const todayIST = new Date(istNow.getFullYear(), istNow.getMonth(), istNow.getDate());
+  const utcTime = now.getTime() + (now.getTimezoneOffset() * 60 * 1000);
+  const istNow = new Date(utcTime + istOffset);
+  // Calculate midnight IST as a UTC timestamp
+  const todayIST = new Date(Date.UTC(
+    istNow.getFullYear(),
+    istNow.getMonth(),
+    istNow.getDate(),
+    0, 0, 0, 0
+  ) - istOffset);
 
   return this.find({ date: todayIST }).sort({ batchType: 1 });
 };

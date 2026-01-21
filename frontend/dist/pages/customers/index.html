@@ -13,11 +13,11 @@
     <!-- Animations -->
 
     <!-- Page-specific styles -->
-  <script type="module" crossorigin src="/assets/customers-B_K4kvFM.js"></script>
+  <script type="module" crossorigin src="/assets/customers-B2Q03lJ3.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/responsive-D1ZTW0b0.js">
   <link rel="modulepreload" crossorigin href="/assets/ui-D1Am529b.js">
   <link rel="stylesheet" crossorigin href="/assets/responsive-BaXdD4wa.css">
-  <link rel="stylesheet" crossorigin href="/assets/customers-I4a_5fQI.css">
+  <link rel="stylesheet" crossorigin href="/assets/customers-CPEA2H3x.css">
   <link rel="stylesheet" crossorigin href="/assets/page-BklDA2cI.css">
   <link rel="stylesheet" crossorigin href="/assets/inputs-Djo_6IW1.css">
   <link rel="stylesheet" crossorigin href="/assets/buttons-CLMBJEwY.css">
@@ -38,6 +38,10 @@
     <div class="search-bar">
         <input id="searchInput" type="text" placeholder="Search customers..." class="search-input input-animated"
             oninput="searchCustomers()">
+        <label class="toggle-test-customers">
+            <input type="checkbox" id="showTestCustomers" onchange="toggleTestCustomers()">
+            <span>Show test</span>
+        </label>
     </div>
 
     <div id="toast" class="toast"></div>
@@ -113,6 +117,13 @@
                     <div class="form-group">
                         <label class="form-label">Address</label>
                         <textarea id="customerAddress" rows="2" class="form-textarea input-animated"></textarea>
+                    </div>
+                    <div class="form-group checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="customerIsTest">
+                            <span>Test customer</span>
+                        </label>
+                        <p class="form-hint">Test customers are hidden by default</p>
                     </div>
                     <div class="form-section">
                         <div class="form-section-title">Pricing</div>

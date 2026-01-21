@@ -126,6 +126,7 @@ frontend/
 | markupPercentage | Number | 0-200% (for markup pricing) |
 | contractPrices | Map | ProductId → Price (for contract pricing) |
 | balance | Number | Outstanding balance (positive = owes money) |
+| isTestCustomer | Boolean | Test/demo customer flag (excluded by default) |
 | magicLinkToken | String | Unique token for passwordless auth (sparse) |
 | magicLinkCreatedAt | Date | When magic link was generated |
 
@@ -142,7 +143,7 @@ frontend/
 |-------|------|-------|
 | orderNumber | String | Auto-generated: ORD{YY}{MM}{0001} |
 | customer | ObjectId | Ref to Customer |
-| products | Array | [{product, productName, quantity, unit, rate, amount}] |
+| products | Array | [{product, productName, quantity, unit, rate, amount, packed}] |
 | totalAmount | Number | Sum of all items |
 | status | Enum | `pending`, `confirmed`, `delivered`, `cancelled` (simplified) |
 | paymentStatus | Enum | `unpaid`, `partial`, `paid` |
@@ -195,7 +196,7 @@ frontend/
 ### Customers `/api/customers`
 | Method | Endpoint | Access | Description |
 |--------|----------|--------|-------------|
-| GET | / | Admin/Staff | List active customers (soft-deleted hidden) |
+| GET | / | Admin/Staff | List active customers (query: `includeTest=true/only`) |
 | GET | /:id | Admin/Staff | Get one customer |
 | POST | / | Admin/Staff | Create customer |
 | PUT | /:id | Admin/Staff | Update customer |
@@ -203,6 +204,8 @@ frontend/
 | POST | /:id/payment | Admin/Staff | Record payment |
 | POST | /:id/magic-link | Admin/Staff | Generate magic link for customer |
 | DELETE | /:id/magic-link | Admin/Staff | Revoke customer's magic link |
+
+**Test Customers**: By default, test customers (`isTestCustomer: true`) are excluded from listings. Use `?includeTest=true` to show all, or `?includeTest=only` to show only test customers.
 
 ### Orders `/api/orders`
 | Method | Endpoint | Access | Description |
@@ -256,9 +259,9 @@ frontend/
 |--------|----------|--------|-------------|
 | GET | /queue | Admin/Staff | Get confirmed orders ready for packing |
 | GET | /stats | Admin/Staff | Get packing statistics for today |
-| GET | /:orderId | Admin/Staff | Get packing details for order |
-| PUT | /:orderId/item/:productId | Admin/Staff | Update item quantity (immediately updates order) |
-| POST | /:orderId/done | Admin/Staff | Mark packing as done |
+| GET | /:orderId | Admin/Staff | Get packing details for order (includes `packed` status per item) |
+| PUT | /:orderId/item/:productId | Admin/Staff | Update item quantity and/or packed status (`packed: boolean`) |
+| POST | /:orderId/done | Admin/Staff | Mark packing as done (validates all items are packed) |
 | POST | /:orderId/reprint-bill | Admin/Staff | Reprint delivery bill with current quantities |
 
 ### Reconciliation `/api/reconciliation`

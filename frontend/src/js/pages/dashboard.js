@@ -468,10 +468,9 @@ const chartColors = {
 
 async function loadAnalytics(ordersList) {
     try {
-        // Order Status Distribution
+        // Order Status Distribution (simplified: pending, confirmed, delivered, cancelled)
         const statusCounts = {
-            pending: 0, confirmed: 0, processing: 0,
-            packed: 0, shipped: 0, delivered: 0, cancelled: 0
+            pending: 0, confirmed: 0, delivered: 0, cancelled: 0
         };
 
         ordersList.forEach(order => {
@@ -482,8 +481,7 @@ async function loadAnalytics(ordersList) {
 
         // Update summary counts
         document.getElementById('pendingCount').textContent = statusCounts.pending;
-        document.getElementById('processingCount').textContent =
-            statusCounts.processing + statusCounts.packed + statusCounts.shipped;
+        document.getElementById('processingCount').textContent = statusCounts.confirmed;
         document.getElementById('deliveredCount').textContent = statusCounts.delivered;
 
         // Order Status Doughnut Chart
@@ -493,15 +491,15 @@ async function loadAnalytics(ordersList) {
         orderStatusChart = new Chart(statusCtx, {
             type: 'doughnut',
             data: {
-                labels: ['Pending', 'Confirmed', 'Processing', 'Packed', 'Shipped', 'Delivered', 'Cancelled'],
+                labels: ['Pending', 'Confirmed', 'Delivered', 'Cancelled'],
                 datasets: [{
                     data: [
-                        statusCounts.pending, statusCounts.confirmed, statusCounts.processing,
-                        statusCounts.packed, statusCounts.shipped, statusCounts.delivered, statusCounts.cancelled
+                        statusCounts.pending, statusCounts.confirmed,
+                        statusCounts.delivered, statusCounts.cancelled
                     ],
                     backgroundColor: [
-                        chartColors.warning, chartColors.olive, chartColors.terracotta,
-                        chartColors.gunmetal, chartColors.slate, chartColors.success, chartColors.error
+                        chartColors.warning, chartColors.olive,
+                        chartColors.success, chartColors.error
                     ],
                     borderWidth: 0
                 }]

@@ -29,7 +29,7 @@ const validateCustomer = [
 // @access  Private (Admin, Staff)
 router.get('/', protect, authorize('admin', 'staff'), async (req, res, next) => {
   try {
-    const { search, isActive, limit: rawLimit, page: rawPage } = req.query;
+    const { search, isActive, includeTest, limit: rawLimit, page: rawPage } = req.query;
     const filter = {};
 
     // Validate and cap limit to prevent DoS (min 1, max 500, default 100)
@@ -54,6 +54,17 @@ router.get('/', protect, authorize('admin', 'staff'), async (req, res, next) => 
     } else {
       // Default: only active customers
       filter.isActive = true;
+    }
+
+    // By default, exclude test customers unless explicitly requested
+    if (includeTest === 'true' || includeTest === 'only') {
+      if (includeTest === 'only') {
+        filter.isTestCustomer = true;
+      }
+      // 'true' shows all customers (test and non-test)
+    } else {
+      // Default: exclude test customers
+      filter.isTestCustomer = { $ne: true };
     }
 
     const [customers, total] = await Promise.all([
@@ -172,6 +183,7 @@ router.put('/:id',
     if (req.body.address !== undefined) customer.address = req.body.address;
     if (req.body.pricingType) customer.pricingType = req.body.pricingType;
     if (req.body.markupPercentage !== undefined) customer.markupPercentage = req.body.markupPercentage;
+    if (req.body.isTestCustomer !== undefined) customer.isTestCustomer = req.body.isTestCustomer;
 
     // Handle contractPrices Map update properly
     if (req.body.contractPrices) {

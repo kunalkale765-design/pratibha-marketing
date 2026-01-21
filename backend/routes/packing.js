@@ -160,7 +160,8 @@ router.get('/:orderId',
         orderedQuantity: p.quantity,
         unit: p.unit,
         rate: p.rate,
-        amount: p.amount
+        amount: p.amount,
+        packed: p.packed || false
       }));
 
       res.json({
@@ -195,8 +196,9 @@ router.put('/:orderId/item/:productId',
   param('orderId').isMongoId().withMessage('Invalid order ID'),
   param('productId').isMongoId().withMessage('Invalid product ID'),
   [
-    body('quantity').isFloat({ min: 0 }).withMessage('Quantity must be 0 or positive'),
-    body('notes').optional().isString().isLength({ max: 500 }).withMessage('Notes must be 500 characters or less')
+    body('quantity').optional().isFloat({ min: 0 }).withMessage('Quantity must be 0 or positive'),
+    body('notes').optional().isString().isLength({ max: 500 }).withMessage('Notes must be 500 characters or less'),
+    body('packed').optional().isBoolean().withMessage('Packed must be a boolean')
   ],
   async (req, res, next) => {
     try {
@@ -206,7 +208,7 @@ router.put('/:orderId/item/:productId',
       }
 
       const { orderId, productId } = req.params;
-      const { quantity, notes } = req.body;
+      const { quantity, notes, packed } = req.body;
 
       const order = await Order.findById(orderId);
       if (!order) {
@@ -238,6 +240,28 @@ router.put('/:orderId/item/:productId',
 
       const product = order.products[productIndex];
       const oldQuantity = product.quantity;
+
+      // Handle packed status update
+      if (typeof packed === 'boolean') {
+        product.packed = packed;
+      }
+
+      // If quantity is not provided, just save packed status change
+      if (quantity === undefined) {
+        await order.save();
+        return res.json({
+          success: true,
+          message: 'Product packed status updated',
+          data: {
+            product: {
+              productId: productId,
+              productName: product.productName,
+              packed: product.packed
+            }
+          }
+        });
+      }
+
       const newQuantity = quantity;
 
       // Update the product quantity and recalculate amount
@@ -322,6 +346,23 @@ router.post('/:orderId/done',
         return res.status(400).json({
           success: false,
           message: `Cannot mark packing done for order with status "${order.status}". Order must be confirmed.`
+        });
+      }
+
+      // Validate all items are packed
+      const unpackedItems = order.products.filter(p => !p.packed);
+      if (unpackedItems.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: `${unpackedItems.length} item(s) not marked as packed`,
+          data: {
+            unpackedCount: unpackedItems.length,
+            unpackedItems: unpackedItems.map(p => ({
+              productName: p.productName,
+              quantity: p.quantity,
+              unit: p.unit
+            }))
+          }
         });
       }
 

@@ -41,6 +41,10 @@
     <div class="search-bar">
         <input id="searchInput" type="text" placeholder="Search customers..." class="search-input input-animated"
             oninput="searchCustomers()">
+        <label class="toggle-test-customers">
+            <input type="checkbox" id="showTestCustomers" onchange="toggleTestCustomers()">
+            <span>Show test</span>
+        </label>
     </div>
 
     <div id="toast" class="toast"></div>
@@ -116,6 +120,13 @@
                     <div class="form-group">
                         <label class="form-label">Address</label>
                         <textarea id="customerAddress" rows="2" class="form-textarea input-animated"></textarea>
+                    </div>
+                    <div class="form-group checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="customerIsTest">
+                            <span>Test customer</span>
+                        </label>
+                        <p class="form-hint">Test customers are hidden by default</p>
                     </div>
                     <div class="form-section">
                         <div class="form-section-title">Pricing</div>

@@ -1043,6 +1043,15 @@ body {
     background: rgba(93, 122, 95, 0.08);
 }
 
+.packing-checklist-item.item-packed .packing-item-name {
+    text-decoration: line-through;
+    opacity: 0.7;
+}
+
+.packing-checklist-item.item-packed .packing-item-qty {
+    opacity: 0.6;
+}
+
 .packing-checklist-item.item-short {
     border-color: var(--warning);
     background: rgba(184, 154, 90, 0.08);
@@ -1084,6 +1093,19 @@ body {
     background: var(--success);
     border-color: var(--success);
     color: white;
+    animation: checkPop 0.2s ease-out;
+}
+
+@keyframes checkPop {
+    0% {
+        transform: scale(0.8);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+    }
 }
 
 .item-short .packing-item-check.checked {

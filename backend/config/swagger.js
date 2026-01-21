@@ -93,7 +93,7 @@ const options = {
             totalAmount: { type: 'number', example: 25000 },
             status: {
               type: 'string',
-              enum: ['pending', 'confirmed', 'processing', 'packed', 'shipped', 'delivered', 'cancelled'],
+              enum: ['pending', 'confirmed', 'delivered', 'cancelled'],
               example: 'pending'
             },
             paymentStatus: { type: 'string', enum: ['unpaid', 'partial', 'paid'], example: 'unpaid' },
@@ -579,7 +579,7 @@ swaggerSpec.paths = {
               properties: {
                 status: {
                   type: 'string',
-                  enum: ['pending', 'confirmed', 'processing', 'packed', 'shipped', 'delivered', 'cancelled']
+                  enum: ['pending', 'confirmed', 'delivered', 'cancelled']
                 }
               }
             }

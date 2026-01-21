@@ -14,7 +14,7 @@ router.get('/quantity-summary', protect, authorize('admin', 'staff'), async (req
   try {
     // Get all pending/confirmed orders
     const orders = await Order.find({
-      status: { $in: ['pending', 'confirmed', 'processing'] }
+      status: { $in: ['pending', 'confirmed'] }
     }).populate('products.product', 'name unit');
 
     // Aggregate quantities by product
@@ -111,7 +111,7 @@ router.get('/quantity-summary', protect, authorize('admin', 'staff'), async (req
 router.get('/pending-orders', protect, authorize('admin', 'staff'), async (req, res, next) => {
   try {
     const orders = await Order.find({
-      status: { $in: ['pending', 'confirmed', 'processing'] }
+      status: { $in: ['pending', 'confirmed'] }
     })
       .populate('customer', 'name phone')
       .populate('products.product', 'name unit')

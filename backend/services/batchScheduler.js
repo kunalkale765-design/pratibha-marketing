@@ -1,6 +1,7 @@
 const cron = require('node-cron');
 const Batch = require('../models/Batch');
 const Order = require('../models/Order');
+const { generateBillsForBatch } = require('./deliveryBillService');
 
 // Import Sentry if available (optional dependency)
 let Sentry;
@@ -12,6 +13,7 @@ try {
 }
 
 let scheduledTask = null;
+let batchCreationTask = null;
 
 // IST timezone configuration
 const IST_TIMEZONE = 'Asia/Kolkata';
@@ -33,12 +35,21 @@ function getISTTime(date = new Date()) {
   const utcTime = date.getTime() + (date.getTimezoneOffset() * 60 * 1000);
   const istTime = new Date(utcTime + istOffset);
 
+  // Calculate midnight IST as a UTC timestamp
+  // This ensures consistent date comparisons regardless of server timezone
+  const midnightIST = new Date(Date.UTC(
+    istTime.getFullYear(),
+    istTime.getMonth(),
+    istTime.getDate(),
+    0, 0, 0, 0
+  ) - istOffset);
+
   return {
     hour: istTime.getHours(),
     minutes: istTime.getMinutes(),
     date: istTime,
-    // Get just the date portion at midnight IST
-    dateOnly: new Date(istTime.getFullYear(), istTime.getMonth(), istTime.getDate())
+    // Get just the date portion at midnight IST (as UTC timestamp)
+    dateOnly: midnightIST
   };
 }
 
@@ -179,13 +190,33 @@ async function autoConfirmFirstBatch() {
     // Confirm the batch
     await batch.confirmBatch(null); // null = auto-confirmed
 
+    // Generate delivery bills for all confirmed orders in the batch
+    let billResults = { billsGenerated: 0, errors: [] };
+    try {
+      console.log(`[BatchScheduler] Generating delivery bills for batch ${batch.batchNumber}...`);
+      billResults = await generateBillsForBatch(batch);
+      console.log(`[BatchScheduler] Generated ${billResults.billsGenerated} bills for ${billResults.totalOrders} orders`);
+      if (billResults.errors.length > 0) {
+        console.warn(`[BatchScheduler] Bill generation had ${billResults.errors.length} errors:`, billResults.errors);
+      }
+    } catch (billError) {
+      console.error('[BatchScheduler] Error generating delivery bills:', billError);
+      // Don't fail the entire operation if bill generation fails
+      // Orders are already confirmed, bills can be generated manually later
+      if (Sentry && process.env.SENTRY_DSN) {
+        Sentry.captureException(billError);
+      }
+    }
+
     const duration = Date.now() - startTime;
-    console.log(`[BatchScheduler] Auto-confirm complete: ${updateResult.modifiedCount} orders confirmed in ${duration}ms`);
+    console.log(`[BatchScheduler] Auto-confirm complete: ${updateResult.modifiedCount} orders confirmed, ${billResults.billsGenerated} bills generated in ${duration}ms`);
 
     return {
       success: true,
       ordersConfirmed: updateResult.modifiedCount,
       batchNumber: batch.batchNumber,
+      billsGenerated: billResults.billsGenerated,
+      billErrors: billResults.errors.length,
       duration
     };
   } catch (error) {
@@ -273,7 +304,7 @@ function startScheduler() {
   });
 
   // Also create next day batches at 12:01 PM IST (after 2nd batch cutoff)
-  cron.schedule('1 12 * * *', async () => {
+  batchCreationTask = cron.schedule('1 12 * * *', async () => {
     try {
       await createNextDayBatches();
     } catch (error) {
@@ -293,17 +324,25 @@ function startScheduler() {
 function stopScheduler() {
   if (scheduledTask) {
     scheduledTask.stop();
-    console.log('[BatchScheduler] Scheduler stopped');
+    scheduledTask = null;
   }
+  if (batchCreationTask) {
+    batchCreationTask.stop();
+    batchCreationTask = null;
+  }
+  console.log('[BatchScheduler] All schedulers stopped');
 }
 
 /**
  * Manually confirm a batch (for 2nd batch or emergency override)
  * @param {string} batchId - The batch ID to confirm
  * @param {string} userId - The user confirming the batch
+ * @param {Object} options - Additional options
+ * @param {boolean} options.generateBills - Whether to generate delivery bills (default: true)
  * @returns {Object} Result with batch and order count
  */
-async function manuallyConfirmBatch(batchId, userId) {
+async function manuallyConfirmBatch(batchId, userId, options = {}) {
+  const { generateBills = true } = options;
   const batch = await Batch.findById(batchId);
 
   if (!batch) {
@@ -339,10 +378,26 @@ async function manuallyConfirmBatch(batchId, userId) {
   // Confirm the batch
   await batch.confirmBatch(userId);
 
+  // Generate delivery bills if requested
+  let billResults = { billsGenerated: 0, errors: [] };
+  if (generateBills) {
+    try {
+      console.log(`[BatchScheduler] Generating delivery bills for batch ${batch.batchNumber}...`);
+      billResults = await generateBillsForBatch(batch);
+      console.log(`[BatchScheduler] Generated ${billResults.billsGenerated} bills for ${billResults.totalOrders} orders`);
+    } catch (billError) {
+      console.error('[BatchScheduler] Error generating delivery bills:', billError);
+      // Don't fail the entire operation if bill generation fails
+      billResults.errors.push({ error: billError.message });
+    }
+  }
+
   return {
     success: true,
     batch,
-    ordersConfirmed
+    ordersConfirmed,
+    billsGenerated: billResults.billsGenerated,
+    billErrors: billResults.errors.length
   };
 }
 

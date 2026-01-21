@@ -52,6 +52,11 @@ const customerSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  // Flag to identify test/demo customers (excluded from production reports)
+  isTestCustomer: {
+    type: Boolean,
+    default: false
+  },
   // Customer's outstanding balance
   // Positive = customer owes money, Negative = credit/overpayment
   balance: {

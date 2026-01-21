@@ -314,3 +314,68 @@ body {
     border-color: var(--dusty-olive);
     color: white;
 }
+
+/* Test Customer Toggle */
+.toggle-test-customers {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.toggle-test-customers input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--dusty-olive);
+    cursor: pointer;
+}
+
+/* Test Customer Badge */
+.badge-test {
+    background: rgba(184, 154, 90, 0.15);
+    color: #8a7340;
+    border: 1px solid rgba(184, 154, 90, 0.3);
+}
+
+/* Customer Badges Container */
+.customer-badges {
+    display: flex;
+    gap: 0.375rem;
+    flex-wrap: wrap;
+}
+
+/* Test Customer Card Styling */
+.customer-card.test-customer {
+    background: repeating-linear-gradient(
+        -45deg,
+        var(--warm-white),
+        var(--warm-white) 10px,
+        rgba(184, 154, 90, 0.05) 10px,
+        rgba(184, 154, 90, 0.05) 20px
+    );
+    border: 1px dashed rgba(184, 154, 90, 0.4);
+}
+
+/* Checkbox Group in Form */
+.checkbox-group {
+    margin-bottom: 0.5rem;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-size: 0.9375rem;
+    color: var(--text-primary);
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--dusty-olive);
+    cursor: pointer;
+}

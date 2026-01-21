@@ -255,18 +255,21 @@ router.post('/:orderId/complete',
         order.notes = order.notes ? `${order.notes}\n\nReconciliation: ${notes}` : `Reconciliation: ${notes}`;
       }
 
-      await order.save();
-
       // Create ledger entry for the customer using a transaction for consistency
+      // IMPORTANT: Order save MUST be inside the transaction to prevent inconsistent state
       const customer = order.customer;
       if (!customer || !customer._id) {
-        // Log error but don't fail reconciliation - the order is already updated
+        // No customer - still save order but warn about missing ledger entry
+        await order.save();
         console.error(`WARNING: Order ${order.orderNumber} has no associated customer. Ledger entry not created.`);
       } else {
-        // Use transaction to ensure ledger entry and customer balance are updated atomically
+        // Use transaction to ensure order, ledger entry and customer balance are updated atomically
         const session = await mongoose.startSession();
         try {
           await session.withTransaction(async () => {
+            // Save order within transaction
+            await order.save({ session });
+
             // Get customer's current balance within transaction
             const lastEntry = await LedgerEntry.findOne({ customer: customer._id })
               .sort({ date: -1, createdAt: -1 })

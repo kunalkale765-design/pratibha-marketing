@@ -12,6 +12,7 @@ let allCustomers = [];
 let allProducts = [];
 let currentContractPrices = {};
 let selectedContractCategory = '';
+let showTestCustomers = false;
 
 async function init() {
     // Pre-fetch CSRF token to ensure it's ensureCsrfTokenready before form submissions
@@ -38,7 +39,8 @@ async function loadProducts() {
 
 async function loadCustomers() {
     try {
-        const res = await fetch('/api/customers', { credentials: 'include' });
+        const url = showTestCustomers ? '/api/customers?includeTest=true' : '/api/customers';
+        const res = await fetch(url, { credentials: 'include' });
         const data = await res.json();
         allCustomers = data.data || [];
         displayCustomers(allCustomers);
@@ -115,13 +117,18 @@ function displayCustomers(customers) {
             className: 'btn-action danger'
         }, 'Delete'));
 
+        const badges = [getPricingBadge(c)];
+        if (c.isTestCustomer) {
+            badges.unshift(createElement('span', { className: 'badge badge-test' }, 'Test'));
+        }
+
         const card = createElement('div', {
-            className: 'customer-card card-animated card-fade-in',
+            className: `customer-card card-animated card-fade-in${c.isTestCustomer ? ' test-customer' : ''}`,
             style: { animationDelay: `${idx * 0.05}s` }
         }, [
             createElement('div', { className: 'customer-header' }, [
                 createElement('div', { className: 'customer-name' }, c.name),
-                getPricingBadge(c)
+                createElement('div', { className: 'customer-badges' }, badges)
             ]),
             createElement('div', { className: 'customer-details' }, details),
             createElement('div', { className: 'customer-actions' }, actions)
@@ -150,6 +157,7 @@ function showAddCustomerForm() {
     document.getElementById('modalTitle').textContent = 'Add Customer';
     document.getElementById('customerForm').reset();
     document.getElementById('customerId').value = '';
+    document.getElementById('customerIsTest').checked = false;
     document.getElementById('customerPricingType').value = 'market';
     toggleMarkupField();
     document.getElementById('customerModal').classList.add('show');
@@ -162,6 +170,7 @@ function editCustomer(customer) {
     document.getElementById('customerPhone').value = customer.phone || '';
     document.getElementById('customerWhatsapp').value = customer.whatsapp || '';
     document.getElementById('customerAddress').value = customer.address || '';
+    document.getElementById('customerIsTest').checked = customer.isTestCustomer || false;
     document.getElementById('customerPricingType').value = customer.pricingType || 'market';
     document.getElementById('customerMarkup').value = customer.markupPercentage || 0;
     toggleMarkupField();
@@ -227,6 +236,7 @@ function setupFormListeners() {
                 phone: phone,
                 whatsapp: whatsapp,
                 address: document.getElementById('customerAddress').value.trim(),
+                isTestCustomer: document.getElementById('customerIsTest').checked,
                 pricingType: pricingType,
                 markupPercentage: pricingType === 'markup' ? markupValue : 0
             };
@@ -625,10 +635,16 @@ function closeContractModal() {
     document.getElementById('productSearch').value = '';
 }
 
+function toggleTestCustomers() {
+    showTestCustomers = document.getElementById('showTestCustomers').checked;
+    loadCustomers();
+}
+
 // Expose functions to window for inline handlers
 window.showAddCustomerForm = showAddCustomerForm;
 window.searchCustomers = searchCustomers;
 window.toggleMarkupField = toggleMarkupField;
+window.toggleTestCustomers = toggleTestCustomers;
 window.closeModal = closeModal;
 window.editCustomerById = editCustomerById;
 window.deleteCustomer = deleteCustomer;

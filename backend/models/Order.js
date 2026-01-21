@@ -40,6 +40,11 @@ const orderSchema = new mongoose.Schema({
     isContractPrice: {
       type: Boolean,
       default: false
+    },
+    // Tracks if item has been packed during packing process
+    packed: {
+      type: Boolean,
+      default: false
     }
   }],
   totalAmount: {
