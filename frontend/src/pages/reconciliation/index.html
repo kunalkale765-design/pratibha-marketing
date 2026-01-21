@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Reconciliation - Pratibha Marketing</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#2e3532">
+
+    <!-- Shared CSS -->
+    <link rel="stylesheet" href="/assets/css/variables.css">
+    <link rel="stylesheet" href="/assets/css/base.css">
+    <link rel="stylesheet" href="/assets/css/components.css">
+    <link rel="stylesheet" href="/assets/css/utilities.css">
+    <link rel="stylesheet" href="/assets/css/responsive.css">
+
+    <!-- Animations -->
+    <link rel="stylesheet" href="/assets/css/animations/skeleton.css">
+    <link rel="stylesheet" href="/assets/css/animations/cards.css">
+    <link rel="stylesheet" href="/assets/css/animations/inputs.css">
+    <link rel="stylesheet" href="/assets/css/animations/buttons.css">
+    <link rel="stylesheet" href="/assets/css/animations/badges.css">
+    <link rel="stylesheet" href="/assets/css/animations/page.css">
+
+    <!-- Page-specific styles -->
+    <link rel="stylesheet" href="/assets/css/pages/reconciliation.css">
+</head>
+
+<body>
+    <header class="header header-animated">
+        <div class="header-content">
+            <a href="/" class="logo">Reconciliation</a>
+            <div class="header-btns">
+                <a href="/pages/orders/" class="btn-header">Orders</a>
+                <a href="/" class="btn-header">Home</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Stats Bar -->
+    <div class="stats-bar" id="statsBar">
+        <div class="stat-item">
+            <span class="stat-value" id="statTotal">-</span>
+            <span class="stat-label">Total</span>
+        </div>
+        <div class="stat-item stat-highlight">
+            <span class="stat-value" id="statPending">-</span>
+            <span class="stat-label">Pending</span>
+        </div>
+        <div class="stat-item stat-success">
+            <span class="stat-value" id="statCompleted">-</span>
+            <span class="stat-label">Done Today</span>
+        </div>
+    </div>
+
+    <!-- Help Banner -->
+    <div class="reconciliation-help-banner" id="helpBanner">
+        <span class="help-icon">&#128161;</span>
+        <span class="help-text">Review delivered quantities and complete reconciliation to update ledger</span>
+        <button class="help-dismiss" onclick="dismissHelp()">&#10005;</button>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <!-- Main Content -->
+    <main class="reconciliation-content">
+        <div class="order-list" id="orderList">
+            <!-- Skeleton loading -->
+            <div class="skeleton-card">
+                <div class="skeleton" style="width: 100%; height: 80px; border-radius: 12px;"></div>
+            </div>
+            <div class="skeleton-card">
+                <div class="skeleton" style="width: 100%; height: 80px; border-radius: 12px;"></div>
+            </div>
+            <div class="skeleton-card">
+                <div class="skeleton" style="width: 100%; height: 80px; border-radius: 12px;"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Reconciliation Modal -->
+    <div id="reconcileModal" class="modal-overlay">
+        <div class="modal reconciliation-modal">
+            <div class="modal-header">
+                <div>
+                    <div class="modal-title" id="modalTitle">Reconcile Order</div>
+                    <div class="modal-subtitle" id="modalSubtitle">-</div>
+                </div>
+                <button class="btn-close" onclick="closeModal()">&times;</button>
+            </div>
+
+            <!-- Order Info -->
+            <div class="order-info-bar" id="orderInfoBar">
+                <div class="info-item">
+                    <span class="info-label">Customer</span>
+                    <span class="info-value" id="infoCustomer">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Total</span>
+                    <span class="info-value" id="infoTotal">-</span>
+                </div>
+            </div>
+
+            <!-- Items List -->
+            <div class="modal-body" id="modalBody">
+                <div class="items-header">
+                    <span>Product</span>
+                    <span>Ordered</span>
+                    <span>Delivered</span>
+                </div>
+                <div class="reconcile-items" id="reconcileItems">
+                    <!-- Items will be rendered here -->
+                </div>
+            </div>
+
+            <!-- Notes -->
+            <div class="reconcile-notes">
+                <label class="input-label">Notes (optional)</label>
+                <textarea id="reconcileNotes" class="input-textarea" rows="2" placeholder="Add any notes about this reconciliation..."></textarea>
+            </div>
+
+            <!-- Summary -->
+            <div class="reconcile-summary" id="reconcileSummary">
+                <div class="summary-row">
+                    <span>Original Total</span>
+                    <span id="summaryOriginal">-</span>
+                </div>
+                <div class="summary-row adjusted">
+                    <span>Adjusted Total</span>
+                    <span id="summaryAdjusted">-</span>
+                </div>
+                <div class="summary-row difference" id="summaryDifferenceRow" style="display: none;">
+                    <span>Difference</span>
+                    <span id="summaryDifference">-</span>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="modal-footer">
+                <button class="btn-modal secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn-modal primary" id="btnComplete" onclick="completeReconciliation()">
+                    Complete Reconciliation
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/js/auth.js"></script>
+    <script type="module" src="/js/api.js"></script>
+    <script type="module" src="/js/pages/reconciliation.js"></script>
+</body>
+
+</html>

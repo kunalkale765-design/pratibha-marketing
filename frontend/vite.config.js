@@ -20,6 +20,7 @@ export default defineConfig({
         resetPassword: resolve(__dirname, 'src/pages/auth/reset-password.html'),
         orderForm: resolve(__dirname, 'src/pages/order-form/index.html'),
         packing: resolve(__dirname, 'src/pages/packing/index.html'),
+        reconciliation: resolve(__dirname, 'src/pages/reconciliation/index.html'),
       }
     }
   },
