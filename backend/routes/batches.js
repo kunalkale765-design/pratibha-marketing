@@ -578,9 +578,6 @@ router.get('/:id/bills/:orderId/download',
         return res.status(400).json({ success: false, errors: errors.array() });
       }
 
-      const { copy = 'original' } = req.query;
-      const copyType = copy.toUpperCase() === 'DUPLICATE' ? 'DUPLICATE' : 'ORIGINAL';
-
       // Find the order
       const order = await Order.findOne({
         _id: req.params.orderId,
@@ -665,11 +662,12 @@ router.get('/:id/bills/:orderId/download',
         total: firmData.subtotal
       };
 
-      const pdfBuffer = await deliveryBillService.generateBillPDF(billData, copyType);
+      // Generate combined PDF with both ORIGINAL and DUPLICATE copies
+      const pdfBuffer = await deliveryBillService.generateBillPDF(billData);
 
       res.set({
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${billNumber}_${copyType}.pdf"`,
+        'Content-Disposition': `attachment; filename="${billNumber}.pdf"`,
         'Content-Length': pdfBuffer.length
       });
 

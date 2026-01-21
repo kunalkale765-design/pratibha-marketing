@@ -404,9 +404,6 @@ router.post('/:orderId/reprint-bill',
         return res.status(400).json({ success: false, errors: errors.array() });
       }
 
-      const { copy = 'original' } = req.body;
-      const copyType = copy.toUpperCase() === 'DUPLICATE' ? 'DUPLICATE' : 'ORIGINAL';
-
       const order = await Order.findById(req.params.orderId)
         .populate('customer', 'name phone address')
         .populate('batch', 'batchNumber');
@@ -461,11 +458,12 @@ router.post('/:orderId/reprint-bill',
         total: firmData.subtotal
       };
 
-      const pdfBuffer = await deliveryBillService.generateBillPDF(billData, copyType);
+      // Generate combined PDF with both ORIGINAL and DUPLICATE copies
+      const pdfBuffer = await deliveryBillService.generateBillPDF(billData);
 
       res.set({
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${billNumber}_${copyType}.pdf"`,
+        'Content-Disposition': `attachment; filename="${billNumber}.pdf"`,
         'Content-Length': pdfBuffer.length
       });
 
