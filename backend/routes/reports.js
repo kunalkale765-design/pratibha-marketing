@@ -1,5 +1,8 @@
 const express = require('express');
 const router = express.Router();
+// SECURITY NOTE: xlsx has known vulnerabilities (prototype pollution, ReDoS) when PARSING
+// untrusted Excel files. This code only WRITES Excel files from trusted database data,
+// which is a lower-risk operation. Do NOT use xlsx to parse user-uploaded files.
 const XLSX = require('xlsx');
 const { query, validationResult } = require('express-validator');
 const Invoice = require('../models/Invoice');

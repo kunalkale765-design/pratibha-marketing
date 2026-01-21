@@ -2,10 +2,37 @@ const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
 const Customer = require('../models/Customer');
 const { JWT_SECRET } = require('../config/secrets');
+
+// SECURITY: Rate limiters for sensitive auth endpoints
+// Prevents brute force attacks on password reset and magic link tokens
+const passwordResetLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5, // 5 attempts per hour per IP
+  message: {
+    success: false,
+    message: 'Too many password reset attempts. Please try again later.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === 'test'
+});
+
+const magicLinkAuthLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 attempts per 15 min per IP
+  message: {
+    success: false,
+    message: 'Too many authentication attempts. Please try again later.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === 'test'
+});
 
 // Generate JWT Token
 const generateToken = (userId) => {
@@ -319,7 +346,8 @@ router.get('/me', async (req, res, next) => {
 // @route   GET /api/auth/magic/:token
 // @desc    Authenticate via magic link
 // @access  Public
-router.get('/magic/:token', async (req, res, next) => {
+// SECURITY: Rate limited to prevent token brute force attacks
+router.get('/magic/:token', magicLinkAuthLimiter, async (req, res, next) => {
   try {
     const { token } = req.params;
 
@@ -435,7 +463,8 @@ router.get('/magic/:token', async (req, res, next) => {
 // @route   POST /api/auth/forgot-password
 // @desc    Request password reset (generates token)
 // @access  Public
-router.post('/forgot-password', [
+// SECURITY: Rate limited to prevent email enumeration and spam
+router.post('/forgot-password', passwordResetLimiter, [
   body('email').trim().notEmpty().withMessage('Username is required')
 ], async (req, res, next) => {
   try {
@@ -490,7 +519,8 @@ router.post('/forgot-password', [
 // @route   POST /api/auth/reset-password/:token
 // @desc    Reset password using token
 // @access  Public
-router.post('/reset-password/:token', [
+// SECURITY: Rate limited to prevent token brute force attacks
+router.post('/reset-password/:token', passwordResetLimiter, [
   body('password')
     .isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
     .matches(/[A-Z]/).withMessage('Password must contain at least one uppercase letter')

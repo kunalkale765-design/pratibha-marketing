@@ -1,5 +1,16 @@
 import { showToast } from '/js/ui.js';
 
+// SECURITY: HTML escape function to prevent XSS
+function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 // Wait for Auth to be available
 const waitForAuth = () => new Promise((resolve) => {
     if (window.Auth) resolve(window.Auth);
@@ -65,16 +76,22 @@ function renderOrders() {
         return;
     }
 
+    // SECURITY: Use data attributes and event delegation instead of inline onclick
+    // Escape all user-provided content to prevent XSS
     container.innerHTML = pendingOrders.map(order => {
-        const initials = getInitials(order.customer?.name || 'U');
+        const initials = escapeHtml(getInitials(order.customer?.name || 'U'));
+        const customerName = escapeHtml(order.customer?.name || 'Unknown');
+        const orderNumber = escapeHtml(order.orderNumber);
+        const batchType = escapeHtml(order.batch?.batchType || '1st');
+        const orderId = escapeHtml(order._id);
         return `
-            <div class="order-card card-animated" data-order-id="${order._id}" onclick="openReconciliation('${order._id}')">
+            <div class="order-card card-animated" data-order-id="${orderId}">
                 <div class="order-avatar">${initials}</div>
                 <div class="order-details">
-                    <div class="order-customer">${order.customer?.name || 'Unknown'}</div>
+                    <div class="order-customer">${customerName}</div>
                     <div class="order-meta">
-                        <span class="order-number">${order.orderNumber}</span>
-                        ${order.batch ? `<span class="order-batch">${order.batch.batchType || '1st'}</span>` : ''}
+                        <span class="order-number">${orderNumber}</span>
+                        ${order.batch ? `<span class="order-batch">${batchType}</span>` : ''}
                     </div>
                     <div class="order-items">${order.itemCount} items</div>
                 </div>
@@ -83,6 +100,14 @@ function renderOrders() {
             </div>
         `;
     }).join('');
+
+    // Event delegation for order card clicks
+    container.querySelectorAll('.order-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const orderId = card.dataset.orderId;
+            if (orderId) openReconciliation(orderId);
+        });
+    });
 }
 
 // Get initials from name
@@ -140,11 +165,15 @@ function renderReconcileItems() {
     const container = document.getElementById('reconcileItems');
     if (!currentOrderData) return;
 
-    container.innerHTML = currentOrderData.products.map((item, index) => `
+    // SECURITY: Escape user-provided content
+    container.innerHTML = currentOrderData.products.map((item, index) => {
+        const productName = escapeHtml(item.productName);
+        const unit = escapeHtml(item.unit);
+        return `
         <div class="reconcile-item" id="item-${index}" data-index="${index}">
             <div class="item-info">
-                <div class="item-name">${item.productName}</div>
-                <div class="item-unit">${item.unit} @ ₹${item.rate}</div>
+                <div class="item-name">${productName}</div>
+                <div class="item-unit">${unit} @ ₹${item.rate}</div>
             </div>
             <div class="item-ordered">${item.orderedQty}</div>
             <div class="item-delivered">
@@ -155,9 +184,7 @@ function renderReconcileItems() {
                     min="0"
                     step="0.1"
                     data-original="${item.orderedQty}"
-                    data-index="${index}"
-                    onchange="onQuantityChange(${index})"
-                    oninput="onQuantityInput(${index})">
+                    data-index="${index}">
             </div>
             <div class="item-reason" id="reason-row-${index}" style="display: none;">
                 <input type="text"
@@ -167,7 +194,13 @@ function renderReconcileItems() {
                     maxlength="200">
             </div>
         </div>
-    `).join('');
+    `;}).join('');
+
+    // Event delegation for quantity inputs
+    container.querySelectorAll('.qty-input').forEach(input => {
+        input.addEventListener('change', () => onQuantityChange(parseInt(input.dataset.index)));
+        input.addEventListener('input', () => onQuantityInput(parseInt(input.dataset.index)));
+    });
 }
 
 // Handle quantity input (real-time visual feedback)
