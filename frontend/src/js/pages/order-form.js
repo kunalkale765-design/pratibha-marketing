@@ -195,16 +195,18 @@ function getFilteredProducts() {
         return products;
     }
 
-    // Contract customers: filter to only products with contract prices
-    const contractPrices = selectedCustomer.contractPrices || {};
-    const contractProductIds = Object.keys(contractPrices);
+    // Contract customers: filter to only products they have access to
+    // For customers (non-staff), use allowedProducts array (doesn't expose prices)
+    // For staff selecting a customer, use contractPrices keys
+    const allowedProductIds = selectedCustomer.allowedProducts
+        || (selectedCustomer.contractPrices ? Object.keys(selectedCustomer.contractPrices) : []);
 
-    // If no contract prices configured, return empty array
-    if (contractProductIds.length === 0) {
+    // If no contract products configured, return empty array
+    if (allowedProductIds.length === 0) {
         return [];
     }
 
-    return products.filter(p => contractProductIds.includes(p._id));
+    return products.filter(p => allowedProductIds.includes(p._id));
 }
 
 function buildCategoryPills(displayProducts = products) {
@@ -288,18 +290,25 @@ function renderProducts() {
         }, cat));
 
         prods.forEach(p => {
-            const price = getPrice(p);
+            // Only calculate price for staff - customers should never see prices
+            const price = isStaff ? getPrice(p) : 0;
             // Use step="1" for piece items to enforce whole numbers
             const step = p.unit === 'piece' ? '1' : '0.01';
 
+            // Build dataset - only include price for staff (customers should never see prices)
+            const itemDataset = {
+                id: p._id,
+                category: cat,
+                unit: p.unit
+            };
+            // SECURITY: Only expose price to staff in DOM - customers get server-calculated prices
+            if (isStaff) {
+                itemDataset.price = price;
+            }
+
             const productItem = createElement('div', {
                 className: 'product-item',
-                dataset: {
-                    id: p._id,
-                    category: cat,
-                    price: price,
-                    unit: p.unit
-                }
+                dataset: itemDataset
             }, [
                 createElement('div', { className: 'product-info' }, [
                     createElement('div', { className: 'product-name' }, p.name),
@@ -424,7 +433,8 @@ async function placeOrder() {
         const input = document.getElementById('qty-' + id);
         const rawValue = parseFloat(input?.value) || 0;
         const qty = rawValue;
-        const price = parseFloat(item.dataset.price) || 0;
+        // Only staff have price in dataset - customers get server-calculated prices
+        const price = isStaff ? (parseFloat(item.dataset.price) || 0) : 0;
         const unit = item.dataset.unit;
         const name = item.querySelector('.product-name')?.textContent || 'Unknown';
 
@@ -433,9 +443,9 @@ async function placeOrder() {
             if (unit === 'piece' && !Number.isInteger(qty)) {
                 pieceErrors.push(name);
             }
-            // Only include rate if > 0; let backend calculate if not provided
+            // Only include rate for staff if > 0; customers always get backend-calculated prices
             const orderProduct = { product: id, quantity: qty };
-            if (price > 0) {
+            if (isStaff && price > 0) {
                 orderProduct.rate = price;
             }
             orderProducts.push(orderProduct);

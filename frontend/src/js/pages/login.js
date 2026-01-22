@@ -98,7 +98,7 @@ if (loginForm) {
                     });
                     const retryData = await retryResponse.json();
                     if (retryResponse.ok) {
-                        localStorage.setItem('user', JSON.stringify(retryData.user));
+                        Auth.setUser(retryData.user);  // Use Auth.setUser to filter sensitive data
                         if (retryData.user.role === 'customer') {
                             window.location.href = '/pages/order-form/';
                         } else {
@@ -112,7 +112,7 @@ if (loginForm) {
             }
 
             if (response.ok) {
-                localStorage.setItem('user', JSON.stringify(data.user));
+                Auth.setUser(data.user);  // Use Auth.setUser to filter sensitive data
                 if (data.user.role === 'customer') {
                     window.location.href = '/pages/order-form/';
                 } else {
@@ -183,7 +183,14 @@ if (forgotLink) {
             if (response.ok && data.resetUrl) {
                 // For development: show the reset link
                 // In production with email, this would just show a success message
-                noticeMessage.innerHTML = `Reset link generated! <a href="${data.resetUrl}" style="color: var(--dusty-olive); text-decoration: underline;">Click here to reset</a>`;
+                // Use DOM methods to prevent XSS (don't use innerHTML with user data)
+                noticeMessage.textContent = '';
+                noticeMessage.appendChild(document.createTextNode('Reset link generated! '));
+                const link = document.createElement('a');
+                link.href = data.resetUrl;
+                link.style.cssText = 'color: var(--dusty-olive); text-decoration: underline;';
+                link.textContent = 'Click here to reset';
+                noticeMessage.appendChild(link);
                 noticeMessage.classList.add('show');
                 noticeMessage.classList.remove('error');
             } else {

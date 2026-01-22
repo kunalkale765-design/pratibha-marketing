@@ -40,11 +40,13 @@ const Auth = {
     /**
      * Store user data after login
      * Only stores essential fields to minimize exposure in localStorage
+     * SECURITY: Never store prices in localStorage - customers should not see pricing
      * @param {Object} user
      */
     setUser(user) {
-        // Only store essential data - exclude sensitive info like sensitive fields
-        // For contract customers, include contractPrices so frontend can filter products
+        // Only store essential data - exclude sensitive info
+        // For contract customers, store only allowed product IDs (not prices)
+        // Prices are calculated server-side; customers should never see them
         const safeUser = {
             id: user.id,
             name: user.name,
@@ -54,8 +56,9 @@ const Auth = {
                 _id: user.customer._id,
                 name: user.customer.name,
                 pricingType: user.customer.pricingType,
+                // Store only product IDs for filtering, not actual prices
                 ...(user.customer.pricingType === 'contract' && user.customer.contractPrices
-                    ? { contractPrices: user.customer.contractPrices }
+                    ? { allowedProducts: Object.keys(user.customer.contractPrices) }
                     : {})
             } : null,
             isMagicLink: user.isMagicLink || false

@@ -466,10 +466,18 @@ router.post('/procure', protect, authorize('admin', 'staff'), async (req, res, n
   try {
     const { productId, rate, quantity } = req.body;
 
-    if (!productId || rate === undefined) {
+    if (!productId || rate === undefined || rate === null) {
       return res.status(400).json({
         success: false,
         message: 'Product ID and rate are required'
+      });
+    }
+
+    // Validate rate is positive
+    if (typeof rate !== 'number' || rate <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Rate must be a positive number'
       });
     }
 

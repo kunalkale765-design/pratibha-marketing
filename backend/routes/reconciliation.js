@@ -260,8 +260,14 @@ router.post('/:orderId/complete',
       const customer = order.customer;
       if (!customer || !customer._id) {
         // No customer - still save order but warn about missing ledger entry
-        await order.save();
-        console.error(`WARNING: Order ${order.orderNumber} has no associated customer. Ledger entry not created.`);
+        try {
+          await order.save();
+          console.error(`WARNING: Order ${order.orderNumber} has no associated customer. Ledger entry not created.`);
+        } catch (saveError) {
+          console.error(`ERROR: Failed to save order ${order.orderNumber} without customer:`, saveError.message);
+          res.status(500);
+          throw new Error('Failed to complete reconciliation - order save failed');
+        }
       } else {
         // Use transaction to ensure order, ledger entry and customer balance are updated atomically
         const session = await mongoose.startSession();
@@ -270,14 +276,25 @@ router.post('/:orderId/complete',
             // Save order within transaction
             await order.save({ session });
 
-            // Get customer's current balance within transaction
-            const lastEntry = await LedgerEntry.findOne({ customer: customer._id })
-              .sort({ date: -1, createdAt: -1 })
-              .session(session);
-            const previousBalance = lastEntry?.balance || 0;
-            const newBalance = roundTo2Decimals(previousBalance + order.totalAmount);
+            // Use atomic $inc to update balance - prevents race conditions
+            // even with concurrent transactions
+            const updatedCustomer = await Customer.findByIdAndUpdate(
+              customer._id,
+              { $inc: { balance: order.totalAmount } },
+              { session, new: true }
+            );
+            const newBalance = roundTo2Decimals(updatedCustomer.balance);
 
-            // Create invoice ledger entry
+            // Fix floating-point precision drift - ensure stored value matches rounded value
+            if (newBalance !== updatedCustomer.balance) {
+              await Customer.findByIdAndUpdate(
+                customer._id,
+                { $set: { balance: newBalance } },
+                { session }
+              );
+            }
+
+            // Create invoice ledger entry with the actual new balance
             await LedgerEntry.create([{
               customer: customer._id,
               type: 'invoice',
@@ -291,13 +308,6 @@ router.post('/:orderId/complete',
               createdBy: req.user._id,
               createdByName: req.user.name
             }], { session });
-
-            // Update customer's balance atomically
-            await Customer.findByIdAndUpdate(
-              customer._id,
-              { $set: { balance: newBalance } },
-              { session }
-            );
           });
         } finally {
           await session.endSession();

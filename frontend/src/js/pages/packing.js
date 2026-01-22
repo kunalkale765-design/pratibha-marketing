@@ -1,5 +1,13 @@
 import { showToast } from '/js/ui.js';
 
+// HTML escape function to prevent XSS
+function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    const div = document.createElement('div');
+    div.textContent = String(text);
+    return div.innerHTML;
+}
+
 // Wait for Auth to be available
 const waitForAuth = () => new Promise((resolve) => {
     if (window.Auth) resolve(window.Auth);
@@ -121,7 +129,7 @@ function renderQueue() {
     container.innerHTML = Object.entries(grouped).map(([batchKey, group]) => `
         <div class="batch-group">
             <div class="batch-header">
-                <span class="batch-name">${batchKey}</span>
+                <span class="batch-name">${escapeHtml(batchKey)}</span>
                 <span class="batch-count">${group.orders.length} orders</span>
             </div>
             <div class="batch-orders">
@@ -149,11 +157,11 @@ function renderOrderCard(order) {
         : '';
 
     return `
-        <div class="order-card card-animated ${statusClass}" data-order-id="${order._id}">
+        <div class="order-card card-animated ${statusClass}" data-order-id="${escapeHtml(order._id)}">
             <div class="order-main">
                 <div class="order-info">
-                    <span class="order-number">${order.orderNumber}</span>
-                    <span class="customer-name">${order.customer?.name || 'Unknown'}</span>
+                    <span class="order-number">${escapeHtml(order.orderNumber)}</span>
+                    <span class="customer-name">${escapeHtml(order.customer?.name || 'Unknown')}</span>
                 </div>
                 <div class="order-meta">
                     <span class="item-count">${order.itemCount} items</span>
@@ -255,8 +263,8 @@ function renderBatchSummary(summary) {
         <div class="batch-summary-card">
             <div class="batch-summary-header">
                 <div>
-                    <h3>${batch.batchNumber}</h3>
-                    <span class="batch-type">${batch.batchType} Batch</span>
+                    <h3>${escapeHtml(batch.batchNumber)}</h3>
+                    <span class="batch-type">${escapeHtml(batch.batchType)} Batch</span>
                 </div>
                 <div class="batch-progress-ring" data-progress="${progress}">
                     <span>${progress}%</span>
@@ -288,9 +296,9 @@ function renderBatchSummary(summary) {
                     <div class="product-list">
                         ${products.slice(0, 5).map(p => `
                             <div class="product-row ${p.remaining <= 0 ? 'done' : ''}">
-                                <span class="product-name">${p.productName}</span>
+                                <span class="product-name">${escapeHtml(p.productName)}</span>
                                 <span class="product-qty">
-                                    ${p.totalPacked}/${p.totalOrdered} ${p.unit}
+                                    ${p.totalPacked}/${p.totalOrdered} ${escapeHtml(p.unit)}
                                 </span>
                                 <div class="product-progress-bar">
                                     <div class="product-progress-fill" style="width: ${p.percentPacked}%"></div>

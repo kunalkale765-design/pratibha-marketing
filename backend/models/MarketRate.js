@@ -13,7 +13,8 @@ const marketRateSchema = new mongoose.Schema({
   rate: {
     type: Number,
     required: [true, 'Rate is required'],
-    min: [0, 'Rate cannot be negative']
+    min: [0, 'Rate cannot be negative'],
+    max: [100000, 'Rate cannot exceed ₹1,00,000']
   },
   previousRate: {
     type: Number,

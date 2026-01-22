@@ -500,17 +500,23 @@ router.post('/forgot-password', passwordResetLimiter, [
     user.resetPasswordExpires = Date.now() + 60 * 60 * 1000; // 1 hour
     await user.save({ validateBeforeSave: false });
 
-    // In production, you would send this via email
-    // For now, return the token (staff/admin can share it manually)
-    // Remove the resetToken from response in production with email integration
-    res.json({
+    // Build response - only include token details in non-production environments
+    const response = {
       success: true,
-      message: 'Password reset token generated',
-      // NOTE: In production with email, remove resetToken and resetUrl from response
-      resetToken,
-      resetUrl: `/pages/auth/reset-password.html?token=${resetToken}`,
-      expiresIn: '1 hour'
-    });
+      message: process.env.NODE_ENV === 'production'
+        ? 'If an account exists, a password reset link will be sent to your email'
+        : 'Password reset token generated'
+    };
+
+    // Only expose token in development/test environments (for manual testing)
+    // In production with email integration, token would be sent via email only
+    if (process.env.NODE_ENV !== 'production') {
+      response.resetToken = resetToken;
+      response.resetUrl = `/pages/auth/reset-password.html?token=${resetToken}`;
+      response.expiresIn = '1 hour';
+    }
+
+    res.json(response);
   } catch (error) {
     next(error);
   }

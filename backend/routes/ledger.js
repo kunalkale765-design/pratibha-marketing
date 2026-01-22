@@ -182,10 +182,25 @@ router.post('/payment',
           const freshCustomer = await Customer.findById(customerId).session(session);
           previousBalance = freshCustomer.balance || 0;
 
-          // Payment reduces balance (negative amount in ledger entry)
-          newBalance = roundTo2Decimals(previousBalance - paymentAmount);
+          // Use atomic $inc to update balance - prevents race conditions
+          // even with concurrent transactions
+          const updatedCustomer = await Customer.findByIdAndUpdate(
+            customerId,
+            { $inc: { balance: -paymentAmount } },
+            { session, new: true }
+          );
+          newBalance = roundTo2Decimals(updatedCustomer.balance);
 
-          // Create payment ledger entry
+          // Fix floating-point precision drift - ensure stored value matches rounded value
+          if (newBalance !== updatedCustomer.balance) {
+            await Customer.findByIdAndUpdate(
+              customerId,
+              { $set: { balance: newBalance } },
+              { session }
+            );
+          }
+
+          // Create payment ledger entry with the actual new balance
           const entries = await LedgerEntry.create([{
             customer: customerId,
             type: 'payment',
@@ -198,13 +213,6 @@ router.post('/payment',
             createdByName: req.user.name
           }], { session });
           entry = entries[0];
-
-          // Update customer's balance atomically
-          await Customer.findByIdAndUpdate(
-            customerId,
-            { $set: { balance: newBalance } },
-            { session }
-          );
         });
       } finally {
         await session.endSession();
@@ -270,9 +278,26 @@ router.post('/adjustment',
           // Get customer's current balance within transaction
           const freshCustomer = await Customer.findById(customerId).session(session);
           previousBalance = freshCustomer.balance || 0;
-          newBalance = roundTo2Decimals(previousBalance + adjustmentAmount);
 
-          // Create adjustment ledger entry
+          // Use atomic $inc to update balance - prevents race conditions
+          // even with concurrent transactions
+          const updatedCustomer = await Customer.findByIdAndUpdate(
+            customerId,
+            { $inc: { balance: adjustmentAmount } },
+            { session, new: true }
+          );
+          newBalance = roundTo2Decimals(updatedCustomer.balance);
+
+          // Fix floating-point precision drift - ensure stored value matches rounded value
+          if (newBalance !== updatedCustomer.balance) {
+            await Customer.findByIdAndUpdate(
+              customerId,
+              { $set: { balance: newBalance } },
+              { session }
+            );
+          }
+
+          // Create adjustment ledger entry with the actual new balance
           const entries = await LedgerEntry.create([{
             customer: customerId,
             type: 'adjustment',
@@ -285,13 +310,6 @@ router.post('/adjustment',
             createdByName: req.user.name
           }], { session });
           entry = entries[0];
-
-          // Update customer's balance atomically
-          await Customer.findByIdAndUpdate(
-            customerId,
-            { $set: { balance: newBalance } },
-            { session }
-          );
         });
       } finally {
         await session.endSession();

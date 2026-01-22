@@ -68,7 +68,7 @@ async function updatePendingOrdersWithZeroRates(productId, newRate) {
 // Validation middleware
 const validateMarketRate = [
   body('product').notEmpty().withMessage('Product is required'),
-  body('rate').isFloat({ min: 0 }).withMessage('Rate must be positive'),
+  body('rate').isFloat({ min: 0, max: 100000 }).withMessage('Rate must be between ₹0 and ₹1,00,000'),
   body('effectiveDate').optional().isISO8601().withMessage('Invalid date format')
 ];
 
@@ -360,6 +360,16 @@ router.post('/', protect, authorize('admin', 'staff'), validateMarketRate, async
     const previousRate = await MarketRate.findOne({ product: req.body.product })
       .sort({ effectiveDate: -1 });
 
+    // Sanity check: warn if rate change exceeds 50%
+    let rateChangeWarning = null;
+    if (previousRate && previousRate.rate > 0) {
+      const changePercent = Math.abs((req.body.rate - previousRate.rate) / previousRate.rate * 100);
+      if (changePercent > 50) {
+        rateChangeWarning = `Large rate change detected: ${changePercent.toFixed(1)}% (₹${previousRate.rate} → ₹${req.body.rate})`;
+        console.warn(`[MarketRate] ${product.name}: ${rateChangeWarning}`);
+      }
+    }
+
     // Create new market rate entry
     const rateData = {
       product: req.body.product,
@@ -384,6 +394,7 @@ router.post('/', protect, authorize('admin', 'staff'), validateMarketRate, async
       success: true,
       data: marketRate,
       ordersUpdated: ordersUpdated > 0 ? ordersUpdated : undefined,
+      warning: rateChangeWarning,
       message: ordersUpdated > 0
         ? `Market rate updated. ${ordersUpdated} pending order(s) with zero rates were auto-updated.`
         : undefined

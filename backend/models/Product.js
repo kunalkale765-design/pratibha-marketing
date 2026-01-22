@@ -29,5 +29,7 @@ const productSchema = new mongoose.Schema({
 
 // Index for faster searches (name already indexed via unique: true)
 productSchema.index({ category: 1 });
+productSchema.index({ isActive: 1 }); // For filtering active/inactive products
+productSchema.index({ isActive: 1, category: 1 }); // Compound for active products by category
 
 module.exports = mongoose.model('Product', productSchema);
