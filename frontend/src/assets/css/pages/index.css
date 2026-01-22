@@ -49,45 +49,184 @@
     align-items: center;
     justify-content: center;
     transition: all 0.15s;
+    flex-shrink: 0;
 }
 
 .btn-icon:hover { background: var(--pale-slate-light); }
 .btn-icon:active { transform: scale(0.95); }
 
-/* Batch Filter */
-.batch-filter {
+/* Purchase Search */
+.purchase-search {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--pale-slate-light);
+    border-radius: var(--radius-md);
+    background: var(--cream);
+    font-size: 0.875rem;
+    color: var(--gunmetal);
+    width: 140px;
+    transition: all 0.2s;
+}
+
+.purchase-search:focus {
+    outline: none;
+    border-color: var(--dusty-olive);
+    box-shadow: 0 0 0 3px rgba(126, 145, 129, 0.15);
+    width: 180px;
+}
+
+.purchase-search::placeholder {
+    color: var(--text-muted);
+}
+
+/* Category Filter Pills */
+.category-pills {
     display: flex;
     gap: 0.5rem;
     padding: 0.75rem 1rem;
     background: var(--cream);
     border-bottom: 1px solid var(--pale-slate-light);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
 }
 
-.batch-filter-btn {
+.category-pills::-webkit-scrollbar {
+    display: none;
+}
+
+.category-pill {
     padding: 0.5rem 1rem;
     border: 1px solid var(--pale-slate-light);
-    border-radius: var(--radius-md);
+    border-radius: 20px;
     background: var(--warm-white);
     font-size: 0.8125rem;
     font-weight: 500;
     color: var(--text-muted);
     cursor: pointer;
     transition: all 0.15s;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
-.batch-filter-btn:hover {
+.category-pill:hover {
     background: var(--pale-slate-light);
     color: var(--gunmetal);
 }
 
-.batch-filter-btn.active {
+.category-pill.active {
     background: var(--dusty-olive);
     border-color: var(--dusty-olive);
     color: white;
 }
 
-.batch-filter-btn.active:hover {
+.category-pill.active:hover {
     background: var(--dusty-olive-dark);
+}
+
+/* Section Headers */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 0.8125rem;
+}
+
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.to-procure-header {
+    background: linear-gradient(90deg, #fff3e0, var(--cream));
+    color: #c17c3c;
+    border-bottom: 2px solid #e6a255;
+}
+
+.procured-header {
+    background: linear-gradient(90deg, #e8f5e9, var(--cream));
+    color: var(--success);
+    cursor: pointer;
+    border-top: 1px solid var(--pale-slate-light);
+    transition: background 0.2s;
+}
+
+.procured-header:hover {
+    background: linear-gradient(90deg, #dcedc8, var(--cream));
+}
+
+.collapse-icon {
+    font-size: 0.75rem;
+    transition: transform 0.2s;
+}
+
+.procured-header.collapsed .collapse-icon {
+    transform: rotate(-90deg);
+}
+
+.procured-header.collapsed + .procured-section {
+    display: none;
+}
+
+/* New Order Badge */
+.new-order-badge {
+    background: linear-gradient(135deg, #f44336, #e91e63);
+    color: white;
+    padding: 0.25rem 0.625rem;
+    border-radius: 12px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+    animation: pulse-badge 2s ease-in-out infinite;
+    box-shadow: 0 2px 8px rgba(244, 67, 54, 0.3);
+}
+
+.new-order-badge.hidden {
+    display: none;
+}
+
+@keyframes pulse-badge {
+    0%, 100% { transform: scale(1); box-shadow: 0 2px 8px rgba(244, 67, 54, 0.3); }
+    50% { transform: scale(1.05); box-shadow: 0 4px 12px rgba(244, 67, 54, 0.5); }
+}
+
+/* Procurement Empty State */
+.procurement-empty {
+    padding: 3rem 1rem;
+    text-align: center;
+}
+
+.procurement-empty.hidden {
+    display: none;
+}
+
+.procurement-empty .empty-icon {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+}
+
+.procurement-empty .empty-text {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--success);
+}
+
+/* Empty list message */
+.empty-list-msg {
+    padding: 1.5rem;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+/* Procured section */
+.procured-section {
+    background: rgba(93, 122, 95, 0.03);
 }
 
 .procurement-list {
@@ -192,10 +331,150 @@
 
 .item-qty.zero { color: var(--text-muted); font-weight: 400; }
 
+/* Simple Quantity Display */
+.qty-simple {
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--gunmetal);
+    min-width: 50px;
+    text-align: right;
+}
+
+/* Quantity Breakdown (procuredQty + newQty format) */
+.qty-breakdown {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-width: 100px;
+    justify-content: flex-end;
+}
+
+.qty-breakdown .procured-qty {
+    color: var(--dusty-olive);
+}
+
+.qty-breakdown .new-qty {
+    font-weight: 700;
+    color: var(--gunmetal);
+}
+
+.qty-breakdown .new-qty.highlight-new {
+    color: #c17c3c;
+    background: rgba(193, 124, 60, 0.1);
+    padding: 0.125rem 0.375rem;
+    border-radius: 4px;
+}
+
+.qty-breakdown .separator {
+    color: var(--text-muted);
+    font-weight: 400;
+}
+
+/* Legacy batch classes (kept for compatibility) */
+.qty-breakdown .batch1 {
+    color: var(--dusty-olive);
+}
+
+.qty-breakdown .batch2 {
+    color: #c17c3c;
+}
+
+.qty-breakdown .total {
+    font-weight: 700;
+    color: var(--gunmetal);
+    min-width: 32px;
+    text-align: right;
+}
+
+/* Item that was previously procured but has new orders */
+.procurement-item.was-procured {
+    border-left: 3px solid #c17c3c;
+}
+
+/* Highlight info row in details */
+.detail-row.highlight-info {
+    background: rgba(193, 124, 60, 0.08);
+    padding: 0.375rem 0.5rem;
+    border-radius: 4px;
+    margin: -0.125rem -0.5rem 0.25rem;
+}
+
 .item-unit {
     font-size: 0.75rem;
     color: var(--text-muted);
     min-width: 40px;
+}
+
+/* Procured Item Styles */
+.procurement-item.procured-item {
+    opacity: 0.85;
+    background: rgba(93, 122, 95, 0.05);
+}
+
+.procurement-item.procured-item:hover {
+    opacity: 1;
+}
+
+/* Checkmark is added in JS now */
+
+.procured-rate {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--success);
+    background: rgba(93, 122, 95, 0.1);
+    padding: 0.375rem 0.625rem;
+    border-radius: var(--radius-sm);
+    min-width: 80px;
+    text-align: center;
+}
+
+/* Additional quantity indicator for procured items */
+.additional-qty-badge {
+    background: linear-gradient(135deg, #ff9800, #f57c00);
+    color: white;
+    padding: 0.125rem 0.5rem;
+    border-radius: 10px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    margin-left: 0.5rem;
+}
+
+/* Detail Actions (undo button container) */
+.detail-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 0.75rem;
+    margin-top: 0.5rem;
+    border-top: 1px solid var(--pale-slate-light);
+}
+
+.btn-undo {
+    padding: 0.5rem 1rem;
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--pale-slate-light);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.btn-undo:hover {
+    background: rgba(154, 101, 101, 0.1);
+    border-color: var(--error);
+    color: var(--error);
+}
+
+.btn-undo:active {
+    transform: scale(0.97);
 }
 
 .item-rate-input {
@@ -550,6 +829,11 @@
     .item-name { font-size: 0.8125rem; }
     .item-qty { font-size: 0.875rem; min-width: 50px; }
     .item-rate-input { width: 70px; padding: 0.25rem 0.375rem; font-size: 0.8125rem; }
+    .purchase-search { width: 100px; font-size: 0.8125rem; }
+    .purchase-search:focus { width: 120px; }
+    .qty-breakdown { font-size: 0.75rem; min-width: 80px; }
+    .qty-breakdown .total { min-width: 24px; }
+    .qty-simple { font-size: 0.8125rem; min-width: 40px; }
 }
 
 /* Mobile */
@@ -558,6 +842,26 @@
     .btn-icon { width: 44px; height: 44px; font-size: 1.125rem; }
     .item-rate-input { min-height: 44px; font-size: 16px; }
     .procurement-list { max-height: none; }
+    .procurement-header .header-actions {
+        flex-wrap: wrap;
+        gap: 0.375rem;
+    }
+    .purchase-search {
+        order: -1;
+        width: 100%;
+        flex-basis: 100%;
+    }
+    .purchase-search:focus {
+        width: 100%;
+    }
+    .category-pills {
+        padding: 0.5rem;
+        gap: 0.375rem;
+    }
+    .category-pill {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.75rem;
+    }
 }
 
 /* Tablet and up */
@@ -593,174 +897,7 @@
 .action-card:nth-child(4) { animation-delay: 0.25s; }
 .action-card:nth-child(5) { animation-delay: 0.3s; }
 .action-card:nth-child(6) { animation-delay: 0.35s; }
-.batch-container { animation: fadeInUp 0.4s ease backwards; animation-delay: 0.35s; }
 .procurement-container { animation: fadeInUp 0.4s ease backwards; animation-delay: 0.35s; }
 .reports-container { animation: fadeInUp 0.4s ease backwards; animation-delay: 0.4s; }
 .analytics-section { animation: fadeInUp 0.4s ease backwards; animation-delay: 0.45s; }
 
-/* Batch Management Section */
-.batch-container {
-    background: var(--warm-white);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--pale-slate-light);
-    overflow: hidden;
-    margin-top: 1rem;
-}
-
-.batch-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 1.25rem;
-    border-bottom: 1px solid var(--pale-slate-light);
-    background: var(--cream);
-}
-
-.batch-header h2 {
-    font-family: var(--font-heading);
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: var(--gunmetal);
-}
-
-.batch-time {
-    font-family: var(--font-mono);
-    font-size: 0.875rem;
-    color: var(--text-muted);
-}
-
-.batch-info {
-    padding: 0.75rem 1.25rem;
-    background: rgba(126, 145, 129, 0.08);
-    border-bottom: 1px solid var(--pale-slate-light);
-}
-
-.badge-info {
-    display: inline-block;
-    padding: 0.375rem 0.75rem;
-    background: var(--dusty-olive);
-    color: white;
-    font-size: 0.8125rem;
-    font-weight: 500;
-    border-radius: 20px;
-}
-
-.batch-cards {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
-    padding: 1rem;
-}
-
-.batch-card {
-    background: var(--cream);
-    border-radius: var(--radius-md);
-    border: 2px solid var(--pale-slate-light);
-    overflow: hidden;
-    transition: all 0.2s ease;
-}
-
-.batch-card.open {
-    border-color: var(--dusty-olive);
-}
-
-.batch-card.confirmed {
-    border-color: var(--success);
-    background: rgba(93, 122, 95, 0.05);
-}
-
-.batch-card.expired {
-    opacity: 0.6;
-}
-
-.batch-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.75rem 1rem;
-    background: var(--cream-dark);
-    border-bottom: 1px solid var(--pale-slate-light);
-}
-
-.batch-type {
-    font-weight: 600;
-    font-size: 0.9375rem;
-    color: var(--gunmetal);
-}
-
-.batch-status {
-    font-size: 0.75rem;
-    font-weight: 500;
-}
-
-.batch-card-body {
-    padding: 1rem;
-}
-
-.batch-stat {
-    text-align: center;
-}
-
-.batch-stat-value {
-    font-family: var(--font-mono);
-    font-size: 1.75rem;
-    font-weight: 700;
-    color: var(--dusty-olive-dark);
-}
-
-.batch-stat-label {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-    margin-top: 0.25rem;
-}
-
-.batch-confirmed-info {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    margin-top: 0.75rem;
-    padding-top: 0.75rem;
-    border-top: 1px dashed var(--pale-slate-light);
-    text-align: center;
-}
-
-.batch-card-actions {
-    padding: 0.75rem 1rem;
-    border-top: 1px solid var(--pale-slate-light);
-    background: var(--cream-dark);
-}
-
-.btn-confirm-batch {
-    width: 100%;
-    padding: 0.625rem 1rem;
-    background: var(--dusty-olive);
-    color: white;
-    border: none;
-    border-radius: var(--radius-sm);
-    font-size: 0.875rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.btn-confirm-batch:hover {
-    background: var(--dusty-olive-dark);
-}
-
-.btn-confirm-batch:active {
-    transform: scale(0.98);
-}
-
-/* Mobile responsiveness for batches */
-@media (max-width: 480px) {
-    .batch-cards {
-        grid-template-columns: 1fr;
-    }
-
-    .batch-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.5rem;
-    }
-}

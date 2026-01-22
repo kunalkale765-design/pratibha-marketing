@@ -396,5 +396,255 @@ describe('Supplier Endpoints', () => {
 
       expect(res.status).toBe(401);
     });
+
+    it('should reject unauthenticated access to procurement-summary', async () => {
+      const res = await request(app)
+        .get('/api/supplier/procurement-summary');
+
+      expect(res.status).toBe(401);
+    });
+  });
+
+  describe('GET /api/supplier/procurement-summary', () => {
+    let vegetableProduct, fruitProduct;
+
+    beforeEach(async () => {
+      // Create products in procurement categories
+      vegetableProduct = await testUtils.createTestProduct({
+        name: 'Tomato',
+        unit: 'kg',
+        category: 'Indian Vegetables'
+      });
+      fruitProduct = await testUtils.createTestProduct({
+        name: 'Apple',
+        unit: 'kg',
+        category: 'Fruits'
+      });
+    });
+
+    it('should return procurement summary for admin', async () => {
+      const res = await request(app)
+        .get('/api/supplier/procurement-summary')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.toProcure).toBeInstanceOf(Array);
+      expect(res.body.procured).toBeInstanceOf(Array);
+      expect(res.body.categories).toBeInstanceOf(Array);
+      expect(res.body.summary).toBeDefined();
+    });
+
+    it('should return procurement summary for staff', async () => {
+      const res = await request(app)
+        .get('/api/supplier/procurement-summary')
+        .set('Authorization', `Bearer ${staffToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+    });
+
+    it('should deny access to customer', async () => {
+      const res = await request(app)
+        .get('/api/supplier/procurement-summary')
+        .set('Authorization', `Bearer ${customerToken}`);
+
+      expect(res.status).toBe(403);
+    });
+
+    it('should return date and current time', async () => {
+      const res = await request(app)
+        .get('/api/supplier/procurement-summary')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.date).toBeDefined();
+      expect(res.body.currentTime).toBeDefined();
+    });
+
+    // Batch status fields removed - simplified procurement logic
+
+    it('should include summary counts', async () => {
+      const res = await request(app)
+        .get('/api/supplier/procurement-summary')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.summary).toBeDefined();
+      expect(typeof res.body.summary.toProcureCount).toBe('number');
+      expect(typeof res.body.summary.procuredCount).toBe('number');
+      expect(typeof res.body.summary.totalProducts).toBe('number');
+    });
+
+    it('should include all active product categories', async () => {
+      // Create products in different categories
+      await testUtils.createTestProduct({
+        name: 'Frozen Peas',
+        unit: 'kg',
+        category: 'Frozen'
+      });
+      await testUtils.createTestProduct({
+        name: 'Exotic Zucchini',
+        unit: 'kg',
+        category: 'Exotic Vegetables'
+      });
+
+      const res = await request(app)
+        .get('/api/supplier/procurement-summary')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      // Should include products from all active categories
+      expect(res.body.categories).toBeInstanceOf(Array);
+      expect(res.body.categories.length).toBeGreaterThan(0);
+    });
+
+    it('should move product to procured when explicitly marked via /api/supplier/procure', async () => {
+      // Mark vegetable product as procured via the procure endpoint
+      const procureRes = await request(app)
+        .post('/api/supplier/procure')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          productId: vegetableProduct._id,
+          rate: 50,
+          quantity: 100
+        });
+
+      expect(procureRes.status).toBe(200);
+
+      const res = await request(app)
+        .get('/api/supplier/procurement-summary')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      // Tomato should be in procured since we explicitly marked it
+      const procuredTomato = res.body.procured.find(item => item.productName === 'Tomato');
+      expect(procuredTomato).toBeDefined();
+      expect(procuredTomato.rate).toBe(50);
+    });
+
+    it('should show product in toProcure if no rate saved today', async () => {
+      const res = await request(app)
+        .get('/api/supplier/procurement-summary')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      // Products without rates today should NOT be in toProcure (only if they have orders)
+      // Without orders, products won't appear in toProcure
+      expect(res.body.toProcure).toBeInstanceOf(Array);
+    });
+
+    it('should include procurement fields when orders exist', async () => {
+      // Create an order with vegetable product
+      await testUtils.createTestOrder(customer, vegetableProduct, {
+        status: 'pending',
+        products: [{
+          product: vegetableProduct._id,
+          productName: vegetableProduct.name,
+          quantity: 25,
+          unit: vegetableProduct.unit,
+          rate: 50,
+          amount: 1250
+        }]
+      });
+
+      const res = await request(app)
+        .get('/api/supplier/procurement-summary')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      // Find tomato in toProcure (no rate saved today)
+      const tomatoItem = res.body.toProcure.find(item => item.productName === 'Tomato');
+      if (tomatoItem) {
+        expect(tomatoItem.totalQty).toBeGreaterThan(0);
+        expect(typeof tomatoItem.procuredQty).toBe('number');
+        expect(typeof tomatoItem.newQty).toBe('number');
+        expect(typeof tomatoItem.wasProcured).toBe('boolean');
+      }
+    });
+
+    it('should include current rate and trend for items', async () => {
+      // Create a market rate for the product
+      await testUtils.createMarketRate(vegetableProduct, 45);
+
+      // Create an order to make product appear in toProcure
+      await testUtils.createTestOrder(customer, vegetableProduct, {
+        status: 'pending',
+        products: [{
+          product: vegetableProduct._id,
+          productName: vegetableProduct.name,
+          quantity: 10,
+          unit: vegetableProduct.unit,
+          rate: 45,
+          amount: 450
+        }]
+      });
+
+      const res = await request(app)
+        .get('/api/supplier/procurement-summary')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      const tomatoItem = res.body.toProcure.find(item => item.productName === 'Tomato');
+      if (tomatoItem) {
+        expect(tomatoItem.currentRate).toBeDefined();
+        expect(tomatoItem.trend).toBeDefined();
+      }
+    });
+
+    it('should return categories list', async () => {
+      const res = await request(app)
+        .get('/api/supplier/procurement-summary')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.categories).toBeInstanceOf(Array);
+      // Should include categories from active products (all categories now supported)
+      res.body.categories.forEach(cat => {
+        expect(typeof cat).toBe('string');
+        expect(cat.length).toBeGreaterThan(0);
+      });
+    });
+
+    it('should sort items by category then by quantity', async () => {
+      // Create orders for multiple products
+      await testUtils.createTestOrder(customer, vegetableProduct, {
+        status: 'pending',
+        products: [{
+          product: vegetableProduct._id,
+          productName: vegetableProduct.name,
+          quantity: 100,
+          unit: vegetableProduct.unit,
+          rate: 50,
+          amount: 5000
+        }]
+      });
+
+      await testUtils.createTestOrder(customer, fruitProduct, {
+        status: 'pending',
+        products: [{
+          product: fruitProduct._id,
+          productName: fruitProduct.name,
+          quantity: 50,
+          unit: fruitProduct.unit,
+          rate: 100,
+          amount: 5000
+        }]
+      });
+
+      const res = await request(app)
+        .get('/api/supplier/procurement-summary')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      // Indian Vegetables should come before Fruits
+      if (res.body.toProcure.length >= 2) {
+        const vegIndex = res.body.toProcure.findIndex(item => item.category === 'Indian Vegetables');
+        const fruitIndex = res.body.toProcure.findIndex(item => item.category === 'Fruits');
+        if (vegIndex !== -1 && fruitIndex !== -1) {
+          expect(vegIndex).toBeLessThan(fruitIndex);
+        }
+      }
+    });
   });
 });

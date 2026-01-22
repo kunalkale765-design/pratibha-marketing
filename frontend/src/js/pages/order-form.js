@@ -646,10 +646,7 @@ function renderOrdersList() {
             onclick: () => window.openOrderDetail(order._id)
         }, [
             createElement('div', { className: 'order-top' }, [
-                createElement('div', { className: 'order-number' }, [
-                    order.orderNumber,
-                    order.batchLocked ? ' 🔒' : ''
-                ]),
+                createElement('div', { className: 'order-number' }, order.orderNumber),
                 createElement('div', { className: 'order-products-summary' }, `${order.products.length} item${order.products.length !== 1 ? 's' : ''}`)
             ]),
             createElement('div', { className: 'order-bottom' }, [
@@ -729,8 +726,7 @@ function closeOrderModal() {
 }
 
 function renderOrderModal() {
-    const isPending = currentOrder.status === 'pending' && !currentOrder.batchLocked;
-    const isBatchLocked = currentOrder.batchLocked;
+    const isPending = currentOrder.status === 'pending';
     const titleEl = document.getElementById('orderModalTitle');
     const bodyEl = document.getElementById('orderModalBody');
     const footerEl = document.getElementById('orderModalFooter');
@@ -739,14 +735,6 @@ function renderOrderModal() {
     bodyEl.innerHTML = '';
 
     const contentFragment = document.createDocumentFragment();
-
-    // Batch lock notice
-    if (isBatchLocked && currentOrder.status === 'pending') {
-        contentFragment.appendChild(createElement('div', { className: 'batch-lock-notice' }, [
-            createElement('span', { className: 'lock-icon' }, '🔒'),
-            createElement('span', {}, "This order's batch has been confirmed. Contact us to make changes.")
-        ]));
-    }
 
     // Info Grid
     const infoGrid = createElement('div', { className: 'order-info-grid' }, [
@@ -763,11 +751,12 @@ function renderOrderModal() {
     ]);
 
     if (currentOrder.batch?.batchType) {
+        const batchLocked = currentOrder.batch?.status === 'confirmed';
         infoGrid.appendChild(createElement('div', {}, [
             createElement('div', { className: 'info-label' }, 'Batch'),
             createElement('span', { className: 'badge badge-batch' }, [
                 `${currentOrder.batch.batchType} Batch`,
-                isBatchLocked ? ' 🔒' : ''
+                batchLocked ? ' 🔒' : ''
             ])
         ]));
     }

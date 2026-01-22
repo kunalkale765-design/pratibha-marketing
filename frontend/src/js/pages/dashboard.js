@@ -2,12 +2,25 @@ import { formatCurrency } from '/js/utils.js';
 import { initPage, logout } from '/js/init.js';
 import { showToast, createElement } from '/js/ui.js';
 
-// Wait for Auth to be available
-const waitForAuth = () => new Promise((resolve) => {
-    if (window.Auth) resolve(window.Auth);
-    else setTimeout(() => resolve(waitForAuth()), 10);
+// Wait for Auth to be available (with timeout to prevent infinite recursion)
+const waitForAuth = (attempts = 0) => new Promise((resolve, reject) => {
+    if (window.Auth) {
+        resolve(window.Auth);
+    } else if (attempts > 500) {
+        // 5 second timeout (500 * 10ms)
+        reject(new Error('Auth module failed to load'));
+    } else {
+        setTimeout(() => waitForAuth(attempts + 1).then(resolve).catch(reject), 10);
+    }
 });
-const Auth = await waitForAuth();
+
+let Auth;
+try {
+    Auth = await waitForAuth();
+} catch (e) {
+    console.error('Auth initialization failed:', e);
+    window.location.href = '/pages/auth/login.html';
+}
 
 // Initialize page
 initPage();
@@ -15,16 +28,128 @@ initPage();
 // State
 let products = [];
 let rates = [];
-let procurement = [];
-let batchSummary = [];
-let selectedBatch = 'all';
+let procurementData = { toProcure: [], procured: [], categories: [] };
+let searchQuery = '';
+let selectedCategory = '';
 const changedRates = {};
+let lastQuantities = {}; // Track quantities to detect new orders
+let pollingInterval = null;
+
+// Sound for new order notifications
+let audioContext = null;
+let notificationAudio = null;
+let soundEnabled = false;
+let isPolling = false; // Mutex to prevent concurrent polling
+
+// Preload notification sound file
+function preloadNotificationSound() {
+    notificationAudio = new Audio('/assets/sounds/notification.wav');
+    notificationAudio.preload = 'auto';
+    notificationAudio.volume = 0.5;
+}
+
+// Cleanup resources on page unload to prevent memory leaks
+window.addEventListener('beforeunload', () => {
+    if (pollingInterval) {
+        clearInterval(pollingInterval);
+        pollingInterval = null;
+    }
+    if (audioContext) {
+        audioContext.close().catch(() => {});
+        audioContext = null;
+    }
+    if (notificationAudio) {
+        notificationAudio = null;
+    }
+});
+
+// Pause polling when page is hidden, resume when visible
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+            pollingInterval = null;
+        }
+    } else {
+        // Resume polling when page becomes visible again
+        if (!pollingInterval) {
+            startPolling();
+        }
+    }
+});
+
+// Play notification sound - tries audio file first, falls back to Web Audio API
+function playNotificationSound() {
+    if (!soundEnabled) return;
+
+    // Try playing the preloaded audio file first
+    if (notificationAudio) {
+        notificationAudio.currentTime = 0;
+        notificationAudio.play().catch(() => {
+            // Fall back to Web Audio API if file playback fails
+            playWebAudioNotification();
+        });
+        return;
+    }
+
+    // Fall back to Web Audio API
+    playWebAudioNotification();
+}
+
+// Web Audio API fallback for notification sound
+function playWebAudioNotification() {
+    try {
+        if (!audioContext) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        // Resume context if suspended (browser autoplay policy)
+        if (audioContext.state === 'suspended') {
+            audioContext.resume();
+        }
+
+        // Create a pleasant notification sound (two-tone beep)
+        const osc1 = audioContext.createOscillator();
+        const osc2 = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        osc1.connect(gainNode);
+        osc2.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        // First tone
+        osc1.frequency.value = 880; // A5
+        osc1.type = 'sine';
+
+        // Second tone (harmony)
+        osc2.frequency.value = 1108.73; // C#6
+        osc2.type = 'sine';
+
+        // Volume envelope
+        const now = audioContext.currentTime;
+        gainNode.gain.setValueAtTime(0, now);
+        gainNode.gain.linearRampToValueAtTime(0.3, now + 0.05);
+        gainNode.gain.linearRampToValueAtTime(0.2, now + 0.15);
+        gainNode.gain.linearRampToValueAtTime(0.3, now + 0.2);
+        gainNode.gain.linearRampToValueAtTime(0, now + 0.35);
+
+        osc1.start(now);
+        osc2.start(now);
+        osc1.stop(now + 0.35);
+        osc2.stop(now + 0.35);
+    } catch (e) {
+        console.log('Could not play notification sound:', e);
+    }
+}
 
 // Elements
 const logoutBtn = document.getElementById('logoutBtn');
 const printBtn = document.getElementById('printBtn');
 const exportBtn = document.getElementById('exportBtn');
 const saveRatesBtn = document.getElementById('saveRatesBtn');
+const purchaseSearch = document.getElementById('purchaseSearch');
+const newOrderBadge = document.getElementById('newOrderBadge');
+const procuredHeader = document.getElementById('procuredHeader');
 
 // Event listeners
 if (logoutBtn) logoutBtn.addEventListener('click', logout);
@@ -32,38 +157,134 @@ if (printBtn) printBtn.addEventListener('click', printList);
 if (exportBtn) exportBtn.addEventListener('click', exportCSV);
 if (saveRatesBtn) saveRatesBtn.addEventListener('click', saveAllRates);
 
-// Batch filter event listeners
-document.querySelectorAll('.batch-filter-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        document.querySelectorAll('.batch-filter-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        selectedBatch = btn.dataset.batch;
+// Search input
+if (purchaseSearch) {
+    purchaseSearch.addEventListener('input', (e) => {
+        searchQuery = e.target.value.trim().toLowerCase();
         displayProcurementList();
     });
-});
+}
+
+// Category filter pills - event delegation for dynamically added pills
+const categoryPillsContainer = document.getElementById('categoryPills');
+if (categoryPillsContainer) {
+    categoryPillsContainer.addEventListener('click', (e) => {
+        const pill = e.target.closest('.category-pill');
+        if (!pill) return;
+
+        document.querySelectorAll('.category-pill').forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        selectedCategory = pill.dataset.category;
+        displayProcurementList();
+    });
+}
+
+// Populate category pills from API response
+function populateCategoryPills(categories) {
+    const container = document.getElementById('categoryPills');
+    if (!container) return;
+
+    // Keep "All" button, remove others
+    container.innerHTML = '<button class="category-pill active" data-category="">All</button>';
+
+    // Short display names for categories
+    const displayNames = {
+        'Indian Vegetables': 'Vegetables',
+        'Exotic Vegetables': 'Exotic',
+        'Fruits': 'Fruits',
+        'Frozen': 'Frozen',
+        'Dairy': 'Dairy'
+    };
+
+    categories.forEach(cat => {
+        const pill = createElement('button', {
+            className: 'category-pill' + (selectedCategory === cat ? ' active' : ''),
+            dataset: { category: cat }
+        }, displayNames[cat] || cat);
+        container.appendChild(pill);
+    });
+
+    // Re-select current category if it exists
+    if (selectedCategory) {
+        const currentPill = container.querySelector(`[data-category="${selectedCategory}"]`);
+        if (currentPill) {
+            container.querySelector('.active')?.classList.remove('active');
+            currentPill.classList.add('active');
+        } else {
+            // Category no longer exists, reset to All
+            selectedCategory = '';
+        }
+    }
+}
+
+// Procured section toggle
+if (procuredHeader) {
+    procuredHeader.addEventListener('click', () => {
+        procuredHeader.classList.toggle('collapsed');
+    });
+}
+
+// Initialize sound on first user interaction
+function initSound() {
+    if (soundEnabled) return;
+
+    try {
+        // Initialize AudioContext (requires user interaction on mobile)
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        // Preload the notification audio file
+        preloadNotificationSound();
+        soundEnabled = true;
+    } catch (e) {
+        console.log('Could not initialize audio:', e);
+    }
+}
+
+// Enable sound on first click anywhere
+document.addEventListener('click', initSound, { once: true });
+document.addEventListener('touchstart', initSound, { once: true });
 
 async function loadDashboardStats() {
     try {
-        const [ordersRes, customersRes, productsRes, ratesRes, procurementRes, batchSummaryRes] = await Promise.all([
+        const [ordersRes, productsRes, ratesRes, procurementRes] = await Promise.all([
             fetch('/api/orders', { credentials: 'include' }),
-            fetch('/api/customers', { credentials: 'include' }),
             fetch('/api/products', { credentials: 'include' }),
             fetch('/api/market-rates', { credentials: 'include' }),
-            fetch('/api/supplier/quantity-summary', { credentials: 'include' }),
-            fetch('/api/supplier/batch-summary', { credentials: 'include' })
+            fetch('/api/supplier/procurement-summary', { credentials: 'include' })
         ]);
 
+        // Validate responses before parsing
+        if (!ordersRes.ok || !productsRes.ok || !ratesRes.ok || !procurementRes.ok) {
+            const failedEndpoint = !ordersRes.ok ? 'orders' :
+                                   !productsRes.ok ? 'products' :
+                                   !ratesRes.ok ? 'rates' : 'procurement';
+            throw new Error(`Failed to load ${failedEndpoint} data (status: ${
+                !ordersRes.ok ? ordersRes.status :
+                !productsRes.ok ? productsRes.status :
+                !ratesRes.ok ? ratesRes.status : procurementRes.status
+            })`);
+        }
+
         const orders = await ordersRes.json();
-        const _customers = await customersRes.json();
         const productsData = await productsRes.json();
         const ratesData = await ratesRes.json();
-        const procurementData = await procurementRes.json();
-        const batchSummaryData = await batchSummaryRes.json();
+        const procurementResponse = await procurementRes.json();
 
         products = productsData.data || [];
         rates = ratesData.data || [];
-        procurement = procurementData.data || [];
-        batchSummary = batchSummaryData.data || [];
+        procurementData = {
+            toProcure: procurementResponse.toProcure || [],
+            procured: procurementResponse.procured || [],
+            categories: procurementResponse.categories || []
+        };
+
+        // Populate category filter pills
+        populateCategoryPills(procurementData.categories);
+
+        // Check for new orders
+        detectNewOrders(procurementData);
+
+        // Store current quantities for future comparison
+        storeQuantities(procurementData);
 
         // Calculate Total Sale (from delivered/completed orders)
         const ordersList = orders.data || [];
@@ -80,12 +301,15 @@ async function loadDashboardStats() {
 
         displayProcurementList();
         loadAnalytics(ordersList);
+
+        // Start polling for new orders
+        startPolling();
     } catch (error) {
         console.error('Error loading dashboard stats:', error);
         document.getElementById('totalSale').textContent = '—';
         document.getElementById('totalProfit').textContent = '—';
-        document.getElementById('procurementList').innerHTML = ''; // Clear
-        document.getElementById('procurementList').appendChild(createElement('div', { className: 'empty-state' }, [
+        document.getElementById('toProcureList').innerHTML = '';
+        document.getElementById('toProcureList').appendChild(createElement('div', { className: 'empty-state' }, [
             createElement('p', {}, 'Data not available'),
             createElement('button', {
                 id: 'retryBtn',
@@ -97,145 +321,302 @@ async function loadDashboardStats() {
     }
 }
 
-function displayProcurementList() {
-    const container = document.getElementById('procurementList');
-    container.innerHTML = ''; // Clear container
+function storeQuantities(data) {
+    lastQuantities = {};
+    [...data.toProcure, ...data.procured].forEach(item => {
+        lastQuantities[item.productId] = item.totalQty;
+    });
+}
 
-    if (!products || products.length === 0) {
-        container.appendChild(createElement('div', { className: 'empty-state' }, 'No products available'));
-        return;
+function detectNewOrders(newData) {
+    if (Object.keys(lastQuantities).length === 0) return; // First load
+
+    let newOrderCount = 0;
+    const allItems = [...newData.toProcure, ...newData.procured];
+
+    allItems.forEach(item => {
+        const prevQty = lastQuantities[item.productId] || 0;
+        if (item.totalQty > prevQty) {
+            newOrderCount++;
+        }
+    });
+
+    if (newOrderCount > 0) {
+        // Play notification sound
+        playNotificationSound();
+
+        // Show badge
+        if (newOrderBadge) {
+            newOrderBadge.textContent = `${newOrderCount} new`;
+            newOrderBadge.classList.remove('hidden');
+
+            // Auto-hide badge after 30 seconds
+            setTimeout(() => {
+                newOrderBadge.classList.add('hidden');
+            }, 30000);
+        }
+
+        showToast(`${newOrderCount} product(s) have new orders!`, 'info');
+    }
+}
+
+function startPolling() {
+    if (pollingInterval) clearInterval(pollingInterval);
+
+    // Poll every 30 seconds for new orders
+    pollingInterval = setInterval(async () => {
+        // Mutex to prevent concurrent polling requests
+        if (isPolling) return;
+        isPolling = true;
+
+        try {
+            const res = await fetch('/api/supplier/procurement-summary', { credentials: 'include' });
+            if (!res.ok) {
+                console.warn('Polling failed:', res.status);
+                return;
+            }
+            const data = await res.json();
+
+            if (res.ok) {
+                const newProcurementData = {
+                    toProcure: data.toProcure || [],
+                    procured: data.procured || [],
+                    categories: data.categories || []
+                };
+
+                // Detect new orders before updating
+                detectNewOrders(newProcurementData);
+
+                // Update data
+                procurementData = newProcurementData;
+                storeQuantities(procurementData);
+
+                // Re-render (preserving unsaved rate inputs)
+                displayProcurementList(true);
+            }
+        } catch (error) {
+            console.error('Polling error:', error);
+        } finally {
+            isPolling = false;
+        }
+    }, 30000);
+}
+
+function displayProcurementList(preserveInputs = false) {
+    const toProcureContainer = document.getElementById('toProcureList');
+    const procuredContainer = document.getElementById('procuredList');
+    const emptyState = document.getElementById('procurementEmpty');
+    const procuredCountEl = document.getElementById('procuredCount');
+
+    // Preserve current input values before re-rendering
+    const inputValues = {};
+    if (preserveInputs) {
+        document.querySelectorAll('.item-rate-input').forEach(input => {
+            if (input.value) {
+                inputValues[input.dataset.productId] = input.value;
+            }
+        });
     }
 
+    // Clear containers
+    toProcureContainer.innerHTML = '';
+    procuredContainer.innerHTML = '';
+
+    // Filter items based on search and category
+    const filterItems = (items) => {
+        return items.filter(item => {
+            const matchesSearch = !searchQuery || item.productName.toLowerCase().includes(searchQuery);
+            const matchesCategory = !selectedCategory || item.category === selectedCategory;
+            return matchesSearch && matchesCategory;
+        });
+    };
+
+    const filteredToProcure = filterItems(procurementData.toProcure);
+    const filteredProcured = filterItems(procurementData.procured);
+
+    // Update procured count
+    if (procuredCountEl) {
+        procuredCountEl.textContent = filteredProcured.length;
+    }
+
+    // Show empty state if nothing to procure
+    if (filteredToProcure.length === 0 && procurementData.toProcure.length === 0) {
+        if (emptyState) emptyState.classList.remove('hidden');
+        toProcureContainer.innerHTML = '<div class="empty-list-msg">No items to procure</div>';
+    } else {
+        if (emptyState) emptyState.classList.add('hidden');
+    }
+
+    // Build rate map for current rates
     const rateMap = {};
     rates.forEach(rate => { rateMap[rate.product] = rate; });
 
-    // Get procurement data based on selected batch
-    let activeProcurement = procurement;
-    if (selectedBatch !== 'all') {
-        const batchData = batchSummary.find(b => b.batchType === selectedBatch);
-        if (batchData && batchData.products) {
-            // Convert batch products to same format as procurement
-            activeProcurement = batchData.products.map(p => ({
-                productName: p.productName,
-                totalQuantity: p.totalQuantity,
-                unit: p.unit,
-                orderCount: p.orderCount
-            }));
-        } else {
-            activeProcurement = [];
-        }
-    }
+    // Render TO PROCURE section
+    if (filteredToProcure.length > 0) {
+        const fragment = document.createDocumentFragment();
 
-    const procurementMap = {};
-    activeProcurement.forEach(item => { procurementMap[item.productName] = item; });
+        // Add column header
+        fragment.appendChild(createElement('div', { className: 'procurement-column-header' }, [
+            createElement('span', { className: 'col-expand' }),
+            createElement('span', { className: 'col-name' }, 'Product'),
+            createElement('span', { className: 'col-qty' }, 'Qty'),
+            createElement('span', { className: 'col-input' }, 'Rate')
+        ]));
 
-    // Filter to only Indian Vegetables and Fruits
-    const filteredProducts = products.filter(p =>
-        p.category === 'Indian Vegetables' || p.category === 'Fruits'
-    );
+        // Group by category
+        let currentCategory = '';
+        filteredToProcure.forEach(item => {
+            // Category divider
+            if (item.category !== currentCategory) {
+                currentCategory = item.category;
+                fragment.appendChild(createElement('div', { className: 'category-divider' }, currentCategory));
+            }
 
-    // Sort: Indian Vegetables first, then Fruits; within each, unsaved rates at top
-    const sortedProducts = [...filteredProducts].sort((a, b) => {
-        // Indian Vegetables before Fruits
-        if (a.category === 'Indian Vegetables' && b.category === 'Fruits') return -1;
-        if (a.category === 'Fruits' && b.category === 'Indian Vegetables') return 1;
+            const rate = rateMap[item.productId];
+            const currentRate = item.currentRate || rate?.rate || 0;
+            const savedValue = inputValues[item.productId] || '';
+            const unsavedClass = currentRate === 0 ? ' unsaved' : '';
 
-        // Within same category: unsaved (rate=0) products first
-        const rateA = rateMap[a._id]?.rate || 0;
-        const rateB = rateMap[b._id]?.rate || 0;
-        if (rateA === 0 && rateB !== 0) return -1;
-        if (rateA !== 0 && rateB === 0) return 1;
+            // Build quantity display based on procurement status
+            let qtyDisplay;
+            if (item.wasProcured) {
+                // Show "procuredQty + newQty" format
+                qtyDisplay = createElement('span', { className: 'qty-breakdown' }, [
+                    createElement('span', { className: 'procured-qty' }, String(item.procuredQty || 0)),
+                    createElement('span', { className: 'separator' }, '+'),
+                    createElement('span', { className: 'new-qty highlight-new' }, String(item.newQty || 0))
+                ]);
+            } else {
+                // Show just totalQty
+                qtyDisplay = createElement('span', { className: 'qty-simple' }, String(item.totalQty || 0));
+            }
 
-        // Then sort by quantity needed (descending)
-        const qtyA = procurementMap[a.name]?.totalQuantity || 0;
-        const qtyB = procurementMap[b.name]?.totalQuantity || 0;
-        return qtyB - qtyA;
-    });
-
-    const fragment = document.createDocumentFragment();
-
-    // Build column header
-    const columnHeader = createElement('div', { className: 'procurement-column-header' }, [
-        createElement('span', { className: 'col-expand' }),
-        createElement('span', { className: 'col-name' }, 'Product'),
-        createElement('span', { className: 'col-qty' }, 'Purchase Qty'),
-        createElement('span', { className: 'col-input' }, 'Purchase Price')
-    ]);
-    fragment.appendChild(columnHeader);
-
-    // Build items with category dividers
-    let currentCategory = '';
-    sortedProducts.forEach(product => {
-        const rate = rateMap[product._id];
-        const currentRate = rate ? rate.rate : 0;
-        const trend = rate ? rate.trend : 'stable';
-
-        const procItem = procurementMap[product.name];
-        const qtyNeeded = procItem ? procItem.totalQuantity : 0;
-        const orderCount = procItem ? procItem.orderCount : 0;
-        const estCost = qtyNeeded > 0 ? (qtyNeeded * currentRate) : 0;
-
-        const qtyClass = qtyNeeded > 0 ? 'item-qty' : 'item-qty zero';
-        const trendText = trend === 'up' ? '↑ Up' : trend === 'down' ? '↓ Down' : '— Stable';
-        const unsavedClass = currentRate === 0 ? ' unsaved' : '';
-
-        // Add category divider when category changes
-        if (product.category !== currentCategory) {
-            currentCategory = product.category;
-            fragment.appendChild(createElement('div', { className: 'category-divider' }, currentCategory));
-        }
-
-        const procurementItem = createElement('div', {
-            className: `procurement-item${unsavedClass}`,
-            dataset: { productId: product._id }
-        }, [
-            createElement('div', {
-                className: 'item-main',
-                onclick: (e) => window.toggleExpand(e.currentTarget)
-            }, [
-                createElement('span', { className: 'item-expand' }, '▶'),
-                createElement('span', { className: 'item-name' }, product.name),
-                createElement('span', { className: qtyClass }, qtyNeeded),
-                createElement('span', { className: 'item-unit' }, product.unit),
-                createElement('input', {
-                    type: 'number',
-                    className: 'item-rate-input',
-                    dataset: {
-                        productId: product._id,
-                        productName: product.name,
-                        currentRate: currentRate
-                    },
-                    placeholder: `₹${currentRate.toFixed(0)}`,
-                    step: '0.01',
-                    min: '0',
-                    onclick: (e) => e.stopPropagation(),
-                    onchange: (e) => window.handleRateChange(e.target),
-                    oninput: (e) => window.handleRateInput(e.target)
-                })
-            ]),
-            createElement('div', { className: 'item-details' }, [
+            // Build details section
+            const detailRows = [
                 createElement('div', { className: 'detail-row' }, [
-                    createElement('span', { className: 'detail-label' }, 'Current Rate'),
-                    createElement('span', { className: 'detail-value' }, `₹${currentRate.toFixed(2)}/${product.unit}`)
-                ]),
-                createElement('div', { className: 'detail-row' }, [
-                    createElement('span', { className: 'detail-label' }, 'Orders'),
-                    createElement('span', { className: 'detail-value' }, orderCount)
-                ]),
+                    createElement('span', { className: 'detail-label' }, 'Total Orders'),
+                    createElement('span', { className: 'detail-value' }, item.totalOrders || 0)
+                ])
+            ];
+
+            // Show last rate if previously procured
+            if (item.wasProcured && item.lastRate) {
+                detailRows.unshift(createElement('div', { className: 'detail-row highlight-info' }, [
+                    createElement('span', { className: 'detail-label' }, 'Last Rate'),
+                    createElement('span', { className: 'detail-value' }, `₹${item.lastRate}/${item.unit}`)
+                ]));
+            }
+
+            detailRows.push(
                 createElement('div', { className: 'detail-row' }, [
                     createElement('span', { className: 'detail-label' }, 'Est. Cost'),
-                    createElement('span', { className: 'detail-value highlight' }, estCost > 0 ? formatCurrency(estCost) : '-')
+                    createElement('span', { className: 'detail-value highlight' },
+                        item.totalQty > 0 && currentRate > 0 ? formatCurrency(item.totalQty * currentRate) : '—')
                 ]),
                 createElement('div', { className: 'detail-row' }, [
                     createElement('span', { className: 'detail-label' }, 'Trend'),
-                    createElement('span', { className: 'detail-value' }, trendText)
+                    createElement('span', { className: 'detail-value' },
+                        item.trend === 'up' ? '↑ Up' : item.trend === 'down' ? '↓ Down' : '— Stable')
                 ])
-            ])
-        ]);
-        fragment.appendChild(procurementItem);
-    });
+            );
 
-    container.appendChild(fragment);
+            const procurementItem = createElement('div', {
+                className: `procurement-item${unsavedClass}${item.wasProcured ? ' was-procured' : ''}`,
+                dataset: { productId: item.productId }
+            }, [
+                createElement('div', {
+                    className: 'item-main',
+                    onclick: (e) => window.toggleExpand(e.currentTarget)
+                }, [
+                    createElement('span', { className: 'item-expand' }, '▶'),
+                    createElement('span', { className: 'item-name' }, item.productName),
+                    qtyDisplay,
+                    createElement('span', { className: 'item-unit' }, item.unit),
+                    createElement('input', {
+                        type: 'number',
+                        className: 'item-rate-input' + (savedValue ? ' changed' : ''),
+                        dataset: {
+                            productId: item.productId,
+                            productName: item.productName,
+                            currentRate: currentRate,
+                            quantity: item.totalQty || 0
+                        },
+                        placeholder: '₹0',
+                        value: savedValue,
+                        step: '0.01',
+                        min: '0',
+                        onclick: (e) => e.stopPropagation(),
+                        onchange: (e) => window.handleRateChange(e.target),
+                        oninput: (e) => window.handleRateInput(e.target)
+                    })
+                ]),
+                createElement('div', { className: 'item-details' }, detailRows)
+            ]);
+            fragment.appendChild(procurementItem);
+        });
+
+        toProcureContainer.appendChild(fragment);
+    } else if (searchQuery || selectedCategory) {
+        toProcureContainer.innerHTML = '<div class="empty-list-msg">No matching items</div>';
+    }
+
+    // Render PROCURED section
+    if (filteredProcured.length > 0) {
+        const fragment = document.createDocumentFragment();
+
+        // Group by category
+        let currentCategory = '';
+        filteredProcured.forEach(item => {
+            // Category divider
+            if (item.category !== currentCategory) {
+                currentCategory = item.category;
+                fragment.appendChild(createElement('div', { className: 'category-divider' }, currentCategory));
+            }
+
+            const procurementItem = createElement('div', {
+                className: 'procurement-item procured-item',
+                dataset: { productId: item.productId }
+            }, [
+                createElement('div', {
+                    className: 'item-main',
+                    onclick: (e) => window.toggleExpand(e.currentTarget)
+                }, [
+                    createElement('span', { className: 'item-expand' }, '▶'),
+                    createElement('span', { className: 'item-name' }, '✓ ' + item.productName),
+                    createElement('span', { className: 'qty-simple' }, String(item.procuredQty || 0)),
+                    createElement('span', { className: 'item-unit' }, item.unit),
+                    createElement('span', { className: 'procured-rate' }, `₹${item.rate}`)
+                ]),
+                createElement('div', { className: 'item-details' }, [
+                    createElement('div', { className: 'detail-row' }, [
+                        createElement('span', { className: 'detail-label' }, 'Procured At'),
+                        createElement('span', { className: 'detail-value' },
+                            new Date(item.procuredAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' }))
+                    ]),
+                    createElement('div', { className: 'detail-row' }, [
+                        createElement('span', { className: 'detail-label' }, 'Total Orders'),
+                        createElement('span', { className: 'detail-value' }, item.totalOrders || 0)
+                    ]),
+                    createElement('div', { className: 'detail-row' }, [
+                        createElement('span', { className: 'detail-label' }, 'Total Value'),
+                        createElement('span', { className: 'detail-value highlight' }, formatCurrency(item.procuredQty * item.rate))
+                    ]),
+                    createElement('div', { className: 'detail-actions' }, [
+                        createElement('button', {
+                            className: 'btn-undo',
+                            onclick: (e) => {
+                                e.stopPropagation();
+                                window.undoProcurement(item.productId, item.productName);
+                            }
+                        }, 'Undo')
+                    ])
+                ])
+            ]);
+            fragment.appendChild(procurementItem);
+        });
+
+        procuredContainer.appendChild(fragment);
+    }
 }
 
 // Global functions for inline event handlers
@@ -253,10 +634,11 @@ window.handleRateChange = function (input) {
     const productId = input.dataset.productId;
     const productName = input.dataset.productName;
     const currentRate = parseFloat(input.dataset.currentRate);
+    const quantity = parseFloat(input.dataset.quantity) || 0;
     const newRate = parseFloat(input.value);
 
     if (input.value && newRate !== currentRate && newRate > 0) {
-        changedRates[productId] = { product: productId, productName, rate: newRate, previousRate: currentRate };
+        changedRates[productId] = { product: productId, productName, rate: newRate, previousRate: currentRate, quantity };
         input.classList.add('changed');
     } else {
         delete changedRates[productId];
@@ -266,9 +648,99 @@ window.handleRateChange = function (input) {
     if (saveRatesBtn) saveRatesBtn.classList.toggle('show', Object.keys(changedRates).length > 0);
 };
 
+// Undo procurement - move item back to TO PROCURE
+window.undoProcurement = async function (productId, productName) {
+    if (!confirm(`Remove ${productName} from procured list?`)) return;
+
+    try {
+        const csrfToken = await Auth.ensureCsrfToken();
+        const headers = { 'Content-Type': 'application/json' };
+        if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
+
+        const res = await fetch(`/api/supplier/procure/${productId}`, {
+            method: 'DELETE',
+            credentials: 'include',
+            headers
+        });
+
+        if (!res.ok) {
+            const data = await res.json();
+            showToast(data.message || 'Could not undo', 'error');
+            return;
+        }
+
+        showToast(`${productName} moved back to TO PROCURE`, 'success');
+        loadDashboardStats();
+    } catch (error) {
+        console.error('Error undoing procurement:', error);
+        showToast('Could not undo', 'error');
+    }
+};
+
 function printList() {
-    const printContent = document.getElementById('procurementList').innerHTML;
+    // Build print content from data model (not DOM innerHTML) to prevent XSS
+    const escapeHtml = (str) => {
+        if (typeof str !== 'string') return String(str);
+        return str
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    };
+
+    // Filter items based on current search and category
+    const filterItems = (items) => {
+        return items.filter(item => {
+            const matchesSearch = !searchQuery || item.productName.toLowerCase().includes(searchQuery);
+            const matchesCategory = !selectedCategory || item.category === selectedCategory;
+            return matchesSearch && matchesCategory;
+        });
+    };
+
+    const filteredToProcure = filterItems(procurementData.toProcure);
+    const filteredProcured = filterItems(procurementData.procured);
+
+    // Build TO PROCURE rows from data
+    let toProcureRows = '';
+    let currentCategory = '';
+    filteredToProcure.forEach(item => {
+        if (item.category !== currentCategory) {
+            currentCategory = item.category;
+            toProcureRows += `<div class="category-header">${escapeHtml(currentCategory)}</div>`;
+        }
+        toProcureRows += `
+            <div class="procurement-item">
+                <span class="item-name">${escapeHtml(item.productName)}</span>
+                <span class="qty-breakdown">${item.batch1Qty || 0} + ${item.batch2Qty || 0} = ${item.totalQty || 0}</span>
+                <span class="item-unit">${escapeHtml(item.unit)}</span>
+                <span class="current-rate">₹${(item.currentRate || 0).toFixed(0)}</span>
+            </div>`;
+    });
+
+    // Build PROCURED rows from data
+    let procuredRows = '';
+    currentCategory = '';
+    filteredProcured.forEach(item => {
+        if (item.category !== currentCategory) {
+            currentCategory = item.category;
+            procuredRows += `<div class="category-header">${escapeHtml(currentCategory)}</div>`;
+        }
+        procuredRows += `
+            <div class="procurement-item procured-item">
+                <span class="item-name">${escapeHtml(item.productName)}</span>
+                <span class="qty-breakdown">${item.batch1Qty || 0} + ${item.batch2Qty || 0} = ${item.totalQty || 0}</span>
+                <span class="item-unit">${escapeHtml(item.unit)}</span>
+                <span class="procured-rate">₹${item.rate}</span>
+            </div>`;
+    });
+
     const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+        showToast('Popup blocked. Please allow popups for this site.', 'error');
+        return;
+    }
+
     printWindow.document.write(`
         <html>
         <head>
@@ -276,17 +748,26 @@ function printList() {
             <style>
                 body { font-family: Arial, sans-serif; padding: 20px; }
                 h1 { font-size: 18px; margin-bottom: 10px; }
+                h2 { font-size: 14px; margin-top: 20px; color: #666; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
                 .date { color: #666; margin-bottom: 20px; }
-                .item { padding: 10px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; }
-                .item-name { font-weight: bold; }
-                .item-qty { font-family: monospace; }
-                .item-details, .item-expand, .item-rate-input, button { display: none !important; }
+                .category-header { font-weight: bold; color: #666; margin: 15px 0 5px; font-size: 12px; text-transform: uppercase; }
+                .procurement-item { padding: 8px 0; border-bottom: 1px solid #eee; display: flex; gap: 10px; align-items: center; }
+                .item-name { font-weight: bold; flex: 1; }
+                .qty-breakdown { font-family: monospace; min-width: 100px; }
+                .item-unit { color: #666; min-width: 50px; }
+                .current-rate { color: #666; min-width: 60px; text-align: right; }
+                .procured-rate { color: #5d7a5f; font-weight: bold; min-width: 60px; text-align: right; }
+                .procured-item .item-name::before { content: '✓ '; color: #5d7a5f; }
+                .empty-msg { color: #999; font-style: italic; padding: 10px 0; }
             </style>
         </head>
         <body>
             <h1>Purchase List - Pratibha Marketing</h1>
             <div class="date">${new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
-            ${printContent}
+            <h2>TO PROCURE (${filteredToProcure.length} items)</h2>
+            ${toProcureRows || '<div class="empty-msg">No items to procure</div>'}
+            <h2>PROCURED (${filteredProcured.length} items)</h2>
+            ${procuredRows || '<div class="empty-msg">No procured items</div>'}
         </body>
         </html>
     `);
@@ -295,48 +776,22 @@ function printList() {
 }
 
 function exportCSV() {
-    const rateMap = {};
-    rates.forEach(rate => {
-        const pid = typeof rate.product === 'object' ? rate.product._id : rate.product;
-        rateMap[pid] = rate;
-    });
+    const allItems = [...procurementData.toProcure, ...procurementData.procured];
 
-    const procurementMap = {};
-    procurement.forEach(item => { procurementMap[item.productName] = item; });
-
-    // Filter and sort same as display
-    const filteredProducts = products
-        .filter(p => p.category === 'Indian Vegetables' || p.category === 'Fruits')
-        .sort((a, b) => {
-            // Indian Vegetables before Fruits
-            if (a.category === 'Indian Vegetables' && b.category === 'Fruits') return -1;
-            if (a.category === 'Fruits' && b.category === 'Indian Vegetables') return 1;
-            // Within same category: unsaved (rate=0) first
-            const rateA = rateMap[a._id]?.rate || 0;
-            const rateB = rateMap[b._id]?.rate || 0;
-            if (rateA === 0 && rateB !== 0) return -1;
-            if (rateA !== 0 && rateB === 0) return 1;
-            // Then by quantity needed
-            const qtyA = procurementMap[a.name]?.totalQuantity || 0;
-            const qtyB = procurementMap[b.name]?.totalQuantity || 0;
-            return qtyB - qtyA;
-        });
-
-    const headers = ['Category', 'Product', 'Unit', 'Qty Needed', 'Current Rate', 'Est. Cost'];
-    const rows = filteredProducts.map(product => {
-        const procItem = procurementMap[product.name];
-        const qtyNeeded = procItem?.totalQuantity || 0;
-        const rate = rateMap[product._id];
-        const currentRate = rate ? rate.rate : 0;
-        const estCost = qtyNeeded * currentRate;
+    const headers = ['Category', 'Product', 'Unit', '1st Batch Qty', '2nd Batch Qty', 'Total Qty', 'Rate', 'Status'];
+    const rows = allItems.map(item => {
+        const status = procurementData.procured.find(p => p.productId === item.productId) ? 'Procured' : 'To Procure';
+        const rate = item.rate || item.currentRate || 0;
 
         return [
-            `"${product.category}"`,
-            `"${product.name}"`,
-            product.unit,
-            qtyNeeded,
-            currentRate,
-            estCost.toFixed(2)
+            `"${item.category}"`,
+            `"${item.productName}"`,
+            item.unit,
+            item.batch1Qty,
+            item.batch2Qty,
+            item.totalQty,
+            rate,
+            status
         ].join(',');
     });
 
@@ -366,11 +821,16 @@ async function saveAllRates() {
 
     for (const [productId, rateData] of Object.entries(changedRates)) {
         try {
-            let response = await fetch('/api/market-rates', {
+            // Use the new /api/supplier/procure endpoint which marks as procured AND updates market rate
+            let response = await fetch('/api/supplier/procure', {
                 method: 'POST',
                 headers,
                 credentials: 'include',
-                body: JSON.stringify({ product: rateData.product, rate: rateData.rate, effectiveDate: new Date().toISOString() })
+                body: JSON.stringify({
+                    productId: rateData.product,
+                    rate: rateData.rate,
+                    quantity: rateData.quantity || 0
+                })
             });
 
             // Handle CSRF error with retry
@@ -380,11 +840,15 @@ async function saveAllRates() {
                     csrfToken = await Auth.refreshCsrfToken();
                     if (csrfToken) {
                         headers['X-CSRF-Token'] = csrfToken;
-                        response = await fetch('/api/market-rates', {
+                        response = await fetch('/api/supplier/procure', {
                             method: 'POST',
                             headers,
                             credentials: 'include',
-                            body: JSON.stringify({ product: rateData.product, rate: rateData.rate, effectiveDate: new Date().toISOString() })
+                            body: JSON.stringify({
+                                productId: rateData.product,
+                                rate: rateData.rate,
+                                quantity: rateData.quantity || 0
+                            })
                         });
                     }
                 } else {
@@ -414,7 +878,6 @@ async function saveAllRates() {
     saveRatesBtn.disabled = false;
 
     if (failures.length > 0) {
-        const _failedNames = failures.map(f => f.productName).join(', ');
         showToast(`${failures.length} rate(s) not saved. Try again.`, 'info');
         if (Object.keys(changedRates).length > 0) {
             saveRatesBtn.classList.add('show');
@@ -427,6 +890,7 @@ async function saveAllRates() {
             input.value = '';
             input.classList.remove('changed');
         });
+        showToast('Items marked as procured!', 'success');
     }
 
     loadDashboardStats();
@@ -486,31 +950,35 @@ async function loadAnalytics(ordersList) {
 
         // Order Status Doughnut Chart
         const statusCtx = document.getElementById('orderStatusChart');
-        if (orderStatusChart) orderStatusChart.destroy();
+        if (!statusCtx) {
+            console.warn('Order status chart canvas not found');
+        } else {
+            if (orderStatusChart) orderStatusChart.destroy();
 
-        orderStatusChart = new Chart(statusCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Pending', 'Confirmed', 'Delivered', 'Cancelled'],
-                datasets: [{
-                    data: [
-                        statusCounts.pending, statusCounts.confirmed,
-                        statusCounts.delivered, statusCounts.cancelled
-                    ],
-                    backgroundColor: [
-                        chartColors.warning, chartColors.olive,
-                        chartColors.success, chartColors.error
-                    ],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '60%',
-                plugins: { legend: { display: false } }
-            }
-        });
+            orderStatusChart = new Chart(statusCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Pending', 'Confirmed', 'Delivered', 'Cancelled'],
+                    datasets: [{
+                        data: [
+                            statusCounts.pending, statusCounts.confirmed,
+                            statusCounts.delivered, statusCounts.cancelled
+                        ],
+                        backgroundColor: [
+                            chartColors.warning, chartColors.olive,
+                            chartColors.success, chartColors.error
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '60%',
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
 
         // Revenue Trend (Last 7 Days)
         const last7Days = [];
@@ -541,38 +1009,42 @@ async function loadAnalytics(ordersList) {
         document.getElementById('avgDaily').textContent = formatCurrency(Math.round(avgDaily));
 
         const revenueCtx = document.getElementById('revenueChart');
-        if (revenueChart) revenueChart.destroy();
+        if (!revenueCtx) {
+            console.warn('Revenue chart canvas not found');
+        } else {
+            if (revenueChart) revenueChart.destroy();
 
-        revenueChart = new Chart(revenueCtx, {
-            type: 'line',
-            data: {
-                labels: last7Days.map(d => {
-                    const date = new Date(d);
-                    return date.toLocaleDateString('en-IN', { weekday: 'short' });
-                }),
-                datasets: [{
-                    label: 'Revenue',
-                    data: revenueData,
-                    borderColor: chartColors.olive,
-                    backgroundColor: chartColors.oliveLight,
-                    fill: true,
-                    tension: 0.4,
-                    pointRadius: 4,
-                    pointBackgroundColor: chartColors.olive
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { callback: value => '₹' + value.toLocaleString('en-IN') }
+            revenueChart = new Chart(revenueCtx, {
+                type: 'line',
+                data: {
+                    labels: last7Days.map(d => {
+                        const date = new Date(d);
+                        return date.toLocaleDateString('en-IN', { weekday: 'short' });
+                    }),
+                    datasets: [{
+                        label: 'Revenue',
+                        data: revenueData,
+                        borderColor: chartColors.olive,
+                        backgroundColor: chartColors.oliveLight,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 4,
+                        pointBackgroundColor: chartColors.olive
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { callback: value => '₹' + value.toLocaleString('en-IN') }
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
 
         // Top Products by Quantity
         const productQuantities = {};
@@ -590,30 +1062,34 @@ async function loadAnalytics(ordersList) {
             .slice(0, 5);
 
         const topProductsCtx = document.getElementById('topProductsChart');
-        if (topProductsChart) topProductsChart.destroy();
+        if (!topProductsCtx) {
+            console.warn('Top products chart canvas not found');
+        } else {
+            if (topProductsChart) topProductsChart.destroy();
 
-        topProductsChart = new Chart(topProductsCtx, {
-            type: 'bar',
-            data: {
-                labels: sortedProducts.map(([name]) => name.length > 12 ? name.slice(0, 12) + '...' : name),
-                datasets: [{
-                    label: 'Quantity',
-                    data: sortedProducts.map(([, qty]) => qty),
-                    backgroundColor: [
-                        chartColors.olive, chartColors.terracotta, chartColors.gunmetal,
-                        chartColors.success, chartColors.warning
-                    ],
-                    borderRadius: 4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                indexAxis: 'y',
-                plugins: { legend: { display: false } },
-                scales: { x: { beginAtZero: true } }
-            }
-        });
+            topProductsChart = new Chart(topProductsCtx, {
+                type: 'bar',
+                data: {
+                    labels: sortedProducts.map(([name]) => name.length > 12 ? name.slice(0, 12) + '...' : name),
+                    datasets: [{
+                        label: 'Quantity',
+                        data: sortedProducts.map(([, qty]) => qty),
+                        backgroundColor: [
+                            chartColors.olive, chartColors.terracotta, chartColors.gunmetal,
+                            chartColors.success, chartColors.warning
+                        ],
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: { legend: { display: false } },
+                    scales: { x: { beginAtZero: true } }
+                }
+            });
+        }
 
     } catch (error) {
         console.error('Error loading analytics:', error);
@@ -712,137 +1188,12 @@ window.downloadLedger = async function () {
     }
 };
 
-// ========================
-// BATCH MANAGEMENT
-// ========================
-async function loadBatches() {
-    try {
-        const res = await fetch('/api/batches/today', { credentials: 'include' });
-        const data = await res.json();
-
-        if (!res.ok) {
-            const batchCards = document.getElementById('batchCards');
-            batchCards.innerHTML = '';
-            batchCards.appendChild(createElement('div', { className: 'empty-state' }, 'Could not load batches'));
-            return;
-        }
-
-        // Update current batch info
-        const batchInfo = document.getElementById('batchInfo');
-        batchInfo.innerHTML = '';
-        batchInfo.appendChild(createElement('span', { className: 'badge badge-info' }, `Currently accepting: ${data.currentBatch}`));
-
-        // Update time display - use Asia/Kolkata timezone for proper IST
-        const currentTime = new Date(data.currentTime);
-        document.getElementById('batchCurrentTime').textContent =
-            currentTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' }) + ' IST';
-
-        const batches = data.data || [];
-
-        if (batches.length === 0) {
-            const batchCards = document.getElementById('batchCards');
-            batchCards.innerHTML = '';
-            batchCards.appendChild(createElement('div', { className: 'empty-state' }, 'No batches for today yet'));
-            return;
-        }
-
-        document.getElementById('batchCards').innerHTML = '';
-        const fragment = document.createDocumentFragment();
-
-        batches.forEach(batch => {
-            const isOpen = batch.status === 'open';
-            const isConfirmed = batch.status === 'confirmed';
-            const statusClass = isConfirmed ? 'confirmed' : (isOpen ? 'open' : 'expired');
-            const statusText = isConfirmed ? '🔒 Confirmed' : (isOpen ? '📝 Open' : '⏰ Expired');
-            const showConfirmBtn = batch.batchType === '2nd' && isOpen;
-
-            const cardBodyDetails = [
-                createElement('div', { className: 'batch-stat' }, [
-                    createElement('span', { className: 'batch-stat-value' }, batch.totalOrders || 0),
-                    createElement('span', { className: 'batch-stat-label' }, 'Orders')
-                ])
-            ];
-
-            if (isConfirmed && batch.confirmedAt) {
-                const confirmedText = [
-                    `Confirmed at ${new Date(batch.confirmedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })}`
-                ];
-                if (batch.confirmedBy?.name) {
-                    confirmedText.push(` by ${batch.confirmedBy.name}`);
-                }
-                cardBodyDetails.push(createElement('div', { className: 'batch-confirmed-info' }, confirmedText));
-            }
-
-            const cardChildren = [
-                createElement('div', { className: 'batch-card-header' }, [
-                    createElement('span', { className: 'batch-type' }, `${batch.batchType} Batch`),
-                    createElement('span', { className: 'batch-status' }, statusText)
-                ]),
-                createElement('div', { className: 'batch-card-body' }, cardBodyDetails)
-            ];
-
-            if (showConfirmBtn) {
-                cardChildren.push(createElement('div', { className: 'batch-card-actions' }, [
-                    createElement('button', {
-                        className: 'btn-confirm-batch',
-                        onclick: () => confirmBatch(batch._id)
-                    }, 'Confirm Batch')
-                ]));
-            }
-
-            fragment.appendChild(createElement('div', { className: `batch-card ${statusClass}` }, cardChildren));
-        });
-
-        document.getElementById('batchCards').appendChild(fragment);
-    } catch (error) {
-        console.error('Error loading batches:', error);
-        const batchCards = document.getElementById('batchCards');
-        batchCards.innerHTML = '';
-        batchCards.appendChild(createElement('div', { className: 'empty-state' }, 'Could not load batches'));
-    }
-}
-
-async function confirmBatch(batchId) {
-    if (!confirm('Are you sure you want to confirm this batch? Orders will be locked and customers will not be able to edit them.')) {
-        return;
-    }
-
-    try {
-        const csrfToken = await Auth.ensureCsrfToken();
-        const headers = { 'Content-Type': 'application/json' };
-        if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
-
-        const res = await fetch(`/api/batches/${batchId}/confirm`, {
-            method: 'POST',
-            credentials: 'include',
-            headers
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-            showToast(data.message || 'Could not confirm batch', 'error');
-            return;
-        }
-
-        showToast(data.message || 'Batch confirmed successfully', 'success');
-        loadBatches(); // Refresh the batch display
-    } catch (error) {
-        console.error('Error confirming batch:', error);
-        showToast('Could not confirm batch', 'error');
-    }
-}
-
-// Make confirmBatch available globally
-window.confirmBatch = confirmBatch;
-
 async function init() {
     const user = await Auth.requireAuth(['admin', 'staff']);
     if (!user) return;
 
     document.getElementById('userBadge').textContent = user.name || user.email || 'User';
     loadDashboardStats();
-    loadBatches();
     checkAPIHealth();
 }
 
