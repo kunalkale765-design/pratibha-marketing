@@ -331,6 +331,11 @@ function renderOrders() {
             }
         }
 
+        // Format order date and time
+        const orderDate = new Date(o.createdAt);
+        const formattedDate = orderDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+        const formattedTime = orderDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+
         // Swipe Content
         const swipeContent = createElement('div', {
             className: 'swipe-content',
@@ -344,7 +349,8 @@ function renderOrders() {
                     createElement('span', { className: 'order-number' }, `Order #${o.orderNumber}`),
                     batchBadge,
                     packingBadge
-                ])
+                ]),
+                createElement('div', { className: 'order-datetime' }, `${formattedDate} • ${formattedTime}`)
             ]),
             createElement('div', { className: 'order-amount-pill' }, `₹${(o.totalAmount || 0).toLocaleString('en-IN')}`)
         ]);
@@ -1087,16 +1093,6 @@ async function viewOrder(id) {
                         onclick: () => window.updateOrderStatus(order._id, 'confirmed')
                     }, 'Confirm Order');
                     footer.appendChild(confirmBtn);
-                }
-
-                // Mark Delivered (Confirmed -> Delivered) - only show if packing is done
-                else if (order.status === 'confirmed' && order.packingDone) {
-                    const deliverBtn = createElement('button', {
-                        className: 'btn-modal primary btn-animated status-action-btn',
-                        style: { background: 'var(--gunmetal)', color: 'white', flex: '1.5' },
-                        onclick: () => window.updateOrderStatus(order._id, 'delivered')
-                    }, 'Mark Delivered');
-                    footer.appendChild(deliverBtn);
                 }
 
                 // Pack Order button (for confirmed orders not yet packed)

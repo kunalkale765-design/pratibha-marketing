@@ -709,10 +709,14 @@ function printList() {
             currentCategory = item.category;
             toProcureRows += `<div class="category-header">${escapeHtml(currentCategory)}</div>`;
         }
+        // Show procuredQty + newQty if previously procured, else just totalQty
+        const qtyDisplay = item.wasProcured
+            ? `${item.procuredQty || 0} + ${item.newQty || 0}`
+            : `${item.totalQty || 0}`;
         toProcureRows += `
             <div class="procurement-item">
                 <span class="item-name">${escapeHtml(item.productName)}</span>
-                <span class="qty-breakdown">${item.batch1Qty || 0} + ${item.batch2Qty || 0} = ${item.totalQty || 0}</span>
+                <span class="qty-breakdown">${qtyDisplay}</span>
                 <span class="item-unit">${escapeHtml(item.unit)}</span>
                 <span class="current-rate">₹${(item.currentRate || 0).toFixed(0)}</span>
             </div>`;
@@ -729,7 +733,7 @@ function printList() {
         procuredRows += `
             <div class="procurement-item procured-item">
                 <span class="item-name">${escapeHtml(item.productName)}</span>
-                <span class="qty-breakdown">${item.batch1Qty || 0} + ${item.batch2Qty || 0} = ${item.totalQty || 0}</span>
+                <span class="qty-breakdown">${item.procuredQty || 0}</span>
                 <span class="item-unit">${escapeHtml(item.unit)}</span>
                 <span class="procured-rate">₹${item.rate}</span>
             </div>`;
@@ -778,7 +782,7 @@ function printList() {
 function exportCSV() {
     const allItems = [...procurementData.toProcure, ...procurementData.procured];
 
-    const headers = ['Category', 'Product', 'Unit', '1st Batch Qty', '2nd Batch Qty', 'Total Qty', 'Rate', 'Status'];
+    const headers = ['Category', 'Product', 'Unit', 'Procured Qty', 'New Qty', 'Total Qty', 'Rate', 'Status'];
     const rows = allItems.map(item => {
         const status = procurementData.procured.find(p => p.productId === item.productId) ? 'Procured' : 'To Procure';
         const rate = item.rate || item.currentRate || 0;
@@ -787,9 +791,9 @@ function exportCSV() {
             `"${item.category}"`,
             `"${item.productName}"`,
             item.unit,
-            item.batch1Qty,
-            item.batch2Qty,
-            item.totalQty,
+            item.procuredQty || 0,
+            item.newQty || 0,
+            item.totalQty || item.procuredQty || 0,
             rate,
             status
         ].join(',');
