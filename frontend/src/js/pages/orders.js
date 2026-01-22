@@ -331,6 +331,11 @@ function renderOrders() {
             }
         }
 
+        // Format order date and time
+        const orderDate = new Date(o.createdAt);
+        const formattedDate = orderDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+        const formattedTime = orderDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+
         // Swipe Content
         const swipeContent = createElement('div', {
             className: 'swipe-content',
@@ -344,7 +349,8 @@ function renderOrders() {
                     createElement('span', { className: 'order-number' }, `Order #${o.orderNumber}`),
                     batchBadge,
                     packingBadge
-                ])
+                ]),
+                createElement('div', { className: 'order-datetime' }, `${formattedDate} • ${formattedTime}`)
             ]),
             createElement('div', { className: 'order-amount-pill' }, `₹${(o.totalAmount || 0).toLocaleString('en-IN')}`)
         ]);
