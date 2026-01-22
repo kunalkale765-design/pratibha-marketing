@@ -1089,16 +1089,6 @@ async function viewOrder(id) {
                     footer.appendChild(confirmBtn);
                 }
 
-                // Mark Delivered (Confirmed -> Delivered) - only show if packing is done
-                else if (order.status === 'confirmed' && order.packingDone) {
-                    const deliverBtn = createElement('button', {
-                        className: 'btn-modal primary btn-animated status-action-btn',
-                        style: { background: 'var(--gunmetal)', color: 'white', flex: '1.5' },
-                        onclick: () => window.updateOrderStatus(order._id, 'delivered')
-                    }, 'Mark Delivered');
-                    footer.appendChild(deliverBtn);
-                }
-
                 // Pack Order button (for confirmed orders not yet packed)
                 const canPack = order.status === 'confirmed' && !order.packingDone;
 
