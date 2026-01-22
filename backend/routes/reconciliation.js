@@ -6,11 +6,7 @@ const Order = require('../models/Order');
 const Customer = require('../models/Customer');
 const LedgerEntry = require('../models/LedgerEntry');
 const { protect, authorize } = require('../middleware/auth');
-
-// Helper function to round to 2 decimal places
-function roundTo2Decimals(num) {
-  return Math.round(num * 100) / 100;
-}
+const { roundTo2Decimals, handleValidationErrors } = require('../utils/helpers');
 
 // @route   GET /api/reconciliation/pending
 // @desc    Get orders awaiting reconciliation (confirmed status with packing done)
@@ -78,10 +74,7 @@ router.get('/:orderId',
   param('orderId').isMongoId().withMessage('Invalid order ID'),
   async (req, res, next) => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ success: false, errors: errors.array() });
-      }
+      if (handleValidationErrors(req, res)) return;
 
       const order = await Order.findById(req.params.orderId)
         .populate('customer', 'name phone address pricingType')
@@ -154,10 +147,7 @@ router.post('/:orderId/complete',
   ],
   async (req, res, next) => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ success: false, errors: errors.array() });
-      }
+      if (handleValidationErrors(req, res)) return;
 
       const order = await Order.findById(req.params.orderId)
         .populate('customer');
@@ -309,6 +299,14 @@ router.post('/:orderId/complete',
               createdByName: req.user.name
             }], { session });
           });
+        } catch (txError) {
+          // Log the specific transaction error for debugging
+          console.error(`[Reconciliation] Transaction failed for order ${order.orderNumber}:`, txError.message);
+          console.error('[Reconciliation] Transaction error stack:', txError.stack);
+          // Throw a user-friendly error
+          const error = new Error('Failed to complete reconciliation. The order may have been modified by another user. Please refresh and try again.');
+          error.statusCode = 409; // Conflict
+          throw error;
         } finally {
           await session.endSession();
         }

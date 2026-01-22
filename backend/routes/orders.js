@@ -7,11 +7,14 @@ const Product = require('../models/Product');
 const MarketRate = require('../models/MarketRate');
 const { protect, authorize } = require('../middleware/auth');
 const { assignOrderToBatch } = require('../services/batchScheduler');
-
-// Helper function to round to 2 decimal places (avoids floating-point precision issues)
-function roundTo2Decimals(num) {
-  return Math.round(num * 100) / 100;
-}
+const {
+  roundTo2Decimals,
+  getCustomerId,
+  handleValidationErrors,
+  buildDateRangeFilter,
+  parsePagination,
+  userOwnsOrder
+} = require('../utils/helpers');
 
 // Helper function to calculate price based on customer's pricing type
 // Uses pre-fetched market rate to avoid race conditions
@@ -126,54 +129,36 @@ const validateOrder = [
 // @access  Private
 router.get('/', protect, async (req, res, next) => {
   try {
-    const { status, customer, startDate, endDate, limit: rawLimit } = req.query;
-    // Validate and cap limit to prevent DoS (min 1, max 1000, default 50)
-    const limit = Math.min(Math.max(parseInt(rawLimit) || 50, 1), 1000);
+    const { status, customer, startDate, endDate } = req.query;
+    const { limit } = parsePagination(req.query, { limit: 50, maxLimit: 1000 });
     const filter = {};
 
     // SECURITY: Customers can only see their own orders
     if (req.user.role === 'customer') {
-      if (!req.user.customer) {
+      const customerId = getCustomerId(req.user);
+      if (!customerId) {
         return res.status(403).json({
           success: false,
           message: 'Customer account not properly linked'
         });
       }
-      const customerId = typeof req.user.customer === 'object'
-        ? req.user.customer._id
-        : req.user.customer;
       filter.customer = customerId;
-    } else {
+    } else if (customer) {
       // Staff/admin can filter by customer if specified
-      if (customer) {
-        filter.customer = customer;
-      }
+      filter.customer = customer;
     }
 
     if (status) {
       filter.status = status;
     }
 
-    if (startDate || endDate) {
-      filter.createdAt = {};
-      if (startDate) {
-        const parsedStart = new Date(startDate);
-        if (isNaN(parsedStart.getTime())) {
-          return res.status(400).json({ success: false, message: 'Invalid startDate format' });
-        }
-        filter.createdAt.$gte = parsedStart;
-      }
-      if (endDate) {
-        const parsedEnd = new Date(endDate);
-        if (isNaN(parsedEnd.getTime())) {
-          return res.status(400).json({ success: false, message: 'Invalid endDate format' });
-        }
-        filter.createdAt.$lte = parsedEnd;
-      }
-      // Validate date range: endDate should be >= startDate
-      if (startDate && endDate && filter.createdAt.$gte > filter.createdAt.$lte) {
-        return res.status(400).json({ success: false, message: 'endDate must be greater than or equal to startDate' });
-      }
+    // Build date range filter using shared helper
+    const { filter: dateFilter, error: dateError } = buildDateRangeFilter(startDate, endDate, { endOfDay: false });
+    if (dateError) {
+      return res.status(400).json({ success: false, message: dateError });
+    }
+    if (dateFilter) {
+      filter.createdAt = dateFilter;
     }
 
     const orders = await Order.find(filter)
@@ -202,10 +187,7 @@ router.get('/:id',
   param('id').isMongoId().withMessage('Invalid order ID'),
   async (req, res, next) => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ success: false, errors: errors.array() });
-      }
+      if (handleValidationErrors(req, res)) return;
 
       const order = await Order.findById(req.params.id)
         .populate('customer')
@@ -219,20 +201,11 @@ router.get('/:id',
       }
 
       // SECURITY: Customers can only view their own orders
-      if (req.user.role === 'customer') {
-        const userCustomerId = typeof req.user.customer === 'object'
-          ? req.user.customer._id.toString()
-          : req.user.customer?.toString();
-        const orderCustomerId = typeof order.customer === 'object'
-          ? order.customer._id.toString()
-          : order.customer.toString();
-
-        if (userCustomerId !== orderCustomerId) {
-          return res.status(403).json({
-            success: false,
-            message: 'Access denied. You can only view your own orders.'
-          });
-        }
+      if (req.user.role === 'customer' && !userOwnsOrder(req.user, order)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. You can only view your own orders.'
+        });
       }
 
       res.json({
@@ -251,10 +224,7 @@ router.get('/customer/:customerId', protect, async (req, res, next) => {
   try {
     // SECURITY: Customers can only view their own orders
     if (req.user.role === 'customer') {
-      const userCustomerId = typeof req.user.customer === 'object'
-        ? req.user.customer._id.toString()
-        : req.user.customer?.toString();
-
+      const userCustomerId = getCustomerId(req.user);
       if (userCustomerId !== req.params.customerId) {
         return res.status(403).json({
           success: false,
@@ -283,13 +253,7 @@ router.get('/customer/:customerId', protect, async (req, res, next) => {
 // @access  Private (All authenticated users - customers can create orders)
 router.post('/', protect, validateOrder, async (req, res, next) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        errors: errors.array()
-      });
-    }
+    if (handleValidationErrors(req, res)) return;
 
     // Check for idempotency key to prevent duplicate orders
     const idempotencyKey = req.body.idempotencyKey;
@@ -428,6 +392,7 @@ router.post('/', protect, validateOrder, async (req, res, next) => {
     }
 
     // Save new contract prices to customer if any
+    let contractPriceSaveError = null;
     if (newContractPrices.length > 0) {
       try {
         // Re-fetch customer to avoid race condition where pricingType changed
@@ -444,13 +409,20 @@ router.post('/', protect, validateOrder, async (req, res, next) => {
           await freshCustomer.save();
         } else {
           // Customer's pricing type changed - don't save contract prices
-          console.warn(`Skipping contract price save: customer ${req.body.customer} is no longer contract pricing type`);
+          console.warn(`[Order Creation] Skipping contract price save: customer ${req.body.customer} pricing type changed during order creation`);
           // Clear the newContractPrices so response doesn't claim they were saved
           newContractPrices.length = 0;
         }
       } catch (contractError) {
-        console.error('Failed to save new contract prices:', contractError.message);
-        // Continue - order can still be created, contract prices can be added manually
+        // Log with context for debugging
+        console.error(`[Order Creation] Failed to save contract prices for customer ${req.body.customer}:`, contractError.message);
+        // Store error to include in response - order will still be created but staff should know
+        contractPriceSaveError = contractError.message;
+        // Clear the array so response doesn't falsely claim they were saved
+        const failedPrices = [...newContractPrices];
+        newContractPrices.length = 0;
+        // Add failed prices info for the response
+        contractPriceSaveError = `Failed to save contract prices for: ${failedPrices.map(cp => cp.productName).join(', ')}. Please add them manually in customer management.`;
       }
     }
 
@@ -465,8 +437,7 @@ router.post('/', protect, validateOrder, async (req, res, next) => {
       deliveryAddress: req.body.deliveryAddress,
       notes: req.body.notes,
       usedPricingFallback: usedPricingFallback,
-      batch: batch._id,
-      batchLocked: false // New orders are always editable
+      batch: batch._id
     };
 
     if (idempotencyKey) {
@@ -487,8 +458,19 @@ router.post('/', protect, validateOrder, async (req, res, next) => {
       data: populatedOrder
     };
 
+    // Collect all warnings
+    const warnings = [];
+
     if (usedPricingFallback) {
-      response.warning = 'Some products used market rate fallback because contract prices were not set';
+      warnings.push('Some products used market rate fallback because contract prices were not set');
+    }
+
+    if (contractPriceSaveError) {
+      warnings.push(contractPriceSaveError);
+    }
+
+    if (warnings.length > 0) {
+      response.warning = warnings.join('. ');
     }
 
     // Include info about new contract prices saved
@@ -821,14 +803,6 @@ router.put('/:id/customer-edit',
         return res.status(400).json({
           success: false,
           message: 'Only pending orders can be edited'
-        });
-      }
-
-      // SECURITY: Check if batch is locked (confirmed)
-      if (order.batchLocked) {
-        return res.status(400).json({
-          success: false,
-          message: 'This order\'s batch has been confirmed. Please contact us to make changes.'
         });
       }
 

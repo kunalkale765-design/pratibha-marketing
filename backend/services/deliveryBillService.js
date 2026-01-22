@@ -31,11 +31,18 @@ function roundTo2Decimals(num) {
 
 /**
  * Format date for display (DD/MM/YYYY)
+ * Logs warning if fallback value is used
  */
-function formatDate(date) {
-  if (!date) return '-';
+function formatDate(date, context = 'unknown') {
+  if (!date) {
+    console.warn(`[DeliveryBillService] formatDate: received null/undefined date (context: ${context})`);
+    return '-';
+  }
   const d = new Date(date);
-  if (isNaN(d.getTime())) return '-';
+  if (isNaN(d.getTime())) {
+    console.warn(`[DeliveryBillService] formatDate: invalid date value "${date}" (context: ${context})`);
+    return '-';
+  }
   const day = d.getDate().toString().padStart(2, '0');
   const month = (d.getMonth() + 1).toString().padStart(2, '0');
   const year = d.getFullYear();
@@ -44,9 +51,13 @@ function formatDate(date) {
 
 /**
  * Format number as currency
+ * Logs warning if fallback value is used
  */
-function formatCurrency(amount) {
-  if (amount === null || amount === undefined || isNaN(amount)) return 'Rs. 0.00';
+function formatCurrency(amount, context = 'unknown') {
+  if (amount === null || amount === undefined || isNaN(amount)) {
+    console.warn(`[DeliveryBillService] formatCurrency: invalid amount "${amount}" (context: ${context})`);
+    return 'Rs. 0.00';
+  }
   return `Rs. ${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
@@ -70,7 +81,10 @@ async function generateBillNumber() {
  */
 async function updateOrderPrices(order) {
   const customer = await Customer.findById(order.customer);
-  if (!customer) return order;
+  if (!customer) {
+    console.warn(`[DeliveryBillService] updateOrderPrices: Customer not found for order ${order.orderNumber || order._id}, using existing prices`);
+    return order;
+  }
 
   // Only update for market and markup pricing types
   if (customer.pricingType !== 'market' && customer.pricingType !== 'markup') {
@@ -171,47 +185,24 @@ async function splitOrderByFirm(order) {
   return result;
 }
 
-// PDF Layout Constants
-const PAGE_HEIGHT = 841;  // A4 height in points
-const PAGE_MARGIN = 50;
-const TABLE_ROW_HEIGHT = 22;
-const TABLE_HEADER_HEIGHT = 22;
-const HEADER_HEIGHT = 230;  // Space for company info, bill details, customer
-const FOOTER_HEIGHT = 100;  // Space for total section and footer
-const MAX_ITEMS_Y = PAGE_HEIGHT - PAGE_MARGIN - FOOTER_HEIGHT;  // ~691
-
-// Table configuration
-const TABLE_HEADERS = ['#', 'Product', 'Qty', 'Unit', 'Rate', 'Amount'];
-const COL_WIDTHS = [25, 210, 50, 45, 70, 95];
-
-function getColPositions() {
-  const positions = [50];
-  for (let i = 0; i < COL_WIDTHS.length - 1; i++) {
-    positions.push(positions[i] + COL_WIDTHS[i]);
-  }
-  return positions;
-}
-
 /**
- * Render the watermark for a page
+ * Render a single bill page
+ * @param {PDFDocument} doc - PDFKit document
+ * @param {Object} billData - Bill data
+ * @param {string} copyType - 'ORIGINAL' or 'DUPLICATE'
  */
-function renderWatermark(doc, copyType) {
-  doc.save();
+function renderBillPage(doc, billData, copyType) {
+  // Colors
+  const primaryColor = '#2e3532';
+  const accentColor = '#7e9181';
+  const lightGray = '#f5f5f5';
+
+  // Watermark
   doc.fontSize(60)
     .fillColor('#e0e0e0')
     .rotate(-45, { origin: [300, 400] })
     .text(copyType, 150, 400, { opacity: 0.3 })
     .rotate(45, { origin: [300, 400] });
-  doc.restore();
-}
-
-/**
- * Render the bill header (company info, bill details, customer)
- * @returns {number} Y position where table should start
- */
-function renderBillHeader(doc, billData, copyType, pageNum, totalPages) {
-  const primaryColor = '#2e3532';
-  const accentColor = '#7e9181';
 
   // Header - Company Info
   doc.fontSize(18)
@@ -240,13 +231,6 @@ function renderBillHeader(doc, billData, copyType, pageNum, totalPages) {
     .text(`Date: ${formatDate(billData.date)}`, 380, 93, { align: 'right' })
     .text(`Order: ${billData.orderNumber}`, 380, 106, { align: 'right' })
     .text(`Batch: ${billData.batchNumber}`, 380, 119, { align: 'right' });
-
-  // Page number (only show if multiple pages)
-  if (totalPages > 1) {
-    doc.fontSize(8)
-      .fillColor('#999999')
-      .text(`Page ${pageNum} of ${totalPages}`, 380, 132, { align: 'right' });
-  }
 
   // Divider line
   doc.moveTo(50, 138)
@@ -280,18 +264,17 @@ function renderBillHeader(doc, billData, copyType, pageNum, totalPages) {
     yPos += 13;
   }
 
-  return Math.max(yPos + 15, 230);
-}
-
-/**
- * Render table header row
- */
-function renderTableHeader(doc, tableTop) {
-  const accentColor = '#7e9181';
-  const colPositions = getColPositions();
+  // Products Table
+  const tableTop = Math.max(yPos + 15, 230);
+  const tableHeaders = ['#', 'Product', 'Qty', 'Unit', 'Rate', 'Amount'];
+  const colWidths = [25, 210, 50, 45, 70, 95];
+  const colPositions = [50];
+  for (let i = 0; i < colWidths.length - 1; i++) {
+    colPositions.push(colPositions[i] + colWidths[i]);
+  }
 
   // Table Header Background
-  doc.rect(50, tableTop, 495, TABLE_HEADER_HEIGHT)
+  doc.rect(50, tableTop, 495, 22)
     .fillColor(accentColor)
     .fill();
 
@@ -300,48 +283,37 @@ function renderTableHeader(doc, tableTop) {
     .font('Helvetica-Bold')
     .fontSize(9);
 
-  TABLE_HEADERS.forEach((header, i) => {
+  tableHeaders.forEach((header, i) => {
     const align = i >= 2 ? 'right' : 'left';
     doc.text(header, colPositions[i] + (align === 'right' ? 0 : 5), tableTop + 7, {
-      width: COL_WIDTHS[i] - 10,
+      width: colWidths[i] - 10,
       align: align
     });
   });
 
-  return tableTop + TABLE_HEADER_HEIGHT + 5;
-}
-
-/**
- * Render a single table row
- */
-function renderTableRow(doc, item, index, currentY, isAlternate) {
-  const primaryColor = '#2e3532';
-  const lightGray = '#f5f5f5';
-  const colPositions = getColPositions();
-
-  // Alternate row background
-  if (isAlternate) {
-    doc.rect(50, currentY - 4, 495, TABLE_ROW_HEIGHT)
-      .fillColor(lightGray)
-      .fill();
-  }
-
+  // Table Rows
+  let currentY = tableTop + 27;
   doc.font('Helvetica').fontSize(9).fillColor(primaryColor);
 
-  // Row data
-  doc.text((index + 1).toString(), colPositions[0] + 5, currentY, { width: COL_WIDTHS[0] - 10 });
-  doc.text(item.name || item.productName, colPositions[1] + 5, currentY, { width: COL_WIDTHS[1] - 10 });
-  doc.text(item.quantity.toString(), colPositions[2], currentY, { width: COL_WIDTHS[2] - 10, align: 'right' });
-  doc.text(item.unit, colPositions[3], currentY, { width: COL_WIDTHS[3] - 10, align: 'right' });
-  doc.text(formatCurrency(item.rate), colPositions[4], currentY, { width: COL_WIDTHS[4] - 10, align: 'right' });
-  doc.text(formatCurrency(item.amount), colPositions[5], currentY, { width: COL_WIDTHS[5] - 10, align: 'right' });
-}
+  billData.items.forEach((item, index) => {
+    // Alternate row background
+    if (index % 2 === 0) {
+      doc.rect(50, currentY - 4, 495, 22)
+        .fillColor(lightGray)
+        .fill();
+      doc.fillColor(primaryColor);
+    }
 
-/**
- * Render the total section and footer
- */
-function renderBillFooter(doc, billData, copyType, currentY) {
-  const primaryColor = '#2e3532';
+    // Row data
+    doc.text((index + 1).toString(), colPositions[0] + 5, currentY, { width: colWidths[0] - 10 });
+    doc.text(item.name || item.productName, colPositions[1] + 5, currentY, { width: colWidths[1] - 10 });
+    doc.text(item.quantity.toString(), colPositions[2], currentY, { width: colWidths[2] - 10, align: 'right' });
+    doc.text(item.unit, colPositions[3], currentY, { width: colWidths[3] - 10, align: 'right' });
+    doc.text(formatCurrency(item.rate), colPositions[4], currentY, { width: colWidths[4] - 10, align: 'right' });
+    doc.text(formatCurrency(item.amount), colPositions[5], currentY, { width: colWidths[5] - 10, align: 'right' });
+
+    currentY += 22;
+  });
 
   // Total Section
   const totalY = currentY + 12;
@@ -365,110 +337,7 @@ function renderBillFooter(doc, billData, copyType, currentY) {
 }
 
 /**
- * Calculate total pages needed for items
- */
-function calculateTotalPages(itemCount) {
-  // First page has less space due to header
-  const firstPageItems = Math.floor((MAX_ITEMS_Y - HEADER_HEIGHT - TABLE_HEADER_HEIGHT) / TABLE_ROW_HEIGHT);
-  // Continuation pages have more space (no customer section)
-  const continuationPageItems = Math.floor((MAX_ITEMS_Y - 80 - TABLE_HEADER_HEIGHT) / TABLE_ROW_HEIGHT);
-
-  if (itemCount <= firstPageItems) {
-    return 1;
-  }
-
-  const remainingItems = itemCount - firstPageItems;
-  return 1 + Math.ceil(remainingItems / continuationPageItems);
-}
-
-/**
- * Render a bill copy (ORIGINAL or DUPLICATE) with proper pagination
- * @param {PDFDocument} doc - PDFKit document
- * @param {Object} billData - Bill data
- * @param {string} copyType - 'ORIGINAL' or 'DUPLICATE'
- * @param {boolean} isFirstCopy - Whether this is the first copy (don't add page before)
- */
-function renderBillCopy(doc, billData, copyType, isFirstCopy) {
-  const totalPages = calculateTotalPages(billData.items.length);
-  let itemIndex = 0;
-  let pageNum = 1;
-
-  while (itemIndex < billData.items.length) {
-    // Add new page (except for first page of first copy)
-    if (!(isFirstCopy && pageNum === 1)) {
-      doc.addPage();
-    }
-
-    // Render watermark
-    renderWatermark(doc, copyType);
-
-    // Render header
-    let tableTop;
-    if (pageNum === 1) {
-      // Full header on first page
-      tableTop = renderBillHeader(doc, billData, copyType, pageNum, totalPages);
-    } else {
-      // Condensed header on continuation pages
-      const primaryColor = '#2e3532';
-      const accentColor = '#7e9181';
-
-      doc.fontSize(12)
-        .fillColor(primaryColor)
-        .font('Helvetica-Bold')
-        .text(`${billData.firm.name} - ${billData.billNumber}`, 50, 50);
-
-      doc.fontSize(9)
-        .fillColor('#666666')
-        .font('Helvetica')
-        .text(`Customer: ${billData.customer.name}`, 50, 68)
-        .text(`Page ${pageNum} of ${totalPages}`, 380, 50, { align: 'right' });
-
-      doc.moveTo(50, 85)
-        .lineTo(545, 85)
-        .strokeColor(accentColor)
-        .lineWidth(1)
-        .stroke();
-
-      tableTop = 95;
-    }
-
-    // Render table header
-    let currentY = renderTableHeader(doc, tableTop);
-
-    // Calculate how many items fit on this page
-    const availableHeight = MAX_ITEMS_Y - currentY;
-    const itemsPerPage = Math.floor(availableHeight / TABLE_ROW_HEIGHT);
-
-    // Render items for this page
-    const endIndex = Math.min(itemIndex + itemsPerPage, billData.items.length);
-
-    for (let i = itemIndex; i < endIndex; i++) {
-      renderTableRow(doc, billData.items[i], i, currentY, i % 2 === 0);
-      currentY += TABLE_ROW_HEIGHT;
-    }
-
-    // If this is the last page, render footer with total
-    if (endIndex >= billData.items.length) {
-      renderBillFooter(doc, billData, copyType, currentY);
-    } else {
-      // Show "Continued on next page" indicator
-      doc.fontSize(8)
-        .fillColor('#999999')
-        .font('Helvetica-Oblique')
-        .text('Continued on next page...', 50, PAGE_HEIGHT - PAGE_MARGIN - 20, {
-          align: 'right',
-          width: 495
-        });
-    }
-
-    itemIndex = endIndex;
-    pageNum++;
-  }
-}
-
-/**
  * Generate PDF for a delivery bill with both ORIGINAL and DUPLICATE copies
- * Properly handles pagination for large orders
  * @param {Object} billData - Bill data
  * @returns {Promise<Buffer>} PDF buffer with both copies
  */
@@ -489,11 +358,12 @@ async function generateBillPDF(billData) {
       doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', reject);
 
-      // ORIGINAL copy (with pagination)
-      renderBillCopy(doc, billData, 'ORIGINAL', true);
+      // Page 1: ORIGINAL copy
+      renderBillPage(doc, billData, 'ORIGINAL');
 
-      // DUPLICATE copy (with pagination)
-      renderBillCopy(doc, billData, 'DUPLICATE', false);
+      // Page 2: DUPLICATE copy
+      doc.addPage();
+      renderBillPage(doc, billData, 'DUPLICATE');
 
       doc.end();
     } catch (error) {

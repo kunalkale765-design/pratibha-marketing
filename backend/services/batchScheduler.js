@@ -5,11 +5,15 @@ const { generateBillsForBatch } = require('./deliveryBillService');
 
 // Import Sentry if available (optional dependency)
 let Sentry;
+let sentryAvailable = false;
 try {
   Sentry = require('@sentry/node');
+  sentryAvailable = true;
 } catch (e) {
-  console.log('[BatchScheduler] Sentry not available:', e.message);
-  // Monitoring disabled - errors will only be logged to console
+  // Log at ERROR level so this is visible in deployment logs
+  console.error('[BatchScheduler] WARNING: Sentry not available - batch scheduler errors will not be monitored!');
+  console.error('[BatchScheduler] Sentry import error:', e.message);
+  // Sentry remains undefined, sentryAvailable stays false
 }
 
 let scheduledTask = null;
@@ -175,14 +179,13 @@ async function autoConfirmFirstBatch() {
       return { success: true, ordersConfirmed: 0, message: 'Batch confirmed (no pending orders)' };
     }
 
-    // Bulk update orders to confirmed and lock them
+    // Bulk update orders to confirmed
     const orderIds = pendingOrders.map(o => o._id);
     const updateResult = await Order.updateMany(
       { _id: { $in: orderIds } },
       {
         $set: {
-          status: 'confirmed',
-          batchLocked: true
+          status: 'confirmed'
         }
       }
     );
@@ -191,7 +194,9 @@ async function autoConfirmFirstBatch() {
     await batch.confirmBatch(null); // null = auto-confirmed
 
     // Generate delivery bills for all confirmed orders in the batch
-    let billResults = { billsGenerated: 0, errors: [] };
+    let billResults = { billsGenerated: 0, errors: [], totalOrders: 0 };
+    let billGenerationFailed = false;
+    let billGenerationError = null;
     try {
       console.log(`[BatchScheduler] Generating delivery bills for batch ${batch.batchNumber}...`);
       billResults = await generateBillsForBatch(batch);
@@ -200,16 +205,26 @@ async function autoConfirmFirstBatch() {
         console.warn(`[BatchScheduler] Bill generation had ${billResults.errors.length} errors:`, billResults.errors);
       }
     } catch (billError) {
-      console.error('[BatchScheduler] Error generating delivery bills:', billError);
-      // Don't fail the entire operation if bill generation fails
-      // Orders are already confirmed, bills can be generated manually later
-      if (Sentry && process.env.SENTRY_DSN) {
-        Sentry.captureException(billError);
+      // Log with clear ERROR prefix for visibility
+      console.error('[BatchScheduler] CRITICAL: Delivery bill generation failed completely!', billError.message);
+      console.error('[BatchScheduler] Stack trace:', billError.stack);
+      // Mark failure for return value
+      billGenerationFailed = true;
+      billGenerationError = billError.message;
+      // Report to Sentry if available
+      if (sentryAvailable && Sentry && process.env.SENTRY_DSN) {
+        Sentry.captureException(billError, {
+          tags: { service: 'batchScheduler', operation: 'billGeneration' },
+          extra: { batchNumber: batch.batchNumber, batchId: batch._id.toString() }
+        });
       }
     }
 
     const duration = Date.now() - startTime;
-    console.log(`[BatchScheduler] Auto-confirm complete: ${updateResult.modifiedCount} orders confirmed, ${billResults.billsGenerated} bills generated in ${duration}ms`);
+    const statusMsg = billGenerationFailed
+      ? `Auto-confirm complete BUT BILLS FAILED: ${updateResult.modifiedCount} orders confirmed, 0 bills generated (ERROR: ${billGenerationError})`
+      : `Auto-confirm complete: ${updateResult.modifiedCount} orders confirmed, ${billResults.billsGenerated} bills generated`;
+    console.log(`[BatchScheduler] ${statusMsg} in ${duration}ms`);
 
     return {
       success: true,
@@ -217,14 +232,18 @@ async function autoConfirmFirstBatch() {
       batchNumber: batch.batchNumber,
       billsGenerated: billResults.billsGenerated,
       billErrors: billResults.errors.length,
+      billGenerationFailed: billGenerationFailed,
+      billGenerationError: billGenerationError,
       duration
     };
   } catch (error) {
     console.error('[BatchScheduler] Fatal error during auto-confirm:', error);
 
     // Report to Sentry if available
-    if (Sentry && process.env.SENTRY_DSN) {
-      Sentry.captureException(error);
+    if (sentryAvailable && Sentry && process.env.SENTRY_DSN) {
+      Sentry.captureException(error, {
+        tags: { service: 'batchScheduler', operation: 'autoConfirmFirstBatch' }
+      });
     }
 
     throw error;
@@ -270,8 +289,10 @@ async function createNextDayBatches() {
   } catch (error) {
     console.error('[BatchScheduler] Error creating next day batches:', error);
 
-    if (Sentry && process.env.SENTRY_DSN) {
-      Sentry.captureException(error);
+    if (sentryAvailable && Sentry && process.env.SENTRY_DSN) {
+      Sentry.captureException(error, {
+        tags: { service: 'batchScheduler', operation: 'createNextDayBatches' }
+      });
     }
 
     throw error;
@@ -359,7 +380,7 @@ async function manuallyConfirmBatch(batchId, userId, options = {}) {
     status: 'pending'
   });
 
-  // Bulk update orders to confirmed and lock them
+  // Bulk update orders to confirmed
   let ordersConfirmed = 0;
   if (pendingOrders.length > 0) {
     const orderIds = pendingOrders.map(o => o._id);
@@ -367,8 +388,7 @@ async function manuallyConfirmBatch(batchId, userId, options = {}) {
       { _id: { $in: orderIds } },
       {
         $set: {
-          status: 'confirmed',
-          batchLocked: true
+          status: 'confirmed'
         }
       }
     );
@@ -379,15 +399,18 @@ async function manuallyConfirmBatch(batchId, userId, options = {}) {
   await batch.confirmBatch(userId);
 
   // Generate delivery bills if requested
-  let billResults = { billsGenerated: 0, errors: [] };
+  let billResults = { billsGenerated: 0, errors: [], totalOrders: 0 };
+  let billGenerationFailed = false;
+  let billGenerationError = null;
   if (generateBills) {
     try {
       console.log(`[BatchScheduler] Generating delivery bills for batch ${batch.batchNumber}...`);
       billResults = await generateBillsForBatch(batch);
       console.log(`[BatchScheduler] Generated ${billResults.billsGenerated} bills for ${billResults.totalOrders} orders`);
     } catch (billError) {
-      console.error('[BatchScheduler] Error generating delivery bills:', billError);
-      // Don't fail the entire operation if bill generation fails
+      console.error('[BatchScheduler] CRITICAL: Manual batch bill generation failed!', billError.message);
+      billGenerationFailed = true;
+      billGenerationError = billError.message;
       billResults.errors.push({ error: billError.message });
     }
   }
@@ -397,7 +420,9 @@ async function manuallyConfirmBatch(batchId, userId, options = {}) {
     batch,
     ordersConfirmed,
     billsGenerated: billResults.billsGenerated,
-    billErrors: billResults.errors.length
+    billErrors: billResults.errors.length,
+    billGenerationFailed: billGenerationFailed,
+    billGenerationError: billGenerationError
   };
 }
 

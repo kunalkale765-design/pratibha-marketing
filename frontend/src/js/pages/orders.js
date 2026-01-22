@@ -18,6 +18,8 @@ let currentUser = null;
 let priceChanges = {};
 let quantityChanges = {};
 let isSaving = false; // Prevent concurrent saves
+let marketRatesLoadFailed = false; // Track if market rates failed to load
+let productsLoadFailed = false; // Track if products failed to load
 
 // Track if global listeners have been initialized (prevents memory leak)
 let globalListenersInitialized = false;
@@ -210,9 +212,12 @@ async function loadMarketRates() {
             const pid = typeof r.product === 'object' ? r.product._id : r.product;
             marketRates[pid] = r.rate;
         });
+        marketRatesLoadFailed = false;
     } catch (e) {
-        // Silently fail - market rates are supplementary data
         console.error('Failed to load market rates:', e);
+        marketRatesLoadFailed = true;
+        // Show a subtle warning that can be dismissed
+        showDataLoadWarning('market-rates', 'Market rates may be outdated');
     }
 }
 
@@ -222,8 +227,54 @@ async function loadProducts() {
         if (!res.ok) throw new Error(`Server returned ${res.status}`);
         const data = await res.json();
         allProducts = (data.data || []).filter(p => p.isActive !== false);
+        productsLoadFailed = false;
     } catch (e) {
         console.error('Failed to load products:', e);
+        productsLoadFailed = true;
+        // Show warning - this affects "Add Product" functionality
+        showDataLoadWarning('products', 'Product list unavailable');
+    }
+}
+
+// Show a dismissible warning banner for data load failures
+function showDataLoadWarning(type, message) {
+    // Don't show duplicate warnings
+    if (document.querySelector(`.data-warning[data-type="${type}"]`)) return;
+
+    const warning = createElement('div', {
+        className: 'data-warning',
+        dataset: { type: type },
+        style: {
+            background: 'var(--warning, #b89a5a)',
+            color: 'white',
+            padding: '0.5rem 1rem',
+            fontSize: '0.85rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.5rem'
+        }
+    }, [
+        createElement('span', {}, `⚠️ ${message}`),
+        createElement('button', {
+            style: {
+                background: 'transparent',
+                border: 'none',
+                color: 'white',
+                cursor: 'pointer',
+                fontSize: '1rem',
+                padding: '0 0.25rem'
+            },
+            onclick: (e) => {
+                e.target.closest('.data-warning').remove();
+            }
+        }, '×')
+    ]);
+
+    // Insert at top of page
+    const container = document.getElementById('ordersList');
+    if (container && container.parentElement) {
+        container.parentElement.insertBefore(warning, container);
     }
 }
 
@@ -315,10 +366,7 @@ function renderOrders() {
         // Batch Badge
         let batchBadge = null;
         if (o.batch?.batchType) {
-            batchBadge = createElement('span', { className: 'badge badge-batch' }, [
-                o.batch.batchType,
-                o.batchLocked ? ' 🔒' : ''
-            ]);
+            batchBadge = createElement('span', { className: 'badge badge-batch' }, o.batch.batchType);
         }
 
         // Packing Status Badge - show for confirmed orders
@@ -330,11 +378,6 @@ function renderOrders() {
                 packingBadge = createElement('span', { className: 'packing-status-badge status-ready' }, 'Ready');
             }
         }
-
-        // Format order date and time
-        const orderDate = new Date(o.createdAt);
-        const formattedDate = orderDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-        const formattedTime = orderDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 
         // Swipe Content
         const swipeContent = createElement('div', {
@@ -349,8 +392,7 @@ function renderOrders() {
                     createElement('span', { className: 'order-number' }, `Order #${o.orderNumber}`),
                     batchBadge,
                     packingBadge
-                ]),
-                createElement('div', { className: 'order-datetime' }, `${formattedDate} • ${formattedTime}`)
+                ])
             ]),
             createElement('div', { className: 'order-amount-pill' }, `₹${(o.totalAmount || 0).toLocaleString('en-IN')}`)
         ]);
@@ -566,7 +608,10 @@ async function printOrder(orderId) {
 
     try {
         // Load firms list first
-        await loadFirms();
+        const firmsResult = await loadFirms();
+        if (!firmsResult.success) {
+            throw new Error('Could not load firm list. Please try again.');
+        }
 
         // Fetch split data from API
         const res = await fetch(`/api/invoices/${orderId}/split`, { credentials: 'include' });
@@ -596,15 +641,19 @@ async function printOrder(orderId) {
 let allFirms = [];
 
 async function loadFirms() {
-    if (allFirms.length > 0) return;
+    if (allFirms.length > 0) return { success: true };
     try {
         const res = await fetch('/api/invoices/firms', { credentials: 'include' });
-        if (res.ok) {
-            const data = await res.json();
-            allFirms = data.data || [];
+        if (!res.ok) {
+            throw new Error(`Server returned ${res.status}`);
         }
+        const data = await res.json();
+        allFirms = data.data || [];
+        return { success: true };
     } catch (e) {
         console.error('Failed to load firms:', e);
+        // Return error so caller can handle it
+        return { success: false, error: e.message };
     }
 }
 
@@ -869,7 +918,7 @@ async function viewOrder(id) {
         const isStaff = currentUser.role === 'admin' || currentUser.role === 'staff';
 
         const _batchInfo = order.batch?.batchType
-            ? `<span class="badge badge-batch">${order.batch.batchType}${order.batchLocked ? ' 🔒' : ''}</span>`
+            ? `<span class="badge badge-batch">${order.batch.batchType}</span>`
             : '-';
 
         const modalBody = document.getElementById('modalBody');
@@ -892,10 +941,7 @@ async function viewOrder(id) {
 
         // Date and Batch Row
         const batchBadge = order.batch?.batchType
-            ? createElement('span', { className: 'badge badge-batch' }, [
-                order.batch.batchType,
-                order.batchLocked ? ' 🔒' : ''
-            ])
+            ? createElement('span', { className: 'badge badge-batch' }, order.batch.batchType)
             : '-';
 
         const infoRow2 = createElement('div', { className: 'info-row' }, [
@@ -1095,6 +1141,16 @@ async function viewOrder(id) {
                     footer.appendChild(confirmBtn);
                 }
 
+                // Mark Delivered (Confirmed -> Delivered) - only show if packing is done
+                else if (order.status === 'confirmed' && order.packingDone) {
+                    const deliverBtn = createElement('button', {
+                        className: 'btn-modal primary btn-animated status-action-btn',
+                        style: { background: 'var(--gunmetal)', color: 'white', flex: '1.5' },
+                        onclick: () => window.updateOrderStatus(order._id, 'delivered')
+                    }, 'Mark Delivered');
+                    footer.appendChild(deliverBtn);
+                }
+
                 // Pack Order button (for confirmed orders not yet packed)
                 const canPack = order.status === 'confirmed' && !order.packingDone;
 
@@ -1123,8 +1179,22 @@ async function viewOrder(id) {
         }
 
         document.getElementById('orderModal').classList.add('show');
-    } catch (_e) {
-        showToast('Could not load order', 'info');
+    } catch (err) {
+        console.error('Error in viewOrder:', err);
+        // Provide specific error messages based on error type
+        if (!navigator.onLine) {
+            showToast('No internet connection. Check your network.', 'error');
+        } else if (err.message?.includes('401') || err.message?.includes('403')) {
+            showToast('Session expired. Please log in again.', 'error');
+            // Redirect to login after a short delay
+            setTimeout(() => { window.location.href = '/login.html'; }, 1500);
+        } else if (err.message?.includes('404')) {
+            showToast('Order not found. It may have been deleted.', 'error');
+        } else if (err.message?.includes('500')) {
+            showToast('Server error. Please try again in a moment.', 'error');
+        } else {
+            showToast('Could not load order. Please try again.', 'info');
+        }
     }
 }
 
@@ -1470,15 +1540,23 @@ function updateOrderTotal() {
 }
 
 // Check if invoices exist for an order
+// Returns: { exists: boolean, error?: string }
 async function checkInvoicesExist(orderId) {
     try {
         const res = await fetch(`/api/invoices/order/${orderId}`, { credentials: 'include' });
-        if (!res.ok) return false;
+        if (!res.ok) {
+            // Non-OK response - could be auth issue or server error
+            if (res.status === 401 || res.status === 403) {
+                return { exists: false, error: 'auth' };
+            }
+            return { exists: false, error: `Server returned ${res.status}` };
+        }
         const data = await res.json();
-        return data.data && data.data.length > 0;
+        return { exists: data.data && data.data.length > 0 };
     } catch (e) {
         console.error('Failed to check invoices:', e);
-        return false;
+        // Return error info so caller can decide how to handle
+        return { exists: false, error: e.message };
     }
 }
 
@@ -1504,25 +1582,35 @@ async function savePrices() {
 
     // Check if invoices exist
     let hasInvoices = false;
-    try {
-        hasInvoices = await checkInvoicesExist(currentOrderId);
-        if (hasInvoices) {
-            const proceed = confirm(
-                'Invoices exist for this order. Changes will not update existing invoices.\n\n' +
-                'You may need to regenerate invoices after saving. Continue?'
-            );
-            if (!proceed) {
-                isSaving = false;
-                if (btn) {
-                    btn.classList.remove('btn-loading');
-                    btn.disabled = false;
-                }
-                return;
+    const invoiceCheck = await checkInvoicesExist(currentOrderId);
+    if (invoiceCheck.error) {
+        // If we can't check invoices, warn user but allow them to proceed
+        const proceedAnyway = confirm(
+            'Could not check if invoices exist for this order.\n\n' +
+            'If invoices exist, they may need to be regenerated after saving. Continue?'
+        );
+        if (!proceedAnyway) {
+            isSaving = false;
+            if (btn) {
+                btn.classList.remove('btn-loading');
+                btn.disabled = false;
             }
+            return;
         }
-    } catch (e) {
-        console.error('Invoice check failed:', e);
-        // Continue anyway - don't block save
+    } else if (invoiceCheck.exists) {
+        hasInvoices = true;
+        const proceed = confirm(
+            'Invoices exist for this order. Changes will not update existing invoices.\n\n' +
+            'You may need to regenerate invoices after saving. Continue?'
+        );
+        if (!proceed) {
+            isSaving = false;
+            if (btn) {
+                btn.classList.remove('btn-loading');
+                btn.disabled = false;
+            }
+            return;
+        }
     }
 
     try {
@@ -1917,14 +2005,27 @@ async function togglePackedItem(index) {
         });
 
         if (!response.ok) {
-            throw new Error('Failed to update packed status');
+            // Parse error response for better message
+            const errData = await response.json().catch(() => ({}));
+            const errorMsg = errData.message || `Server error (${response.status})`;
+            throw new Error(errorMsg);
         }
     } catch (error) {
         console.error('Error toggling packed status:', error);
         // Revert on error
         item.packed = !newPacked;
         renderPackingPanel();
-        showToast('Failed to update. Try again.', 'error');
+
+        // Provide specific error messages
+        if (!navigator.onLine) {
+            showToast('No connection. Check internet and retry.', 'error');
+        } else if (error.message?.includes('401') || error.message?.includes('403') || error.message?.includes('auth')) {
+            showToast('Session expired. Please refresh the page.', 'error');
+        } else if (error.message?.includes('404')) {
+            showToast('Order not found. It may have been modified.', 'error');
+        } else {
+            showToast(`Update failed: ${error.message}`, 'error');
+        }
     }
 }
 
@@ -1934,6 +2035,8 @@ async function handlePackingQtyChange(index) {
     const qty = parseFloat(qtyInput?.value) || 0;
     const original = parseFloat(qtyInput?.dataset.original) || 0;
 
+    // Store original value in case we need to revert
+    const previousQty = packingItems[index].packedQuantity;
     packingItems[index].packedQuantity = qty;
 
     // Update visual feedback
@@ -1944,10 +2047,21 @@ async function handlePackingQtyChange(index) {
     }
 
     // Save to server
-    await savePackingItemUpdate(index);
+    const result = await savePackingItemUpdate(index);
+
+    // If save failed, revert the local state and visual feedback
+    if (!result.success) {
+        packingItems[index].packedQuantity = previousQty;
+        qtyInput.value = previousQty ?? original;
+        qtyInput.classList.toggle('modified', (previousQty ?? original) !== original);
+        if (itemEl) {
+            itemEl.classList.toggle('item-modified', (previousQty ?? original) !== original);
+        }
+    }
 }
 
 // Save item quantity update to server
+// Returns { success: boolean, error?: string }
 async function savePackingItemUpdate(index) {
     const item = packingItems[index];
 
@@ -1966,11 +2080,21 @@ async function savePackingItemUpdate(index) {
         });
 
         if (!response.ok) {
-            throw new Error('Failed to save');
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.message || `Server error (${response.status})`);
         }
+        return { success: true };
     } catch (error) {
         console.error('Error saving packing item:', error);
-        showToast('Failed to save changes', 'error');
+        // Provide specific error message
+        let userMsg = 'Failed to save changes';
+        if (!navigator.onLine) {
+            userMsg = 'No connection. Changes not saved.';
+        } else if (error.message?.includes('401') || error.message?.includes('403')) {
+            userMsg = 'Session expired. Please refresh.';
+        }
+        showToast(userMsg, 'error');
+        return { success: false, error: error.message };
     }
 }
 
