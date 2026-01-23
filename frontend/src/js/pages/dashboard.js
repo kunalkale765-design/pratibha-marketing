@@ -306,18 +306,23 @@ async function loadDashboardStats() {
         startPolling();
     } catch (error) {
         console.error('Error loading dashboard stats:', error);
-        document.getElementById('totalSale').textContent = '—';
-        document.getElementById('totalProfit').textContent = '—';
-        document.getElementById('toProcureList').innerHTML = '';
-        document.getElementById('toProcureList').appendChild(createElement('div', { className: 'empty-state' }, [
-            createElement('p', {}, 'Data not available'),
-            createElement('button', {
-                id: 'retryBtn',
-                className: 'btn-retry',
-                style: { marginTop: '1rem', padding: '0.5rem 1rem', background: 'var(--dusty-olive)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' },
-                onclick: loadDashboardStats
-            }, 'Try Again')
-        ]));
+        const saleEl = document.getElementById('totalSale');
+        const profitEl = document.getElementById('totalProfit');
+        const toProcureEl = document.getElementById('toProcureList');
+        if (saleEl) saleEl.textContent = '—';
+        if (profitEl) profitEl.textContent = '—';
+        if (toProcureEl) {
+            toProcureEl.innerHTML = '';
+            toProcureEl.appendChild(createElement('div', { className: 'empty-state' }, [
+                createElement('p', {}, 'Data not available'),
+                createElement('button', {
+                    id: 'retryBtn',
+                    className: 'btn-retry',
+                    style: { marginTop: '1rem', padding: '0.5rem 1rem', background: 'var(--dusty-olive)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' },
+                    onclick: loadDashboardStats
+                }, 'Try Again')
+            ]));
+        }
     }
 }
 
@@ -407,6 +412,23 @@ function displayProcurementList(preserveInputs = false) {
     const procuredContainer = document.getElementById('procuredList');
     const emptyState = document.getElementById('procurementEmpty');
     const procuredCountEl = document.getElementById('procuredCount');
+
+    // Guard: abort early if required containers are missing from the DOM
+    if (!toProcureContainer || !procuredContainer) {
+        console.error('Purchase List: Required DOM elements missing (toProcureList or procuredList). Check index.html structure.');
+        const fallback = document.querySelector('.procurement-container');
+        if (fallback) {
+            const existing = fallback.querySelector('.procurement-error');
+            if (!existing) {
+                const errDiv = document.createElement('div');
+                errDiv.className = 'procurement-error';
+                errDiv.style.cssText = 'padding:1.5rem;text-align:center;color:var(--error);font-size:0.875rem;';
+                errDiv.textContent = 'Purchase list failed to load. Please refresh the page.';
+                fallback.appendChild(errDiv);
+            }
+        }
+        return;
+    }
 
     // Preserve current input values before re-rendering
     const inputValues = {};
