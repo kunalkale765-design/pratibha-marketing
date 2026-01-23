@@ -144,6 +144,7 @@
             <div class="procurement-header">
                 <h2>Purchase List</h2>
                 <div class="header-actions">
+                    <input type="text" id="purchaseSearch" class="purchase-search" placeholder="Search...">
                     <button class="btn-icon" id="printBtn" title="Print">⎙</button>
                     <button class="btn-icon" id="exportBtn" title="Export CSV">↓</button>
                     <button class="btn-save-rates" id="saveRatesBtn">Save</button>
@@ -154,25 +155,27 @@
                 <button class="batch-filter-btn" data-batch="1st">1st Batch</button>
                 <button class="batch-filter-btn" data-batch="2nd">2nd Batch</button>
             </div>
-            <div class="procurement-list" id="procurementList">
-                <!-- Skeleton loading -->
-                <div class="skeleton-card" style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem;">
-                    <div class="skeleton skeleton-title" style="width: 35%;"></div>
-                    <div class="skeleton skeleton-text" style="width: 20%;"></div>
-                    <div class="skeleton" style="width: 80px; height: 32px; border-radius: 6px; margin-left: auto;">
-                    </div>
-                </div>
-                <div class="skeleton-card" style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem;">
-                    <div class="skeleton skeleton-title" style="width: 35%;"></div>
-                    <div class="skeleton skeleton-text" style="width: 20%;"></div>
-                    <div class="skeleton" style="width: 80px; height: 32px; border-radius: 6px; margin-left: auto;">
-                    </div>
-                </div>
-                <div class="skeleton-card" style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem;">
-                    <div class="skeleton skeleton-title" style="width: 35%;"></div>
-                    <div class="skeleton skeleton-text" style="width: 20%;"></div>
-                    <div class="skeleton" style="width: 80px; height: 32px; border-radius: 6px; margin-left: auto;">
-                    </div>
+            <div class="category-pills" id="categoryPills">
+                <button class="category-pill active" data-category="">All</button>
+            </div>
+            <div class="section-header to-procure-header">
+                <span class="section-title">To Procure</span>
+                <span id="newOrderBadge" class="new-order-badge hidden"></span>
+            </div>
+            <div id="procurementEmpty" class="procurement-empty hidden">
+                <div class="empty-icon">✓</div>
+                <div class="empty-text">All items procured!</div>
+            </div>
+            <div class="procurement-list" id="toProcureList">
+                <!-- To procure items rendered here by JS -->
+            </div>
+            <div class="section-header procured-header" id="procuredHeader">
+                <span class="section-title">Procured (<span id="procuredCount">0</span>)</span>
+                <span class="collapse-icon">▼</span>
+            </div>
+            <div class="procured-section">
+                <div class="procurement-list" id="procuredList">
+                    <!-- Procured items rendered here by JS -->
                 </div>
             </div>
         </div>

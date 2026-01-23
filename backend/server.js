@@ -273,27 +273,16 @@ if (process.env.NODE_ENV === 'development') {
   });
 }
 
-// Serve static frontend files
-if (process.env.NODE_ENV === 'production') {
-  // In production, serve the built files from dist
-  app.use(express.static(path.join(__dirname, '../frontend/dist')));
+// Serve static frontend files from src (uses native ES modules)
+app.use(express.static(path.join(__dirname, '../frontend/src')));
 
-  // Catch-all route for SPA support (serve index.html)
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api')) {
-      return next();
-    }
-    res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
-  });
-} else {
-  // In development, we expect the use of Vite dev server (port 5173)
-  // But we can serve src as a fallback, mostly for asset references if needed
-  app.use(express.static(path.join(__dirname, '../frontend/src')));
-
-  app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/src/index.html'));
-  });
-}
+// Catch-all route for SPA support (serve index.html for non-API routes)
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    return next();
+  }
+  res.sendFile(path.join(__dirname, '../frontend/src/index.html'));
+});
 
 // Error Handling Middleware (must be last)
 // ==========================================
