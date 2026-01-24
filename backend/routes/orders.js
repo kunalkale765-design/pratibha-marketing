@@ -6,7 +6,8 @@ const Customer = require('../models/Customer');
 const Product = require('../models/Product');
 const MarketRate = require('../models/MarketRate');
 const { protect, authorize } = require('../middleware/auth');
-const { assignOrderToBatch } = require('../services/batchScheduler');
+const { calculatePriceWithRate } = require('../services/pricingService');
+const { createOrder } = require('../services/orderService');
 const {
   roundTo2Decimals,
   getCustomerId,
@@ -15,78 +16,6 @@ const {
   parsePagination,
   userOwnsOrder
 } = require('../utils/helpers');
-
-// Helper function to calculate price based on customer's pricing type
-// Uses pre-fetched market rate to avoid race conditions
-// Returns { rate: number, usedFallback: boolean, isContractPrice: boolean, saveAsContractPrice: boolean }
-function calculatePriceWithRate(customer, product, prefetchedMarketRate, requestedRate = null) {
-  const pricingType = customer.pricingType || 'market';
-  const marketRate = prefetchedMarketRate || 0;
-  const productId = product._id.toString();
-
-  // For contract customers, contract prices are LOCKED
-  if (pricingType === 'contract') {
-    const existingContractPrice = customer.contractPrices?.get(productId);
-
-    if (existingContractPrice !== undefined && existingContractPrice !== null) {
-      // Contract price exists - ALWAYS use it (ignore any staff-provided rate)
-      return {
-        rate: existingContractPrice,
-        usedFallback: false,
-        isContractPrice: true,
-        saveAsContractPrice: false
-      };
-    }
-
-    // No contract price exists for this product
-    if (requestedRate !== null && requestedRate !== undefined && requestedRate > 0) {
-      // Staff provided a rate - use it and mark for saving as new contract price
-      return {
-        rate: requestedRate,
-        usedFallback: false,
-        isContractPrice: true, // Will become contract price
-        saveAsContractPrice: true // Flag to save this as new contract price
-      };
-    }
-
-    // No contract price and no staff rate - fall back to market rate
-    return {
-      rate: marketRate,
-      usedFallback: true,
-      isContractPrice: false,
-      saveAsContractPrice: false
-    };
-  }
-
-  // For non-contract customers (market/markup), use staff rate if provided
-  if (requestedRate !== null && requestedRate !== undefined && requestedRate > 0) {
-    return {
-      rate: requestedRate,
-      usedFallback: false,
-      isContractPrice: false,
-      saveAsContractPrice: false
-    };
-  }
-
-  // Calculate based on pricing type
-  if (pricingType === 'markup') {
-    const markup = customer.markupPercentage || 0;
-    return {
-      rate: roundTo2Decimals(marketRate * (1 + markup / 100)),
-      usedFallback: false,
-      isContractPrice: false,
-      saveAsContractPrice: false
-    };
-  }
-
-  // Market pricing (default)
-  return {
-    rate: roundTo2Decimals(marketRate),
-    usedFallback: false,
-    isContractPrice: false,
-    saveAsContractPrice: false
-  };
-}
 
 // Validation middleware
 const validateOrder = [
@@ -268,238 +197,46 @@ router.post('/', protect, validateOrder, async (req, res, next) => {
   try {
     if (handleValidationErrors(req, res)) return;
 
-    // Check for idempotency key to prevent duplicate orders
-    const idempotencyKey = req.body.idempotencyKey;
-    if (idempotencyKey) {
-      const existingOrder = await Order.findOne({ idempotencyKey })
-        .populate('customer', 'name phone')
-        .populate('products.product', 'name unit');
+    const result = await createOrder({
+      customerId: req.body.customer,
+      products: req.body.products,
+      deliveryAddress: req.body.deliveryAddress,
+      notes: req.body.notes,
+      idempotencyKey: req.body.idempotencyKey,
+      user: req.user
+    });
 
-      if (existingOrder) {
-        // Return the existing order (idempotent response)
-        return res.status(200).json({
-          success: true,
-          data: existingOrder,
-          idempotent: true,
-          message: 'Order already exists (idempotent response)'
-        });
-      }
-    }
-
-    // Verify customer exists and is active
-    const customer = await Customer.findById(req.body.customer);
-    if (!customer) {
-      res.status(404);
-      throw new Error('Customer not found');
-    }
-    if (!customer.isActive) {
-      res.status(400);
-      throw new Error('Cannot create order for inactive customer');
-    }
-
-    // SECURITY: Customers can only create orders for themselves
-    if (req.user.role === 'customer') {
-      const userCustomerId = typeof req.user.customer === 'object'
-        ? req.user.customer._id.toString()
-        : req.user.customer?.toString();
-
-      if (userCustomerId !== req.body.customer.toString()) {
-        return res.status(403).json({
-          success: false,
-          message: 'You can only create orders for yourself'
-        });
-      }
-    }
-
-    // SECURITY: Contract customers can only order products with contract prices configured
-    if (req.user.role === 'customer' && customer.pricingType === 'contract') {
-      const contractProductIds = customer.contractPrices
-        ? [...customer.contractPrices.keys()]
-        : [];
-
-      const requestedProductIds = req.body.products.map(p => p.product.toString());
-      const unauthorizedProducts = requestedProductIds.filter(
-        pid => !contractProductIds.includes(pid)
-      );
-
-      if (unauthorizedProducts.length > 0) {
-        return res.status(403).json({
-          success: false,
-          message: 'Some products are not available for your account. Please contact us for pricing.'
-        });
-      }
-    }
-
-    // Pre-fetch all products and market rates to avoid race conditions
-    // This ensures consistent pricing across all products in one order
-    const productIds = req.body.products.map(item => item.product);
-    const [products, marketRates] = await Promise.all([
-      Product.find({ _id: { $in: productIds } }),
-      MarketRate.find({ product: { $in: productIds } }).sort({ effectiveDate: -1 })
-    ]);
-
-    // Create lookup maps for O(1) access
-    const productMap = new Map(products.map(p => [p._id.toString(), p]));
-    const rateMap = new Map();
-    // Get latest rate for each product (rates are sorted by effectiveDate desc)
-    for (const rate of marketRates) {
-      const productId = rate.product.toString();
-      if (!rateMap.has(productId)) {
-        rateMap.set(productId, rate.rate);
-      }
-    }
-
-    // Calculate amounts and populate product names
-    // Price is calculated based on customer's pricing type if not provided
-    let totalAmount = 0;
-    let usedPricingFallback = false;
-    const processedProducts = [];
-    const newContractPrices = []; // Track new contract prices to save
-
-    for (const item of req.body.products) {
-      const product = productMap.get(item.product);
-      if (!product) {
-        res.status(404);
-        throw new Error(`Product ${item.product} not found`);
-      }
-      if (!product.isActive) {
-        res.status(400);
-        throw new Error(`Product "${product.name}" is no longer available`);
-      }
-
-      // Validate quantity precision based on unit type
-      // "piece" requires whole numbers, other units allow decimals
-      if (product.unit === 'piece' && !Number.isInteger(item.quantity)) {
-        res.status(400);
-        throw new Error(`Product "${product.name}" is sold by piece and requires a whole number quantity (got ${item.quantity})`);
-      }
-
-      // Calculate rate based on customer's pricing type
-      // Pass the pre-fetched market rate to avoid race conditions
-      const priceResult = calculatePriceWithRate(customer, product, rateMap.get(product._id.toString()), item.rate);
-      const amount = roundTo2Decimals(item.quantity * priceResult.rate);
-      totalAmount += amount;
-
-      if (priceResult.usedFallback) {
-        usedPricingFallback = true;
-      }
-
-      // Track new contract prices to save
-      if (priceResult.saveAsContractPrice) {
-        newContractPrices.push({
-          productId: product._id.toString(),
-          productName: product.name,
-          rate: priceResult.rate
-        });
-      }
-
-      processedProducts.push({
-        product: item.product,
-        productName: product.name,
-        quantity: item.quantity,
-        unit: product.unit,
-        rate: priceResult.rate,
-        amount: amount,
-        isContractPrice: priceResult.isContractPrice
+    if (result.idempotent) {
+      return res.status(200).json({
+        success: true,
+        data: result.order,
+        idempotent: true,
+        message: 'Order already exists (idempotent response)'
       });
     }
 
-    // Save new contract prices to customer if any
-    let contractPriceSaveError = null;
-    if (newContractPrices.length > 0) {
-      try {
-        // Re-fetch customer to avoid race condition where pricingType changed
-        // between initial fetch and now
-        const freshCustomer = await Customer.findById(req.body.customer);
-        if (freshCustomer && freshCustomer.pricingType === 'contract') {
-          if (!freshCustomer.contractPrices) {
-            freshCustomer.contractPrices = new Map();
-          }
-          for (const cp of newContractPrices) {
-            freshCustomer.contractPrices.set(cp.productId, cp.rate);
-          }
-          freshCustomer.markModified('contractPrices'); // Required for Mongoose to detect Map changes
-          await freshCustomer.save();
-        } else {
-          // Customer's pricing type changed - don't save contract prices
-          console.warn(`[Order Creation] Skipping contract price save: customer ${req.body.customer} pricing type changed during order creation`);
-          // Clear the newContractPrices so response doesn't claim they were saved
-          newContractPrices.length = 0;
-        }
-      } catch (contractError) {
-        // Log with context for debugging
-        console.error(`[Order Creation] Failed to save contract prices for customer ${req.body.customer}:`, contractError.message);
-        // Store error to include in response - order will still be created but staff should know
-        contractPriceSaveError = contractError.message;
-        // Clear the array so response doesn't falsely claim they were saved
-        const failedPrices = [...newContractPrices];
-        newContractPrices.length = 0;
-        // Add failed prices info for the response
-        contractPriceSaveError = `Failed to save contract prices for: ${failedPrices.map(cp => cp.productName).join(', ')}. Please add them manually in customer management.`;
-      }
+    const response = { success: true, data: result.order };
+
+    if (result.warnings.length > 0) {
+      response.warning = result.warnings.join('. ');
     }
 
-    // Assign order to appropriate batch based on current time (IST)
-    const batch = await assignOrderToBatch(new Date());
-    if (!batch || !batch._id) {
-      throw new Error('Failed to assign order to a batch. Please try again or contact support.');
-    }
-
-    // Create order (include idempotencyKey if provided)
-    const orderData = {
-      customer: req.body.customer,
-      products: processedProducts,
-      totalAmount: totalAmount,
-      deliveryAddress: req.body.deliveryAddress,
-      notes: req.body.notes,
-      usedPricingFallback: usedPricingFallback,
-      batch: batch._id
-    };
-
-    if (idempotencyKey) {
-      orderData.idempotencyKey = idempotencyKey;
-    }
-
-    const order = await Order.create(orderData);
-
-    // Populate and return
-    const populatedOrder = await Order.findById(order._id)
-      .populate('customer', 'name phone')
-      .populate('products.product', 'name unit')
-      .populate('batch', 'batchNumber batchType status');
-
-    // Build response with warnings/info
-    const response = {
-      success: true,
-      data: populatedOrder
-    };
-
-    // Collect all warnings
-    const warnings = [];
-
-    if (usedPricingFallback) {
-      warnings.push('Some products used market rate fallback because contract prices were not set');
-    }
-
-    if (contractPriceSaveError) {
-      warnings.push(contractPriceSaveError);
-    }
-
-    if (warnings.length > 0) {
-      response.warning = warnings.join('. ');
-    }
-
-    // Include info about new contract prices saved
-    if (newContractPrices.length > 0) {
-      response.newContractPrices = newContractPrices.map(cp => ({
+    if (result.newContractPrices.length > 0) {
+      response.newContractPrices = result.newContractPrices.map(cp => ({
         productName: cp.productName,
         rate: cp.rate
       }));
-      response.message = `New contract prices saved for: ${newContractPrices.map(cp => cp.productName).join(', ')}`;
+      response.message = `New contract prices saved for: ${result.newContractPrices.map(cp => cp.productName).join(', ')}`;
     }
 
     res.status(201).json(response);
   } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message
+      });
+    }
     next(error);
   }
 });
