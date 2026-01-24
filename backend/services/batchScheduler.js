@@ -392,7 +392,7 @@ function startScheduler() {
   // Format: minute hour day-of-month month day-of-week
   scheduledTask = cron.schedule('0 8 * * *', async () => {
     try {
-      const result = await autoConfirmFirstBatch();
+      await autoConfirmFirstBatch();
       schedulerHealth.lastAutoConfirmSuccess = new Date();
       schedulerHealth.lastAutoConfirmError = null;
     } catch (error) {
