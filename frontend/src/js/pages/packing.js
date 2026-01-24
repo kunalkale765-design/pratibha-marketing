@@ -77,7 +77,16 @@ async function loadQueue() {
         renderQueue();
     } catch (error) {
         console.error('Error loading queue:', error);
-        showToast('Failed to load packing queue', 'error');
+        queueOrders = [];
+        const queueList = document.getElementById('queueList');
+        if (queueList) {
+            queueList.innerHTML = `
+                <div class="error-state" style="text-align:center;padding:2rem;color:var(--error);">
+                    <p>Failed to load packing queue</p>
+                    <button onclick="window.location.reload()" style="margin-top:1rem;padding:0.5rem 1rem;background:var(--dusty-olive);color:white;border:none;border-radius:8px;cursor:pointer;">Retry</button>
+                </div>
+            `;
+        }
     }
 }
 
@@ -217,6 +226,9 @@ async function loadBatchView() {
             credentials: 'include'
         });
 
+        // Guard: user switched views while fetching
+        if (_currentView !== 'batch') return;
+
         if (!response.ok) throw new Error('Failed to load batches');
 
         const data = await response.json();
@@ -236,12 +248,12 @@ async function loadBatchView() {
         const batchSummaries = await Promise.all(
             batches.map(async (batch) => {
                 try {
-                    const summaryRes = await fetch(`/api/packing/batch/${batch._id}/summary`, {
+                    const summaryRes = await fetch(`/api/batches/${batch._id}/quantity-summary`, {
                         credentials: 'include'
                     });
                     if (summaryRes.ok) {
                         const summaryData = await summaryRes.json();
-                        return summaryData.data;
+                        return summaryData.data || summaryData;
                     }
                 } catch (e) {
                     console.error('Error loading batch summary:', e);
@@ -250,10 +262,15 @@ async function loadBatchView() {
             })
         );
 
+        // Guard: user switched views during batch summary fetches
+        if (_currentView !== 'batch') return;
+
         container.innerHTML = batchSummaries.map(summary => renderBatchSummary(summary)).join('');
     } catch (error) {
         console.error('Error loading batch view:', error);
-        container.innerHTML = '<div class="error-state">Failed to load batches</div>';
+        if (_currentView === 'batch') {
+            container.innerHTML = '<div class="error-state">Failed to load batches</div>';
+        }
     }
 }
 
@@ -271,7 +288,7 @@ function renderBatchSummary(summary) {
                     <h3>${escapeHtml(batch.batchNumber)}</h3>
                     <span class="batch-type">${escapeHtml(batch.batchType)} Batch</span>
                 </div>
-                <div class="batch-progress-ring" data-progress="${progress}">
+                <div class="batch-progress-ring" style="--progress: ${progress}">
                     <span>${progress}%</span>
                 </div>
             </div>
@@ -320,19 +337,26 @@ function renderBatchSummary(summary) {
     `;
 }
 
+// Safe localStorage wrapper (private browsing may throw)
+function safeStorage(key, value) {
+    try {
+        if (value === undefined) return localStorage.getItem(key);
+        localStorage.setItem(key, value);
+    } catch { return null; }
+}
+
 // Dismiss help banner
 function dismissPackingHelp() {
     const banner = document.getElementById('packingHelpBanner');
     if (banner) {
         banner.style.display = 'none';
-        // Remember preference in localStorage
-        localStorage.setItem('packingHelpDismissed', 'true');
+        safeStorage('packingHelpDismissed', 'true');
     }
 }
 
 // Check if help banner should be shown
 function checkPackingHelpBanner() {
-    const dismissed = localStorage.getItem('packingHelpDismissed');
+    const dismissed = safeStorage('packingHelpDismissed');
     const banner = document.getElementById('packingHelpBanner');
     if (banner && dismissed === 'true') {
         banner.style.display = 'none';
@@ -342,20 +366,41 @@ function checkPackingHelpBanner() {
 // Initialize help banner visibility on load
 checkPackingHelpBanner();
 
-// Close print modal
-function closePrintModal() {
-    document.getElementById('printModal').classList.remove('active');
+// Polling for queue refresh
+let _packingPollInterval = null;
+
+function startPolling() {
+    stopPolling();
+    _packingPollInterval = setInterval(() => {
+        loadQueue();
+    }, 30000);
 }
 
-// Print slip
-function printSlip() {
-    window.print();
+function stopPolling() {
+    if (_packingPollInterval) {
+        clearInterval(_packingPollInterval);
+        _packingPollInterval = null;
+    }
 }
+
+// Refresh stats and restart polling when page becomes visible
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        loadStats();
+        loadQueue();
+        startPolling();
+    } else {
+        stopPolling();
+    }
+});
 
 // Make functions globally available
-window.closePrintModal = closePrintModal;
-window.printSlip = printSlip;
 window.dismissPackingHelp = dismissPackingHelp;
 
+// Clean up polling on page unload
+window.addEventListener('beforeunload', stopPolling);
+
 // Initialize
-init();
+init().then(() => {
+    startPolling();
+});

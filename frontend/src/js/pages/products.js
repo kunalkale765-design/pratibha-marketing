@@ -183,6 +183,17 @@ function editProductById(id) {
     document.getElementById('productCategory').value = product.category || '';
     document.getElementById('productUnit').value = product.unit;
     document.getElementById('productModal').classList.add('show');
+
+    // Add unit change warning for existing products
+    const unitSelect = document.getElementById('productUnit');
+    const originalUnit = product.unit;
+    unitSelect.onchange = function () {
+        if (this.value !== originalUnit) {
+            if (!confirm('Changing unit may affect existing orders. Continue?')) {
+                this.value = originalUnit;
+            }
+        }
+    };
 }
 
 function closeModal() {
@@ -215,6 +226,7 @@ async function saveProduct(_isRetry = false) {
     const category = document.getElementById('productCategory').value;
     const name = document.getElementById('productName').value.trim();
     const unit = document.getElementById('productUnit').value;
+    const btn = document.querySelector('#productForm button[type="submit"]') || document.getElementById('saveProductBtn');
 
     // Client-side validation
     if (!name) {
@@ -228,6 +240,8 @@ async function saveProduct(_isRetry = false) {
         document.getElementById('productUnit').focus();
         return;
     }
+
+    if (btn) { btn.disabled = true; btn.classList.add('btn-loading'); }
 
     const data = {
         name: name,
@@ -276,11 +290,17 @@ async function saveProduct(_isRetry = false) {
         } else {
             showToast('Could not save. Try again.', 'info');
         }
+    } finally {
+        if (btn) { btn.disabled = false; btn.classList.remove('btn-loading'); }
     }
 }
 
 async function deleteProduct(id, _isRetry = false) {
     if (!_isRetry && !confirm('Delete this product?')) return;
+
+    // Disable all delete buttons to prevent double-clicks
+    const allDeleteBtns = document.querySelectorAll('.btn-icon.danger');
+    allDeleteBtns.forEach(btn => { btn.disabled = true; });
 
     try {
         const headers = {};
@@ -318,6 +338,9 @@ async function deleteProduct(id, _isRetry = false) {
         } else {
             showToast('Could not delete. Try again.', 'info');
         }
+    } finally {
+        const allDeleteBtns = document.querySelectorAll('.btn-icon.danger');
+        allDeleteBtns.forEach(btn => { btn.disabled = false; });
     }
 }
 
@@ -376,7 +399,7 @@ function addCategory() {
         return;
     }
 
-    if (allCategories.includes(name)) {
+    if (allCategories.some(cat => cat.toLowerCase() === name.toLowerCase())) {
         showToast('Category already exists', 'info');
         input.select();
         return;

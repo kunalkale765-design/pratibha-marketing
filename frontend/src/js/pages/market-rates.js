@@ -117,7 +117,12 @@ function renderProducts() {
                     onfocus: (e) => window.clearZero(e.target),
                     onblur: (e) => window.restoreValue(e.target),
                     onchange: (e) => window.handleChange(e.target),
-                    oninput: (e) => window.handleInput(e.target)
+                    oninput: (e) => window.handleInput(e.target),
+                    onkeydown: (e) => {
+                        if (['e', 'E', '+', '-'].includes(e.key)) {
+                            e.preventDefault();
+                        }
+                    }
                 })
             ]);
             fragment.appendChild(productItem);
@@ -160,6 +165,13 @@ function handleChange(input) {
         input.classList.remove('changed');
     }
 
+    // Large rate warning
+    if (current > 1000) {
+        input.style.borderColor = 'var(--warning)';
+    } else {
+        input.style.borderColor = '';
+    }
+
     updateSaveButton();
 }
 
@@ -199,63 +211,75 @@ async function saveRates() {
         headers['X-CSRF-Token'] = csrfToken;
     }
 
-    for (const [productId, rate] of Object.entries(changedRates)) {
-        try {
-            let res = await fetch('/api/market-rates', {
-                method: 'POST',
-                headers,
-                credentials: 'include',
-                body: JSON.stringify({
-                    product: productId,
-                    rate: rate,
-                    effectiveDate: new Date().toISOString()
-                })
-            });
+    // Batch entries into groups of 5 for parallel saves
+    const entries = Object.entries(changedRates);
+    const batchSize = 5;
 
-            // Handle CSRF error with retry
-            if (res.status === 403) {
-                const err = await res.json().catch(() => ({}));
-                if (err.message?.toLowerCase().includes('csrf')) {
-                    csrfToken = await Auth.refreshCsrfToken();
-                    if (csrfToken) {
-                        headers['X-CSRF-Token'] = csrfToken;
-                        res = await fetch('/api/market-rates', {
-                            method: 'POST',
-                            headers,
-                            credentials: 'include',
-                            body: JSON.stringify({
-                                product: productId,
-                                rate: rate,
-                                effectiveDate: new Date().toISOString()
-                            })
-                        });
+    for (let i = 0; i < entries.length; i += batchSize) {
+        const batch = entries.slice(i, i + batchSize);
+
+        const results = await Promise.all(batch.map(async ([productId, rate]) => {
+            try {
+                let res = await fetch('/api/market-rates', {
+                    method: 'POST',
+                    headers,
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        product: productId,
+                        rate: rate
+                    })
+                });
+
+                // Handle CSRF error with retry
+                if (res.status === 403) {
+                    const err = await res.json().catch(() => ({}));
+                    if (err.message?.toLowerCase().includes('csrf')) {
+                        csrfToken = await Auth.refreshCsrfToken();
+                        if (csrfToken) {
+                            headers['X-CSRF-Token'] = csrfToken;
+                            res = await fetch('/api/market-rates', {
+                                method: 'POST',
+                                headers,
+                                credentials: 'include',
+                                body: JSON.stringify({
+                                    product: productId,
+                                    rate: rate
+                                })
+                            });
+                        }
                     }
                 }
-            }
 
-            if (res.ok) {
-                success++;
-                // Update the original value
-                const input = document.getElementById('rate-' + productId);
-                if (input) {
-                    input.dataset.original = rate;
-                    input.classList.remove('changed');
+                if (res.ok) {
+                    // Update the original value
+                    const input = document.getElementById('rate-' + productId);
+                    if (input) {
+                        input.dataset.original = rate;
+                        input.classList.remove('changed');
+                    }
+                    rates[productId] = rate;
+                    return { success: true, productId };
+                } else {
+                    const errData = await res.json().catch(() => ({}));
+                    const errorMsg = errData.message || `HTTP ${res.status}`;
+                    console.error('Failed to save rate for product:', productId, errorMsg);
+                    return { success: false, productId, error: errorMsg };
                 }
-                rates[productId] = rate;
+            } catch (e) {
+                console.error('Failed to save rate for product:', productId, e.message);
+                return { success: false, productId, error: e.message || 'Network error' };
+            }
+        }));
+
+        results.forEach(result => {
+            if (result.success) {
+                success++;
             } else {
                 failed++;
-                const errData = await res.json().catch(() => ({}));
-                const errorMsg = errData.message || `HTTP ${res.status}`;
-                console.error('Failed to save rate for product:', productId, errorMsg);
-                if (!firstError) firstError = errorMsg;
-                failedProducts.push(productId);
+                if (!firstError) firstError = result.error;
+                failedProducts.push(result.productId);
             }
-        } catch (e) {
-            failed++;
-            console.error('Failed to save rate for product:', productId, e.message);
-            if (!firstError) firstError = e.message || 'Network error';
-            failedProducts.push(productId);
-        }
+        });
     }
 
     // Keep only failed rates for retry (clear successfully saved ones)
@@ -378,6 +402,11 @@ function renderHistory(data) {
 }
 
 function exportToPDF() {
+    if (!window.jspdf) {
+        showToast('PDF export not available (library not loaded)', 'info');
+        return;
+    }
+
     if (!historyData || !historyData.data || historyData.data.length === 0 || !historyData.data[0]?.rates?.length) {
         showToast('No data available to export', 'info');
         return;

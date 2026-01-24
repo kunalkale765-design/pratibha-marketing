@@ -31,6 +31,7 @@ if (password) {
         const val = this.value;
         updateRequirement('req-length', val.length >= 6);
         updateRequirement('req-upper', /[A-Z]/.test(val));
+        updateRequirement('req-lower', /[a-z]/.test(val));
         updateRequirement('req-number', /[0-9]/.test(val));
     });
 }
@@ -147,7 +148,7 @@ if (signupForm) {
                     });
                     const retryData = await retryResponse.json();
                     if (retryResponse.ok) {
-                        localStorage.setItem('user', JSON.stringify(retryData.user));
+                        Auth.setUser(retryData.user);
                         showSuccess('Account created successfully! Redirecting...');
                         setTimeout(() => {
                             if (retryData.user.role === 'customer') {
@@ -168,7 +169,7 @@ if (signupForm) {
             }
 
             if (response.ok) {
-                localStorage.setItem('user', JSON.stringify(data.user));
+                Auth.setUser(data.user);
                 showSuccess('Account created successfully! Redirecting...');
                 setTimeout(() => {
                     if (data.user.role === 'customer') {

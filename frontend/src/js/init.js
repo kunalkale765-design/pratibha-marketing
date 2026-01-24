@@ -45,6 +45,19 @@ export function registerServiceWorker() {
           console.log('ServiceWorker registration failed:', error);
         });
     });
+
+    // Listen for SW update notifications
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      if (event.data?.type === 'SW_UPDATED') {
+        // Dynamically import to avoid circular dependency at module load
+        import('./ui.js').then(({ showToast }) => {
+          showToast('Update available — refresh to apply', 'info');
+        }).catch(() => {
+          // Fallback if ui.js import fails
+          console.log('App update available. Refresh to apply.');
+        });
+      }
+    });
   }
 }
 
@@ -54,22 +67,22 @@ export function registerServiceWorker() {
 
 /**
  * Logout the user
- * Clears localStorage and calls the logout API
+ * Delegates to Auth.logout() if available, otherwise performs direct logout
  */
 export async function logout() {
-  // Clear local storage
+  if (window.Auth && typeof window.Auth.logout === 'function') {
+    return window.Auth.logout();
+  }
+
+  // Fallback: direct logout if Auth not loaded
   localStorage.removeItem('user');
 
-  // Build headers with CSRF token
-  const headers = {
-    'Content-Type': 'application/json'
-  };
+  const headers = { 'Content-Type': 'application/json' };
   const csrfToken = getCsrfToken();
   if (csrfToken) {
     headers['X-CSRF-Token'] = csrfToken;
   }
 
-  // Call logout API
   try {
     await fetch('/api/auth/logout', {
       method: 'POST',
@@ -80,7 +93,6 @@ export async function logout() {
     console.error('Logout error:', error);
   }
 
-  // Redirect to login
   window.location.href = '/pages/auth/login.html';
 }
 

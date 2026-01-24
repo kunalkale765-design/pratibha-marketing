@@ -33,6 +33,7 @@ let selectedCategory = '';
 const changedRates = {};
 let lastQuantities = {}; // Track quantities to detect new orders
 let pollingInterval = null;
+let badgeHideTimeout = null; // Track badge hide timeout to prevent overlap
 
 // Sound for new order notifications
 let audioContext = null;
@@ -151,7 +152,6 @@ const newOrderBadge = document.getElementById('newOrderBadge');
 const procuredHeader = document.getElementById('procuredHeader');
 
 // Event listeners
-if (logoutBtn) logoutBtn.addEventListener('click', logout);
 if (printBtn) printBtn.addEventListener('click', printList);
 if (exportBtn) exportBtn.addEventListener('click', exportCSV);
 if (saveRatesBtn) saveRatesBtn.addEventListener('click', saveAllRates);
@@ -293,8 +293,10 @@ async function loadDashboardStats() {
         const profitMargin = 0.15;
         const totalProfit = totalSale * profitMargin;
 
-        document.getElementById('totalSale').textContent = formatCurrency(totalSale);
-        document.getElementById('totalProfit').textContent = formatCurrency(totalProfit);
+        const saleEl = document.getElementById('totalSale');
+        const profitEl = document.getElementById('totalProfit');
+        if (saleEl) saleEl.textContent = formatCurrency(totalSale);
+        if (profitEl) profitEl.textContent = formatCurrency(totalProfit);
 
         displayProcurementList();
         loadAnalytics(ordersList);
@@ -352,9 +354,15 @@ function detectNewOrders(newData) {
             newOrderBadge.textContent = `${newOrderCount} new`;
             newOrderBadge.classList.remove('hidden');
 
+            // Clear any existing timeout before setting a new one
+            if (badgeHideTimeout) {
+                clearTimeout(badgeHideTimeout);
+            }
+
             // Auto-hide badge after 30 seconds
-            setTimeout(() => {
-                newOrderBadge.classList.add('hidden');
+            badgeHideTimeout = setTimeout(() => {
+                if (newOrderBadge) newOrderBadge.classList.add('hidden');
+                badgeHideTimeout = null;
             }, 30000);
         }
 
@@ -372,7 +380,20 @@ function startPolling() {
         isPolling = true;
 
         try {
+            // Guard: stop polling if page containers no longer exist (user navigated away)
+            if (!document.getElementById('toProcureList')) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+                return;
+            }
+
             const res = await fetch('/api/supplier/procurement-summary', { credentials: 'include' });
+            if (res.status === 401) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+                window.location.href = '/pages/auth/login.html';
+                return;
+            }
             if (!res.ok) {
                 console.warn('Polling failed:', res.status);
                 return;
@@ -671,6 +692,11 @@ window.handleRateChange = function (input) {
 window.undoProcurement = async function (productId, productName) {
     if (!confirm(`Remove ${productName} from procured list?`)) return;
 
+    // Disable undo button to prevent double-click
+    const undoBtn = document.querySelector(`[onclick*="undoProcurement('${productId}'"]`) ||
+                    document.querySelector(`[data-product-id="${productId}"] .undo-btn`);
+    if (undoBtn) { undoBtn.disabled = true; undoBtn.classList.add('btn-loading'); }
+
     try {
         const csrfToken = await Auth.ensureCsrfToken();
         const headers = { 'Content-Type': 'application/json' };
@@ -693,6 +719,7 @@ window.undoProcurement = async function (productId, productName) {
     } catch (error) {
         console.error('Error undoing procurement:', error);
         showToast('Could not undo', 'error');
+        if (undoBtn) { undoBtn.disabled = false; undoBtn.classList.remove('btn-loading'); }
     }
 };
 
@@ -842,54 +869,68 @@ async function saveAllRates() {
         headers['X-CSRF-Token'] = csrfToken;
     }
 
-    for (const [productId, rateData] of Object.entries(changedRates)) {
-        try {
-            // Use the new /api/supplier/procure endpoint which marks as procured AND updates market rate
-            let response = await fetch('/api/supplier/procure', {
-                method: 'POST',
-                headers,
-                credentials: 'include',
-                body: JSON.stringify({
-                    productId: rateData.product,
-                    rate: rateData.rate,
-                    quantity: rateData.quantity || 0
-                })
-            });
+    const entries = Object.entries(changedRates);
+    const BATCH_SIZE = 5;
 
-            // Handle CSRF error with retry
-            if (response.status === 403) {
-                const errorData = await response.json().catch(() => ({}));
-                if (errorData.message?.toLowerCase().includes('csrf')) {
-                    csrfToken = await Auth.refreshCsrfToken();
-                    if (csrfToken) {
-                        headers['X-CSRF-Token'] = csrfToken;
-                        response = await fetch('/api/supplier/procure', {
-                            method: 'POST',
-                            headers,
-                            credentials: 'include',
-                            body: JSON.stringify({
-                                productId: rateData.product,
-                                rate: rateData.rate,
-                                quantity: rateData.quantity || 0
-                            })
-                        });
+    for (let i = 0; i < entries.length; i += BATCH_SIZE) {
+        const batch = entries.slice(i, i + BATCH_SIZE);
+
+        const results = await Promise.all(batch.map(async ([productId, rateData]) => {
+            try {
+                // Use the new /api/supplier/procure endpoint which marks as procured AND updates market rate
+                let response = await fetch('/api/supplier/procure', {
+                    method: 'POST',
+                    headers,
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        productId: rateData.product,
+                        rate: rateData.rate,
+                        quantity: rateData.quantity || 0
+                    })
+                });
+
+                // Handle CSRF error with retry
+                if (response.status === 403) {
+                    const errorData = await response.json().catch(() => ({}));
+                    if (errorData.message?.toLowerCase().includes('csrf')) {
+                        csrfToken = await Auth.refreshCsrfToken();
+                        if (csrfToken) {
+                            headers['X-CSRF-Token'] = csrfToken;
+                            response = await fetch('/api/supplier/procure', {
+                                method: 'POST',
+                                headers,
+                                credentials: 'include',
+                                body: JSON.stringify({
+                                    productId: rateData.product,
+                                    rate: rateData.rate,
+                                    quantity: rateData.quantity || 0
+                                })
+                            });
+                        }
+                    } else {
+                        return { productId, success: false, productName: rateData.productName || productId, error: errorData.message || `HTTP ${response.status}` };
                     }
-                } else {
-                    failures.push({ productName: rateData.productName || productId, error: errorData.message || `HTTP ${response.status}` });
-                    continue;
                 }
-            }
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                failures.push({ productName: rateData.productName || productId, error: errorData.message || `HTTP ${response.status}` });
-            } else {
-                successfulProducts.push(productId);
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    return { productId, success: false, productName: rateData.productName || productId, error: errorData.message || `HTTP ${response.status}` };
+                } else {
+                    return { productId, success: true };
+                }
+            } catch (error) {
+                console.error('Error saving rate:', error);
+                return { productId, success: false, productName: rateData.productName || productId, error: error.message || 'Network error' };
             }
-        } catch (error) {
-            console.error('Error saving rate:', error);
-            failures.push({ productName: rateData.productName || productId, error: error.message || 'Network error' });
-        }
+        }));
+
+        results.forEach(result => {
+            if (result.success) {
+                successfulProducts.push(result.productId);
+            } else {
+                failures.push({ productName: result.productName, error: result.error });
+            }
+        });
     }
 
     // Only clear successful rates from changedRates
@@ -920,20 +961,24 @@ async function saveAllRates() {
 }
 
 async function checkAPIHealth() {
+    const apiDot = document.getElementById('apiDot');
+    const apiStatus = document.getElementById('apiStatus');
+    if (!apiDot || !apiStatus) return;
+
     try {
         const response = await fetch('/api/health');
         const data = await response.json();
 
         if (data.status === 'ok') {
-            document.getElementById('apiDot').classList.remove('offline');
-            document.getElementById('apiStatus').textContent = 'API Online';
+            apiDot.classList.remove('offline');
+            apiStatus.textContent = 'API Online';
         } else {
-            document.getElementById('apiDot').classList.add('offline');
-            document.getElementById('apiStatus').textContent = 'API Offline';
+            apiDot.classList.add('offline');
+            apiStatus.textContent = 'API Offline';
         }
     } catch (_error) {
-        document.getElementById('apiDot').classList.add('offline');
-        document.getElementById('apiStatus').textContent = 'API Offline';
+        apiDot.classList.add('offline');
+        apiStatus.textContent = 'API Offline';
     }
 }
 
@@ -954,6 +999,21 @@ const chartColors = {
 };
 
 async function loadAnalytics(ordersList) {
+    if (!window.Chart) {
+        // Charts library unavailable - show fallback message in chart containers
+        const chartIds = ['orderStatusChart', 'revenueChart', 'topProductsChart'];
+        chartIds.forEach(id => {
+            const canvas = document.getElementById(id);
+            if (canvas && canvas.parentElement) {
+                const msg = document.createElement('div');
+                msg.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;color:var(--dusty-olive);font-size:0.85rem;';
+                msg.textContent = 'Charts unavailable';
+                canvas.parentElement.replaceChild(msg, canvas);
+            }
+        });
+        return;
+    }
+
     try {
         // Order Status Distribution (simplified: pending, confirmed, delivered, cancelled)
         const statusCounts = {
@@ -1173,6 +1233,13 @@ window.downloadLedger = async function () {
     if (fromDate) params.append('fromDate', fromDate);
     if (toDate) params.append('toDate', toDate);
 
+    // Find and disable the download button during the operation
+    const downloadBtn = document.querySelector('#ledgerModal .btn-download, #ledgerModal button[onclick*="downloadLedger"]');
+    if (downloadBtn) {
+        downloadBtn.disabled = true;
+        downloadBtn.classList.add('btn-loading');
+    }
+
     try {
         showToast('Downloading ledger...', 'info');
 
@@ -1208,6 +1275,11 @@ window.downloadLedger = async function () {
     } catch (e) {
         console.error('Download ledger error:', e);
         showToast(e.message || 'Could not download', 'info');
+    } finally {
+        if (downloadBtn) {
+            downloadBtn.disabled = false;
+            downloadBtn.classList.remove('btn-loading');
+        }
     }
 };
 
@@ -1215,7 +1287,8 @@ async function init() {
     const user = await Auth.requireAuth(['admin', 'staff']);
     if (!user) return;
 
-    document.getElementById('userBadge').textContent = user.name || user.email || 'User';
+    const userBadge = document.getElementById('userBadge');
+    if (userBadge) userBadge.textContent = user.name || user.email || 'User';
     loadDashboardStats();
     checkAPIHealth();
 }

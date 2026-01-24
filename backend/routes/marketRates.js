@@ -138,7 +138,7 @@ router.get('/history-summary', protect, authorize('admin', 'staff'), [
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
-        errors: errors.array()
+        message: errors.array().map(e => e.msg).join(', ')
       });
     }
 
@@ -245,7 +245,7 @@ router.get('/history/:productId',
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ success: false, errors: errors.array() });
+      return res.status(400).json({ success: false, message: errors.array().map(e => e.msg).join(', ') });
     }
 
     const { limit: rawLimit } = req.query;
@@ -300,7 +300,7 @@ router.get('/:id',
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ success: false, errors: errors.array() });
+      return res.status(400).json({ success: false, message: errors.array().map(e => e.msg).join(', ') });
     }
 
     const rate = await MarketRate.findById(req.params.id)
@@ -330,7 +330,7 @@ router.post('/', protect, authorize('admin', 'staff'), validateMarketRate, async
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
-        errors: errors.array()
+        message: errors.array().map(e => e.msg).join(', ')
       });
     }
 
@@ -411,7 +411,7 @@ router.put('/:id',
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
-        errors: errors.array()
+        message: errors.array().map(e => e.msg).join(', ')
       });
     }
 
@@ -456,7 +456,7 @@ router.delete('/:id',
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ success: false, errors: errors.array() });
+      return res.status(400).json({ success: false, message: errors.array().map(e => e.msg).join(', ') });
     }
 
     const marketRate = await MarketRate.findByIdAndDelete(req.params.id);

@@ -83,6 +83,12 @@ if (loginForm) {
                 body: JSON.stringify({ email, password })
             });
 
+            // Handle rate limiting (429)
+            if (response.status === 429) {
+                showNotice('Too many attempts. Please try again later.');
+                return;
+            }
+
             const data = await response.json();
 
             // Handle CSRF error with automatic retry

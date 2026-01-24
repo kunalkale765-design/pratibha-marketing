@@ -1,8 +1,9 @@
 // Pratibha Marketing - Service Worker
 // Smart caching for PWA functionality
 
-const CACHE_NAME = 'pratibha-v37';
-const API_CACHE_NAME = 'pratibha-api-v1';
+const CACHE_NAME = 'pratibha-v40';
+// IMPORTANT: Increment when API response shapes change
+const API_CACHE_NAME = 'pratibha-api-v2';
 const MAX_API_CACHE_ENTRIES = 50;
 
 // Static assets to cache immediately
@@ -25,35 +26,50 @@ const STATIC_ASSETS = [
   '/js/ui.js',
   '/js/init.js',
   '/js/csrf.js',
-  '/icons/icon.svg',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
+  // Page scripts
+  '/js/pages/dashboard.js',
+  '/js/pages/orders.js',
+  '/js/pages/order-form.js',
+  '/js/pages/customers.js',
+  '/js/pages/products.js',
+  '/js/pages/market-rates.js',
+  '/js/pages/packing.js',
+  '/js/pages/reconciliation.js',
+  '/assets/icons/icon.svg',
+  '/assets/icons/icon-72.png',
+  '/assets/icons/icon-96.png',
+  '/assets/icons/icon-128.png',
+  '/assets/icons/icon-144.png',
+  '/assets/icons/icon-152.png',
+  '/assets/icons/icon-192.png',
+  '/assets/icons/icon-384.png',
+  '/assets/icons/icon-512.png',
   // Core CSS
-  '/css/variables.css',
-  '/css/base.css',
-  '/css/components.css',
-  '/css/utilities.css',
-  '/css/responsive.css',
+  '/assets/css/variables.css',
+  '/assets/css/base.css',
+  '/assets/css/components.css',
+  '/assets/css/utilities.css',
+  '/assets/css/responsive.css',
   // Animation CSS
-  '/css/animations/skeleton.css',
-  '/css/animations/buttons.css',
-  '/css/animations/cards.css',
-  '/css/animations/inputs.css',
-  '/css/animations/badges.css',
-  '/css/animations/segments.css',
-  '/css/animations/page.css',
-  '/css/animations/swipe.css',
+  '/assets/css/animations/skeleton.css',
+  '/assets/css/animations/buttons.css',
+  '/assets/css/animations/cards.css',
+  '/assets/css/animations/inputs.css',
+  '/assets/css/animations/badges.css',
+  '/assets/css/animations/segments.css',
+  '/assets/css/animations/page.css',
+  '/assets/css/animations/swipe.css',
   // Page-specific CSS
-  '/css/pages/login.css',
-  '/css/pages/signup.css',
-  '/css/pages/index.css',
-  '/css/pages/orders.css',
-  '/css/pages/products.css',
-  '/css/pages/market-rates.css',
-  '/css/pages/customer-management.css',
-  '/css/pages/customer-order-form.css',
-  '/css/pages/packing.css',
-  '/css/pages/reconciliation.css'
+  '/assets/css/pages/login.css',
+  '/assets/css/pages/signup.css',
+  '/assets/css/pages/index.css',
+  '/assets/css/pages/orders.css',
+  '/assets/css/pages/products.css',
+  '/assets/css/pages/market-rates.css',
+  '/assets/css/pages/customer-management.css',
+  '/assets/css/pages/customer-order-form.css',
+  '/assets/css/pages/packing.css',
+  '/assets/css/pages/reconciliation.css'
 ];
 
 // API endpoints safe to cache (read-only data, network-first with fallback)
@@ -103,7 +119,14 @@ self.addEventListener('activate', (event) => {
             })
         );
       })
-      .then(() => self.clients.claim())
+      .then(() => {
+        self.clients.matchAll().then(clients => {
+          clients.forEach(client => {
+            client.postMessage({ type: 'SW_UPDATED', version: CACHE_NAME });
+          });
+        });
+        return self.clients.claim();
+      })
   );
 });
 
@@ -277,7 +300,7 @@ async function updateCacheInBackground(request) {
     const networkResponse = await fetch(request);
     if (networkResponse.ok) {
       const cache = await caches.open(CACHE_NAME);
-      cache.put(request, networkResponse);
+      cache.put(request, networkResponse.clone());
     } else {
       console.warn('[SW] Background cache update failed with status:', networkResponse.status, 'for:', request.url);
     }

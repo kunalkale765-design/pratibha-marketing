@@ -55,9 +55,22 @@ router.get('/pending', protect, authorize('admin', 'staff'), async (req, res, ne
       createdAt: order.createdAt
     }));
 
+    // Count today's completed reconciliations (IST day boundary)
+    const now = new Date();
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istNow = new Date(now.getTime() + istOffset);
+    const istMidnight = new Date(istNow);
+    istMidnight.setHours(0, 0, 0, 0);
+    const utcStartOfDay = new Date(istMidnight.getTime() - istOffset);
+
+    const todayCompleted = await Order.countDocuments({
+      'reconciliation.completedAt': { $gte: utcStartOfDay }
+    });
+
     res.json({
       success: true,
       count: pendingItems.length,
+      todayCompleted,
       data: pendingItems
     });
   } catch (error) {

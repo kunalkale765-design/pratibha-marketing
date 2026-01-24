@@ -18,6 +18,7 @@ let allProducts = [];
 let currentContractPrices = {};
 let selectedContractCategory = '';
 let showTestCustomers = false;
+let customerFormDirty = false;
 
 async function init() {
     // Pre-fetch CSRF token to ensure it's ensureCsrfTokenready before form submissions
@@ -126,6 +127,12 @@ function displayCustomers(customers) {
         }, 'Delete'));
 
         const badges = [getPricingBadge(c)];
+        if (c.balance > 0) {
+            badges.push(createElement('span', {
+                className: 'balance-badge',
+                style: { color: 'var(--error)', fontSize: '0.75rem', fontWeight: '600' }
+            }, `₹${c.balance}`));
+        }
         if (c.isTestCustomer) {
             badges.unshift(createElement('span', { className: 'badge badge-test' }, 'Test'));
         }
@@ -169,6 +176,7 @@ function showAddCustomerForm() {
     document.getElementById('customerPricingType').value = 'market';
     toggleMarkupField();
     document.getElementById('customerModal').classList.add('show');
+    setTimeout(() => { customerFormDirty = false; }, 0);
 }
 
 function editCustomer(customer) {
@@ -183,9 +191,14 @@ function editCustomer(customer) {
     document.getElementById('customerMarkup').value = customer.markupPercentage || 0;
     toggleMarkupField();
     document.getElementById('customerModal').classList.add('show');
+    setTimeout(() => { customerFormDirty = false; }, 0);
 }
 
 function closeModal() {
+    if (customerFormDirty) {
+        if (!confirm('You have unsaved changes. Discard them?')) return;
+    }
+    customerFormDirty = false;
     document.getElementById('customerModal').classList.remove('show');
 }
 
@@ -196,6 +209,8 @@ function closeModal() {
 function setupFormListeners() {
     const form = document.getElementById('customerForm');
     if (form) {
+        form.addEventListener('input', () => { customerFormDirty = true; });
+        form.addEventListener('change', () => { customerFormDirty = true; });
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -321,6 +336,10 @@ function setupFormListeners() {
 async function deleteCustomer(id, _isRetry = false) {
     if (!_isRetry && !confirm('Delete this customer?')) return;
 
+    // Disable all delete buttons to prevent double-clicks
+    const allDeleteBtns = document.querySelectorAll('.btn-action.danger');
+    allDeleteBtns.forEach(btn => { btn.disabled = true; });
+
     try {
         const headers = {};
         const csrfToken = await Auth.ensureCsrfToken();
@@ -357,6 +376,9 @@ async function deleteCustomer(id, _isRetry = false) {
         } else {
             showToast('Could not delete. Please try again.', 'info');
         }
+    } finally {
+        const allDeleteBtns = document.querySelectorAll('.btn-action.danger');
+        allDeleteBtns.forEach(btn => { btn.disabled = false; });
     }
 }
 
@@ -372,6 +394,10 @@ async function shareMagicLink(customerId, _isRetry = false) {
         showToast('Customer data updating. Please refresh.', 'info');
         return;
     }
+
+    // Disable all link buttons to prevent double-clicks during generation
+    const allLinkBtns = document.querySelectorAll('.btn-action.link');
+    allLinkBtns.forEach(btn => { btn.disabled = true; });
 
     try {
         const headers = {};
@@ -432,6 +458,9 @@ async function shareMagicLink(customerId, _isRetry = false) {
         } else {
             showToast('Could not generate link. Try again.', 'info');
         }
+    } finally {
+        const allLinkBtns = document.querySelectorAll('.btn-action.link');
+        allLinkBtns.forEach(btn => { btn.disabled = false; });
     }
 }
 

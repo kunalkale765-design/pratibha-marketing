@@ -318,5 +318,34 @@ window.addEventListener('offline', () => {
     showToast('No internet connection', 'info');
 });
 
+/**
+ * Lightweight fetch wrapper with timeout + 401 redirect.
+ * Drop-in replacement for fetch() in page scripts that use raw fetch.
+ * Returns the Response object (same as fetch), or null on 401 redirect.
+ */
+export async function fetchWithAuth(url, options = {}) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    try {
+        const res = await fetch(url, {
+            ...options,
+            credentials: 'include',
+            signal: controller.signal
+        });
+        if (res.status === 401) {
+            window.location.href = '/pages/auth/login.html';
+            return null;
+        }
+        return res;
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            throw new Error('Request timed out');
+        }
+        throw error;
+    } finally {
+        clearTimeout(timeout);
+    }
+}
+
 // Export for use in other modules
 export default API;

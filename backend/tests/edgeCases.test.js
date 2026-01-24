@@ -771,7 +771,7 @@ describe('Edge Cases and Error Handling', () => {
         });
 
       expect(res.status).toBe(400);
-      expect(res.body.errors).toBeDefined();
+      expect(res.body.message).toBeDefined();
     });
 
     it('should reject password without uppercase', async () => {
@@ -784,7 +784,7 @@ describe('Edge Cases and Error Handling', () => {
         });
 
       expect(res.status).toBe(400);
-      expect(res.body.errors.some(e => e.msg.toLowerCase().includes('uppercase'))).toBe(true);
+      expect(res.body.message.toLowerCase()).toContain('uppercase');
     });
 
     it('should reject password without lowercase', async () => {
@@ -797,7 +797,7 @@ describe('Edge Cases and Error Handling', () => {
         });
 
       expect(res.status).toBe(400);
-      expect(res.body.errors.some(e => e.msg.toLowerCase().includes('lowercase'))).toBe(true);
+      expect(res.body.message.toLowerCase()).toContain('lowercase');
     });
 
     it('should reject password without number', async () => {
@@ -810,7 +810,7 @@ describe('Edge Cases and Error Handling', () => {
         });
 
       expect(res.status).toBe(400);
-      expect(res.body.errors.some(e => e.msg.toLowerCase().includes('number'))).toBe(true);
+      expect(res.body.message.toLowerCase()).toContain('number');
     });
 
     it('should accept valid password meeting all criteria', async () => {

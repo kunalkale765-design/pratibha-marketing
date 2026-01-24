@@ -47,14 +47,28 @@ async function loadPendingOrders() {
 
         if (!response.ok) throw new Error('Failed to load pending orders');
 
+        if (response.status === 401) {
+            window.location.href = '/pages/auth/login.html';
+            return;
+        }
+
         const data = await response.json();
         pendingOrders = data.data || [];
+        todayCompletedCount = data.todayCompleted || 0;
 
         updateStats();
         renderOrders();
     } catch (error) {
         console.error('Error loading pending orders:', error);
-        showToast('Failed to load orders', 'error');
+        const orderList = document.getElementById('orderList');
+        if (orderList) {
+            orderList.innerHTML = `
+                <div class="error-state" style="text-align:center;padding:2rem;color:var(--error);">
+                    <p>Failed to load orders</p>
+                    <button onclick="window.location.reload()" style="margin-top:1rem;padding:0.5rem 1rem;background:var(--dusty-olive);color:white;border:none;border-radius:8px;cursor:pointer;">Retry</button>
+                </div>
+            `;
+        }
     }
 }
 
@@ -272,21 +286,35 @@ function updateSummary() {
 async function completeReconciliation() {
     if (!currentOrder || !currentOrderData) return;
 
+    // Gather reconciliation data first for validation
+    const items = currentOrderData.products.map((item, index) => {
+        const input = document.getElementById(`qty-${index}`);
+        const reasonInput = document.getElementById(`reason-${index}`);
+        return {
+            product: item.product,
+            deliveredQty: parseFloat(input?.value) || 0,
+            reason: reasonInput?.value || ''
+        };
+    });
+
+    // Check if all quantities are zero
+    const allZero = items.every(item => item.deliveredQty === 0);
+    if (allZero) {
+        if (!confirm('All quantities are zero. Are you sure?')) {
+            return;
+        }
+    }
+
+    // Confirmation before completing
+    if (!confirm('Mark this order as delivered?')) {
+        return;
+    }
+
     const btn = document.getElementById('btnComplete');
     btn.disabled = true;
     btn.textContent = 'Processing...';
 
     try {
-        // Gather reconciliation data
-        const items = currentOrderData.products.map((item, index) => {
-            const input = document.getElementById(`qty-${index}`);
-            const reasonInput = document.getElementById(`reason-${index}`);
-            return {
-                product: item.product,
-                deliveredQty: parseFloat(input?.value) || 0,
-                reason: reasonInput?.value || ''
-            };
-        });
 
         const notes = document.getElementById('reconcileNotes')?.value || '';
 
@@ -342,23 +370,49 @@ function closeModal() {
     if (notesInput) notesInput.value = '';
 }
 
+// Close modal when clicking on overlay (outside modal content)
+const reconcileModalOverlay = document.getElementById('reconcileModal');
+if (reconcileModalOverlay) {
+    reconcileModalOverlay.addEventListener('click', (e) => {
+        // Only close if clicking the overlay itself, not the modal content
+        if (e.target === reconcileModalOverlay || e.target.classList.contains('modal-overlay')) {
+            closeModal();
+        }
+    });
+}
+
+// Safe localStorage wrapper (private browsing may throw)
+function safeStorage(key, value) {
+    try {
+        if (value === undefined) return localStorage.getItem(key);
+        localStorage.setItem(key, value);
+    } catch { return null; }
+}
+
 // Dismiss help banner
 function dismissHelp() {
     const banner = document.getElementById('helpBanner');
     if (banner) {
         banner.style.display = 'none';
-        localStorage.setItem('reconciliationHelpDismissed', 'true');
+        safeStorage('reconciliationHelpDismissed', 'true');
     }
 }
 
 // Check if help banner should be shown
 function checkHelpBanner() {
-    const dismissed = localStorage.getItem('reconciliationHelpDismissed');
+    const dismissed = safeStorage('reconciliationHelpDismissed');
     const banner = document.getElementById('helpBanner');
     if (banner && dismissed === 'true') {
         banner.style.display = 'none';
     }
 }
+
+// Refresh pending orders when page becomes visible again
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        loadPendingOrders();
+    }
+});
 
 // Make functions globally available
 window.openReconciliation = openReconciliation;

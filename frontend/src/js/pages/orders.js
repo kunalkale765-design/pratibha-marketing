@@ -1,5 +1,12 @@
 import { showToast, createElement } from '/js/ui.js';
 
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 // Wait for Auth to be available
 const waitForAuth = (maxWait = 10000) => new Promise((resolve, reject) => {
     const startTime = Date.now();
@@ -23,6 +30,7 @@ let currentUser = null;
 let priceChanges = {};
 let quantityChanges = {};
 let isSaving = false; // Prevent concurrent saves
+let isDeleting = false; // Prevent concurrent deletes
 
 // Track if global listeners have been initialized (prevents memory leak)
 let globalListenersInitialized = false;
@@ -537,6 +545,13 @@ async function downloadDeliveryBill(orderId, batchId) {
         return;
     }
 
+    // Disable the bill button to prevent double-download
+    const billBtn = document.querySelector(`.swipe-item[data-order-id="${orderId}"] .swipe-action.bill`);
+    if (billBtn) {
+        billBtn.disabled = true;
+        billBtn.classList.add('btn-loading');
+    }
+
     showToast('Downloading delivery bill...', 'info');
 
     try {
@@ -572,6 +587,11 @@ async function downloadDeliveryBill(orderId, batchId) {
     } catch (error) {
         console.error('Error downloading delivery bill:', error);
         showToast(error.message || 'Failed to download delivery bill', 'error');
+    } finally {
+        if (billBtn) {
+            billBtn.disabled = false;
+            billBtn.classList.remove('btn-loading');
+        }
     }
 }
 
@@ -825,6 +845,9 @@ function printFromModal() {
 }
 
 async function deleteOrder(orderId) {
+    // Prevent concurrent deletes
+    if (isDeleting) return;
+
     // Admin check - button should be hidden for non-admins anyway
     if (currentUser?.role !== 'admin') {
         return;
@@ -834,6 +857,7 @@ async function deleteOrder(orderId) {
         return;
     }
 
+    isDeleting = true;
     const item = document.querySelector(`.swipe-item[data-order-id="${orderId}"]`);
 
     try {
@@ -867,6 +891,8 @@ async function deleteOrder(orderId) {
     } catch (e) {
         console.error('Delete order error:', e);
         showToast('Could not delete order', 'info');
+    } finally {
+        isDeleting = false;
     }
 }
 
@@ -1179,13 +1205,18 @@ async function viewOrder(id) {
         document.getElementById('orderModal').classList.add('show');
     } catch (err) {
         console.error('Error in viewOrder:', err);
+        // Reset state and close modal on error
+        currentOrder = null;
+        currentOrderId = null;
+        const modal = document.getElementById('orderModal');
+        if (modal) modal.classList.remove('show');
+
         // Provide specific error messages based on error type
         if (!navigator.onLine) {
             showToast('No internet connection. Check your network.', 'error');
         } else if (err.message?.includes('401') || err.message?.includes('403')) {
             showToast('Session expired. Please log in again.', 'error');
-            // Redirect to login after a short delay
-            setTimeout(() => { window.location.href = '/login.html'; }, 1500);
+            setTimeout(() => { window.location.href = '/pages/auth/login.html'; }, 1500);
         } else if (err.message?.includes('404')) {
             showToast('Order not found. It may have been deleted.', 'error');
         } else if (err.message?.includes('500')) {
@@ -1212,6 +1243,7 @@ function restoreValue(input) {
 
 function handlePriceInput(idx) {
     const input = document.getElementById(`price-${idx}`);
+    if (!input) return;
     const qtyInput = document.getElementById(`quantity-${idx}`);
     const original = parseFloat(input.dataset.original);
     const current = parseFloat(input.value) || 0;
@@ -1337,7 +1369,13 @@ function updateSaveButtonState() {
 function addProductToOrder() {
     const select = document.getElementById('productSelector');
     const productId = select.value;
-    if (!productId) return;
+    if (!productId) {
+        // Check if dropdown is empty (no products available besides the placeholder)
+        if (allProducts.length === 0 || select.options.length <= 1) {
+            showToast('No products available', 'info');
+        }
+        return;
+    }
 
     const option = select.options[select.selectedIndex];
     const productName = option.dataset.name;
@@ -1815,7 +1853,9 @@ window.removeAddedProduct = removeAddedProduct;
 async function updateOrderStatus(orderId, newStatus) {
     if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'staff')) return;
 
-    // Optimistic UI update/Loading state could go here, but for now just wait for API
+    // Disable all status buttons to prevent double-click
+    const statusBtns = document.querySelectorAll('#modalBody .btn-confirm, #modalBody .btn-deliver');
+    statusBtns.forEach(b => { b.disabled = true; b.classList.add('btn-loading'); });
 
     try {
         const headers = { 'Content-Type': 'application/json' };
@@ -1846,6 +1886,8 @@ async function updateOrderStatus(orderId, newStatus) {
         console.error('Status update error:', error);
         showToast('Network error updating status', 'error');
         viewOrder(orderId);
+    } finally {
+        statusBtns.forEach(b => { b.disabled = false; b.classList.remove('btn-loading'); });
     }
 }
 
@@ -1888,6 +1930,8 @@ async function openPackingPanel(orderId) {
     } catch (error) {
         console.error('Error loading packing order:', error);
         showToast('Failed to load order details', 'error');
+        packingOrder = null;
+        packingItems = [];
         closePackingPanel();
     }
 }
@@ -1912,14 +1956,14 @@ function renderPackingPanel() {
             orderDetailsHtml += `
                 <div class="packing-delivery-info">
                     <span class="packing-label">Deliver to</span>
-                    <span class="packing-value">${packingOrder.deliveryAddress}</span>
+                    <span class="packing-value">${escapeHtml(packingOrder.deliveryAddress)}</span>
                 </div>`;
         }
         if (packingOrder.notes) {
             orderDetailsHtml += `
                 <div class="packing-order-notes">
                     <span class="packing-label">Notes</span>
-                    <span class="packing-value">${packingOrder.notes}</span>
+                    <span class="packing-value">${escapeHtml(packingOrder.notes)}</span>
                 </div>`;
         }
         orderDetailsHtml += `</div>`;
@@ -1939,7 +1983,7 @@ function renderPackingPanel() {
                         ${isPacked ? '✓' : ''}
                     </div>
                     <div class="packing-item-details">
-                        <span class="packing-item-name">${item.productName}</span>
+                        <span class="packing-item-name">${escapeHtml(item.productName)}</span>
                         <span class="packing-item-qty">Ordered: ${item.orderedQuantity} ${item.unit}</span>
                     </div>
                 </div>

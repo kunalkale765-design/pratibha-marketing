@@ -63,8 +63,6 @@ export function createElement(tag, attributes = {}, children = []) {
    TOAST NOTIFICATIONS
    =================== */
 
-let toastTimeout = null;
-
 /**
  * Show a toast notification
  *
@@ -86,9 +84,10 @@ export function showToast(message, type = 'success', duration = 3000) {
     document.body.appendChild(toast);
   }
 
-  // Clear any existing timeout
-  if (toastTimeout) {
-    clearTimeout(toastTimeout);
+  // Clear any existing timeout (stored on element to avoid module-level state conflicts)
+  if (toast._hideTimeout) {
+    clearTimeout(toast._hideTimeout);
+    toast._hideTimeout = null;
   }
 
   // Remove existing type classes
@@ -104,7 +103,7 @@ export function showToast(message, type = 'success', duration = 3000) {
   });
 
   // Auto-hide after duration
-  toastTimeout = setTimeout(() => {
+  toast._hideTimeout = setTimeout(() => {
     hideToast();
   }, duration);
 }
@@ -192,16 +191,26 @@ export function setupModalCloseOnOverlay(modalId) {
 
 /**
  * Close modal on Escape key
- * Call this once during page init
+ * Call this once during page init (idempotent - safe to call multiple times)
  */
+let _escapeListenerRegistered = false;
 export function setupModalCloseOnEscape() {
+  if (_escapeListenerRegistered) return;
+  _escapeListenerRegistered = true;
+
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       const openModals = document.querySelectorAll('.modal-overlay.show');
-      openModals.forEach(modal => {
-        modal.classList.remove('show');
-      });
-      document.body.style.overflow = '';
+      if (openModals.length === 0) return;
+      // Use page's closeModal if available (handles unsaved changes warnings)
+      if (typeof window.closeModal === 'function') {
+        window.closeModal();
+      } else {
+        openModals.forEach(modal => {
+          modal.classList.remove('show');
+        });
+        document.body.style.overflow = '';
+      }
     }
   });
 }

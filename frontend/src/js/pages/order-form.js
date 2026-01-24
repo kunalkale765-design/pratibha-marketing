@@ -28,6 +28,7 @@ let products = [];
 const marketRates = {};
 let customers = [];
 let isStaff = false;
+let _orderFormDirty = false;
 
 async function init() {
     // Check for magic link token in URL
@@ -134,14 +135,17 @@ async function loadData() {
 
 function populateCustomers() {
     const select = document.getElementById('customerSelect');
-    // Clear existing except first option if any? No, usually start clean if re-populating or append if incremental. 
-    // Assuming clear first is safer or checking if empty. But let's follow existing pattern but use createElement.
-    // Actually, existing code just appends. But usually we want to clear or keep placeholder.
-    // The HTML likely has a placeholder. Let's append to existing.
 
-    // Better to clear existing options to avoid duplicates if called multiple times, keeping the first placeholder if exists
-    // But original code didn't clear. Let's just append for now to match behavior, but use createElement.
-    // Actually, to be safe and cleaner, let's keep it simple: just append.
+    // Show loading placeholder while customers load
+    if (customers.length === 0) {
+        const loadingOption = createElement('option', { value: '', disabled: true, selected: true }, 'Loading customers...');
+        select.appendChild(loadingOption);
+        return;
+    }
+
+    // Clear loading placeholder and add actual customers
+    select.innerHTML = '';
+    select.appendChild(createElement('option', { value: '' }, 'Select customer'));
 
     customers.forEach(c => {
         select.appendChild(createElement('option', { value: c._id }, c.name));
@@ -402,8 +406,10 @@ function updateSummary() {
         if (qty > 0) items++;
     });
 
-    document.getElementById('itemCount').textContent = items;
-    document.getElementById('orderBtn').disabled = items === 0 || !selectedCustomer;
+    const itemCountEl = document.getElementById('itemCount');
+    const orderBtn = document.getElementById('orderBtn');
+    if (itemCountEl) itemCountEl.textContent = items;
+    if (orderBtn) orderBtn.disabled = items === 0 || !selectedCustomer;
 }
 
 // Search
@@ -481,7 +487,8 @@ async function placeOrder() {
 
         const orderPayload = {
             customer: selectedCustomer._id,
-            products: orderProducts
+            products: orderProducts,
+            idempotencyKey: crypto.randomUUID()
         };
 
         if (notes) {
@@ -551,8 +558,10 @@ async function placeOrder() {
             showToast('Could not place order. Try again.', 'info');
         }
     } finally {
-        btn.disabled = false;
-        btn.textContent = 'Place Order';
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Place Order';
+        }
         updateSummary();
     }
 }
@@ -733,11 +742,17 @@ async function openOrderDetail(orderId) {
 }
 
 function closeOrderModal() {
+    if (_orderFormDirty) {
+        if (!confirm('You have unsaved changes. Discard them?')) {
+            return;
+        }
+    }
     document.getElementById('orderModal').classList.remove('show');
     document.body.style.overflow = '';
     currentOrder = null;
     editedProducts = [];
     orderInvoices = [];
+    _orderFormDirty = false;
 }
 
 function renderOrderModal() {
@@ -916,6 +931,7 @@ function changeOrderQty(index, delta) {
     val = Math.max(0, val + delta);
     input.value = val;
     editedProducts[index].quantity = val;
+    _orderFormDirty = true;
 }
 
 function updateOrderQtyFromInput(index) {
@@ -923,6 +939,7 @@ function updateOrderQtyFromInput(index) {
     const val = Math.max(0, parseFloat(input.value) || 0);
     input.value = val;
     editedProducts[index].quantity = val;
+    _orderFormDirty = true;
 }
 
 async function downloadInvoice(invoiceNumber) {
@@ -1021,6 +1038,7 @@ async function saveOrderEdit() {
 
         if (res.ok) {
             showToast('Order updated successfully', 'success');
+            _orderFormDirty = false;
             closeOrderModal();
             loadMyOrders(); // Refresh list
         } else {
@@ -1057,6 +1075,13 @@ document.addEventListener('keydown', (e) => {
     const modal = document.getElementById('orderModal');
     if (e.key === 'Escape' && modal && modal.classList.contains('show')) {
         closeOrderModal();
+    }
+});
+
+// Refresh orders list when page becomes visible again
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && _activeTab === 'list') {
+        loadMyOrders();
     }
 });
 

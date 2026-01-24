@@ -29,9 +29,12 @@ export async function refreshCsrfToken() {
     }
 
     csrfRefreshPromise = (async () => {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
         try {
             const response = await fetch('/api/csrf-token', {
-                credentials: 'include'
+                credentials: 'include',
+                signal: controller.signal
             });
             if (response.ok) {
                 const data = await response.json();
@@ -39,7 +42,11 @@ export async function refreshCsrfToken() {
                 return data.csrfToken || getCsrfToken();
             }
         } catch (error) {
-            console.error('Failed to refresh CSRF token:', error);
+            if (error.name !== 'AbortError') {
+                console.error('Failed to refresh CSRF token:', error);
+            }
+        } finally {
+            clearTimeout(timeout);
         }
         return null;
     })();
