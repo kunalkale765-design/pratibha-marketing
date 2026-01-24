@@ -18,6 +18,7 @@ try {
 
 let scheduledTask = null;
 let batchCreationTask = null;
+let recoveryTask = null;
 
 // Track scheduler health for status checks
 const schedulerHealth = {
@@ -133,15 +134,15 @@ async function autoConfirmFirstBatch() {
     const ist = getISTTime();
     const today = ist.dateOnly;
 
-    // Find today's 1st batch that is still open
-    const batch = await Batch.findOne({
-      date: today,
-      batchType: '1st',
-      status: 'open'
-    });
+    // Atomically claim the batch (prevents duplicate confirmation across instances)
+    const batch = await Batch.findOneAndUpdate(
+      { date: today, batchType: '1st', status: 'open' },
+      { $set: { status: 'confirmed', confirmedAt: new Date(), confirmedBy: null } },
+      { new: true }
+    );
 
     if (!batch) {
-      console.log('[BatchScheduler] No open 1st batch found for today, skipping');
+      console.log('[BatchScheduler] No open 1st batch found for today (or already confirmed), skipping');
       return { success: true, ordersConfirmed: 0, message: 'No open batch' };
     }
 
@@ -152,8 +153,7 @@ async function autoConfirmFirstBatch() {
     });
 
     if (pendingOrders.length === 0) {
-      console.log('[BatchScheduler] No pending orders in 1st batch, confirming batch');
-      await batch.confirmBatch(null); // null = auto-confirmed
+      console.log('[BatchScheduler] No pending orders in 1st batch, batch confirmed');
       return { success: true, ordersConfirmed: 0, message: 'Batch confirmed (no pending orders)' };
     }
 
@@ -168,30 +168,56 @@ async function autoConfirmFirstBatch() {
       }
     );
 
-    // Confirm the batch
-    await batch.confirmBatch(null); // null = auto-confirmed
-
-    // Generate delivery bills for all confirmed orders in the batch
+    // Generate delivery bills with retry logic
     let billResults = { billsGenerated: 0, errors: [], totalOrders: 0 };
     let billGenerationFailed = false;
     let billGenerationError = null;
-    try {
-      console.log(`[BatchScheduler] Generating delivery bills for batch ${batch.batchNumber}...`);
-      billResults = await generateBillsForBatch(batch);
-      console.log(`[BatchScheduler] Generated ${billResults.billsGenerated} bills for ${billResults.totalOrders} orders`);
-      if (billResults.errors.length > 0) {
-        console.warn(`[BatchScheduler] Bill generation had ${billResults.errors.length} errors:`, billResults.errors);
+    const MAX_BILL_RETRIES = 3;
+
+    for (let attempt = 1; attempt <= MAX_BILL_RETRIES; attempt++) {
+      try {
+        console.log(`[BatchScheduler] Generating delivery bills for batch ${batch.batchNumber} (attempt ${attempt}/${MAX_BILL_RETRIES})...`);
+        billResults = await generateBillsForBatch(batch);
+        console.log(`[BatchScheduler] Generated ${billResults.billsGenerated} bills for ${billResults.totalOrders} orders`);
+        if (billResults.errors.length > 0) {
+          console.warn(`[BatchScheduler] Bill generation had ${billResults.errors.length} errors:`, billResults.errors);
+        }
+        billGenerationFailed = false;
+        billGenerationError = null;
+        break; // Success, exit retry loop
+      } catch (billError) {
+        console.error(`[BatchScheduler] Bill generation attempt ${attempt} failed:`, billError.message);
+        billGenerationFailed = true;
+        billGenerationError = billError.message;
+
+        if (attempt < MAX_BILL_RETRIES) {
+          // Exponential backoff: 2s, 4s
+          const delay = Math.pow(2, attempt) * 1000;
+          console.log(`[BatchScheduler] Retrying bill generation in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
       }
-    } catch (billError) {
-      // Log with clear ERROR prefix for visibility
-      console.error('[BatchScheduler] CRITICAL: Delivery bill generation failed completely!', billError.message);
-      console.error('[BatchScheduler] Stack trace:', billError.stack);
-      // Mark failure for return value
-      billGenerationFailed = true;
-      billGenerationError = billError.message;
+    }
+
+    // If all retries failed, revert orders to pending and reopen batch
+    if (billGenerationFailed) {
+      console.error('[BatchScheduler] CRITICAL: All bill generation attempts failed! Reverting orders to pending.');
+      try {
+        await Order.updateMany(
+          { _id: { $in: orderIds } },
+          { $set: { status: 'pending' } }
+        );
+        // Reopen the batch
+        batch.status = 'open';
+        batch.confirmedAt = undefined;
+        await batch.save();
+        console.error('[BatchScheduler] Orders reverted to pending, batch reopened.');
+      } catch (revertError) {
+        console.error('[BatchScheduler] CRITICAL: Failed to revert orders after bill failure!', revertError.message);
+      }
       // Report to Sentry if available
       if (sentryAvailable && Sentry && process.env.SENTRY_DSN) {
-        Sentry.captureException(billError, {
+        Sentry.captureException(new Error(`Bill generation failed after ${MAX_BILL_RETRIES} retries: ${billGenerationError}`), {
           tags: { service: 'batchScheduler', operation: 'billGeneration' },
           extra: { batchNumber: batch.batchNumber, batchId: batch._id.toString() }
         });
@@ -416,6 +442,34 @@ function startScheduler() {
     timezone: IST_TIMEZONE
   });
 
+  // Recovery check: every 15 minutes between 8:15-9:00 AM IST
+  // Catches missed batch confirmations due to DB outages or server restarts
+  recoveryTask = cron.schedule('15,30,45 8 * * *', async () => {
+    const ist = getISTTime();
+    const today = ist.dateOnly;
+    const openBatch = await Batch.findOne({ date: today, batchType: '1st', status: 'open' });
+    if (openBatch) {
+      console.log('[BatchScheduler] RECOVERY: Found unconfirmed 1st batch at periodic check, confirming now');
+      const lockResult = await withLock('batch-auto-confirm', async () => {
+        return await autoConfirmFirstBatch();
+      }, { ttlMs: 5 * 60 * 1000, timeoutMs: 60000 });
+
+      if (lockResult.skipped) {
+        console.log('[BatchScheduler] RECOVERY: Another instance is handling the batch');
+      } else if (lockResult.error) {
+        console.error('[BatchScheduler] RECOVERY: Failed:', lockResult.error.message);
+        schedulerHealth.lastAutoConfirmError = { message: `Recovery failed: ${lockResult.error.message}`, at: new Date() };
+      } else {
+        console.log('[BatchScheduler] RECOVERY: Batch confirmed successfully');
+        schedulerHealth.lastAutoConfirmSuccess = new Date();
+        schedulerHealth.lastAutoConfirmError = null;
+      }
+    }
+  }, {
+    scheduled: true,
+    timezone: IST_TIMEZONE
+  });
+
   // Also create next day batches at 12:01 PM IST (after 2nd batch cutoff)
   batchCreationTask = cron.schedule('1 12 * * *', async () => {
     const lockResult = await withLock('batch-creation-daily', async () => {
@@ -450,6 +504,10 @@ function stopScheduler() {
   if (scheduledTask) {
     scheduledTask.stop();
     scheduledTask = null;
+  }
+  if (recoveryTask) {
+    recoveryTask.stop();
+    recoveryTask = null;
   }
   if (batchCreationTask) {
     batchCreationTask.stop();
@@ -502,20 +560,49 @@ async function manuallyConfirmBatch(batchId, userId, options = {}) {
   // Confirm the batch
   await batch.confirmBatch(userId);
 
-  // Generate delivery bills if requested
+  // Generate delivery bills if requested (with retry)
   let billResults = { billsGenerated: 0, errors: [], totalOrders: 0 };
   let billGenerationFailed = false;
   let billGenerationError = null;
   if (generateBills) {
-    try {
-      console.log(`[BatchScheduler] Generating delivery bills for batch ${batch.batchNumber}...`);
-      billResults = await generateBillsForBatch(batch);
-      console.log(`[BatchScheduler] Generated ${billResults.billsGenerated} bills for ${billResults.totalOrders} orders`);
-    } catch (billError) {
-      console.error('[BatchScheduler] CRITICAL: Manual batch bill generation failed!', billError.message);
-      billGenerationFailed = true;
-      billGenerationError = billError.message;
-      billResults.errors.push({ error: billError.message });
+    const MAX_BILL_RETRIES = 3;
+    for (let attempt = 1; attempt <= MAX_BILL_RETRIES; attempt++) {
+      try {
+        console.log(`[BatchScheduler] Generating delivery bills for batch ${batch.batchNumber} (attempt ${attempt}/${MAX_BILL_RETRIES})...`);
+        billResults = await generateBillsForBatch(batch);
+        console.log(`[BatchScheduler] Generated ${billResults.billsGenerated} bills for ${billResults.totalOrders} orders`);
+        billGenerationFailed = false;
+        billGenerationError = null;
+        break;
+      } catch (billError) {
+        console.error(`[BatchScheduler] Manual batch bill generation attempt ${attempt} failed:`, billError.message);
+        billGenerationFailed = true;
+        billGenerationError = billError.message;
+        if (attempt < MAX_BILL_RETRIES) {
+          const delay = Math.pow(2, attempt) * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+
+    // If all retries failed, revert orders to pending and reopen batch
+    if (billGenerationFailed) {
+      console.error('[BatchScheduler] CRITICAL: Manual bill generation failed after retries! Reverting.');
+      try {
+        if (pendingOrders.length > 0) {
+          const orderIds = pendingOrders.map(o => o._id);
+          await Order.updateMany(
+            { _id: { $in: orderIds } },
+            { $set: { status: 'pending' } }
+          );
+        }
+        batch.status = 'open';
+        batch.confirmedAt = undefined;
+        await batch.save();
+      } catch (revertError) {
+        console.error('[BatchScheduler] Failed to revert after manual bill failure:', revertError.message);
+      }
+      billResults.errors.push({ error: billGenerationError });
     }
   }
 

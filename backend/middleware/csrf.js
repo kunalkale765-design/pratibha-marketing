@@ -16,7 +16,7 @@ const crypto = require('crypto');
 const CSRF_COOKIE_NAME = 'csrf_token';
 const CSRF_HEADER_NAME = 'x-csrf-token';
 const TOKEN_LENGTH = 32;
-const COOKIE_MAX_AGE = 30 * 24 * 60 * 60 * 1000; // 30 days (match JWT expiration)
+const COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days (match JWT expiration)
 
 // Generate a cryptographically secure random token
 const generateToken = () => {
@@ -55,6 +55,50 @@ const csrfTokenSetter = (req, res, next) => {
   next();
 };
 
+// Validate Origin/Referer header matches allowed origins
+const validateOrigin = (req) => {
+  const origin = req.headers.origin;
+  const referer = req.headers.referer;
+
+  // In development, allow localhost origins
+  if (process.env.NODE_ENV === 'development') {
+    const devHosts = ['localhost', '127.0.0.1'];
+    if (origin) {
+      try {
+        const url = new URL(origin);
+        if (devHosts.includes(url.hostname)) return true;
+      } catch (e) { /* invalid origin */ }
+    }
+    if (referer) {
+      try {
+        const url = new URL(referer);
+        if (devHosts.includes(url.hostname)) return true;
+      } catch (e) { /* invalid referer */ }
+    }
+    // No origin/referer in dev is ok (Postman, curl)
+    if (!origin && !referer) return true;
+    return false;
+  }
+
+  // In production, check against ALLOWED_ORIGINS
+  const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+    : [];
+
+  if (origin && allowedOrigins.some(allowed => origin === allowed)) return true;
+  if (referer) {
+    try {
+      const refOrigin = new URL(referer).origin;
+      if (allowedOrigins.some(allowed => refOrigin === allowed)) return true;
+    } catch (e) { /* invalid referer */ }
+  }
+
+  // Allow requests with no origin/referer (non-browser clients)
+  if (!origin && !referer) return true;
+
+  return false;
+};
+
 // Middleware to validate CSRF token on state-changing requests
 const csrfProtection = (req, res, next) => {
   // Skip for safe methods (GET, HEAD, OPTIONS)
@@ -76,6 +120,14 @@ const csrfProtection = (req, res, next) => {
 
   if (exemptPatterns.some(pattern => pattern.test(req.path))) {
     return next();
+  }
+
+  // Secondary defense: validate Origin/Referer header
+  if (!validateOrigin(req)) {
+    return res.status(403).json({
+      success: false,
+      message: 'Request origin not allowed'
+    });
   }
 
   const cookieToken = req.cookies[CSRF_COOKIE_NAME];

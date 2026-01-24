@@ -70,13 +70,12 @@ describe('Auth Middleware Extended Tests', () => {
       expect(res.status).toBe(200);
     });
 
-    it('should reject magic link token when magic link has been revoked', async () => {
+    it('should reject magic link session when customer is deactivated', async () => {
       const customer = await Customer.create({
-        name: 'Revoked Customer',
+        name: 'Deactivated Customer',
         phone: '1234567891',
         pricingType: 'market',
-        isActive: true
-        // No magicLinkToken set = revoked
+        isActive: false // Deactivated = immediate session revocation
       });
 
       const token = jwt.sign(
@@ -90,7 +89,7 @@ describe('Auth Middleware Extended Tests', () => {
         .set('Authorization', `Bearer ${token}`);
 
       expect(res.status).toBe(401);
-      expect(res.body.message).toContain('revoked');
+      expect(res.body.message).toContain('Invalid session');
     });
   });
 

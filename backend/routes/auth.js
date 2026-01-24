@@ -35,10 +35,11 @@ const magicLinkAuthLimiter = rateLimit({
   skip: () => process.env.NODE_ENV === 'test'
 });
 
-// Generate JWT Token
-const generateToken = (userId) => {
-  return jwt.sign({ id: userId }, JWT_SECRET, {
-    expiresIn: '30d'
+// Generate JWT Token with unique jti for revocation support
+const generateToken = (userId, tokenVersion = 0) => {
+  const jti = crypto.randomUUID();
+  return jwt.sign({ id: userId, jti, tv: tokenVersion }, JWT_SECRET, {
+    expiresIn: '7d'
   });
 };
 
@@ -127,7 +128,7 @@ router.post('/register', [
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
     res.status(201).json({
@@ -184,15 +185,15 @@ router.post('/login', [
       });
     }
 
-    // Generate token
-    const token = generateToken(user._id);
+    // Generate token with tokenVersion for revocation support
+    const token = generateToken(user._id, user.tokenVersion || 0);
 
     // Set cookie
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
     res.json({
@@ -212,9 +213,24 @@ router.post('/login', [
 });
 
 // @route   POST /api/auth/logout
-// @desc    Logout user
+// @desc    Logout user (revokes JWT server-side)
 // @access  Private
-router.post('/logout', (req, res) => {
+router.post('/logout', async (req, res) => {
+  // Revoke the current token server-side
+  try {
+    const token = req.cookies?.token || req.headers.authorization?.replace('Bearer ', '');
+    if (token) {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      if (decoded.jti) {
+        const RevokedToken = require('../models/RevokedToken');
+        const expiresAt = new Date(decoded.exp * 1000);
+        await RevokedToken.revokeToken(decoded.jti, decoded.id, expiresAt, 'logout');
+      }
+    }
+  } catch (err) {
+    // Token may be expired/invalid, that's fine - still clear cookie
+  }
+
   res.cookie('token', '', {
     httpOnly: true,
     expires: new Date(0)
@@ -322,8 +338,8 @@ router.get('/magic/:token', magicLinkAuthLimiter, async (req, res, next) => {
       });
     }
 
-    // Magic links expire after 90 days for security
-    const MAGIC_LINK_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
+    // Magic links expire after 24 hours for security
+    const MAGIC_LINK_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
     if (customer.magicLinkCreatedAt) {
       const linkAge = Date.now() - new Date(customer.magicLinkCreatedAt).getTime();
       if (linkAge > MAGIC_LINK_MAX_AGE_MS) {
@@ -337,6 +353,11 @@ router.get('/magic/:token', magicLinkAuthLimiter, async (req, res, next) => {
         });
       }
     }
+
+    // Invalidate magic link after first use (single-use enforcement)
+    customer.magicLinkToken = undefined;
+    customer.magicLinkCreatedAt = undefined;
+    await customer.save();
 
     // Find if there's a user account linked to this customer
     const user = await User.findOne({ customer: customer._id, isActive: true });
@@ -371,13 +392,13 @@ router.get('/magic/:token', magicLinkAuthLimiter, async (req, res, next) => {
     }
 
     // User exists - create full session
-    const jwtToken = generateToken(user._id);
+    const jwtToken = generateToken(user._id, user.tokenVersion || 0);
 
     res.cookie('token', jwtToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
     res.json({
@@ -500,14 +521,14 @@ router.post('/reset-password/:token', passwordResetLimiter, [
     user.resetPasswordExpires = undefined;
     await user.save();
 
-    // Generate new JWT token (auto-login after reset)
-    const jwtToken = generateToken(user._id);
+    // Generate new JWT token (auto-login after reset, uses bumped tokenVersion)
+    const jwtToken = generateToken(user._id, user.tokenVersion || 0);
 
     res.cookie('token', jwtToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
     res.json({

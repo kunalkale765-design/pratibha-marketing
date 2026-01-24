@@ -262,25 +262,20 @@ router.post('/:orderId/complete',
           // Save order
           await order.save(sessionOpts);
 
-          // Use atomic $inc to update balance - prevents race conditions
-          // Round the increment amount to avoid introducing precision drift
-          const incrementAmount = roundTo2Decimals(order.totalAmount);
-          const updatedCustomer = await Customer.findByIdAndUpdate(
-            customer._id,
-            { $inc: { balance: incrementAmount } },
-            { ...sessionOpts, new: true }
-          );
-          const newBalance = roundTo2Decimals(updatedCustomer.balance);
+          // Read current balance within transaction for isolation
+          const freshCustomer = sessionOrNull
+            ? await Customer.findById(customer._id).session(sessionOrNull)
+            : await Customer.findById(customer._id);
+          const previousBalance = freshCustomer.balance || 0;
 
-          // Fix floating-point precision drift with conditional update
-          // to avoid overwriting concurrent modifications
-          if (newBalance !== updatedCustomer.balance) {
-            await Customer.findOneAndUpdate(
-              { _id: customer._id, balance: updatedCustomer.balance },
-              { $set: { balance: newBalance } },
-              sessionOpts
-            );
-          }
+          // Calculate and set new balance atomically (avoids $inc + correction race)
+          const invoiceAmount = roundTo2Decimals(order.totalAmount);
+          const newBalance = roundTo2Decimals(previousBalance + invoiceAmount);
+          await Customer.findByIdAndUpdate(
+            customer._id,
+            { $set: { balance: newBalance } },
+            sessionOpts
+          );
 
           // Create invoice ledger entry with the actual new balance
           if (sessionOrNull) {

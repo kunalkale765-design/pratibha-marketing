@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Customer = require('../models/Customer');
+const RevokedToken = require('../models/RevokedToken');
 const { JWT_SECRET } = require('../config/secrets');
 
 /**
@@ -31,6 +32,17 @@ const protect = async (req, res, next) => {
     // Verify token - use centralized secret from config
     const decoded = jwt.verify(token, JWT_SECRET);
 
+    // Check if token has been revoked (jti-based blacklist)
+    if (decoded.jti) {
+      const isRevoked = await RevokedToken.isRevoked(decoded.jti);
+      if (isRevoked) {
+        return res.status(401).json({
+          success: false,
+          message: 'Session has been revoked. Please log in again.'
+        });
+      }
+    }
+
     // Handle magic link tokens (customer-only access)
     if (decoded.type === 'magic' && decoded.customerId) {
       const customer = await Customer.findById(decoded.customerId);
@@ -41,13 +53,10 @@ const protect = async (req, res, next) => {
         });
       }
 
-      // Verify magic link hasn't been revoked since JWT was issued
-      if (!customer.magicLinkToken) {
-        return res.status(401).json({
-          success: false,
-          message: 'Magic link has been revoked. Please request a new one.'
-        });
-      }
+      // Note: We no longer check customer.magicLinkToken here because
+      // magic links are single-use (cleared on first auth). Once a session JWT
+      // is issued, it remains valid until expiry (24h). To revoke access
+      // immediately, set customer.isActive = false.
 
       // Create a virtual user object for magic link sessions
       req.user = {
@@ -75,6 +84,14 @@ const protect = async (req, res, next) => {
       return res.status(401).json({
         success: false,
         message: 'Account is deactivated. Please contact admin.'
+      });
+    }
+
+    // Check tokenVersion: if password was changed, all older tokens are invalid
+    if (decoded.tv !== undefined && decoded.tv !== (user.tokenVersion || 0)) {
+      return res.status(401).json({
+        success: false,
+        message: 'Session invalidated due to password change. Please log in again.'
       });
     }
 

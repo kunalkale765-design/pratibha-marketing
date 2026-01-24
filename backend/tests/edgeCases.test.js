@@ -526,7 +526,7 @@ describe('Edge Cases and Error Handling', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.status).toBeDefined();
-      expect(res.body.mongodb).toBeDefined();
+      expect(res.body.timestamp).toBeDefined();
     });
   });
 

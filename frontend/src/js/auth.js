@@ -67,10 +67,14 @@ const Auth = {
     },
 
     /**
-     * Clear all auth data (logout)
+     * Clear all auth data (logout) and purge service worker cache
      */
     clearAuth() {
         localStorage.removeItem(this.USER_KEY);
+        // Notify service worker to purge cached pages (prevents cross-user data leaks)
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage('logout');
+        }
     },
 
     /**

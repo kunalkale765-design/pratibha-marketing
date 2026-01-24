@@ -283,9 +283,14 @@ self.addEventListener('message', (event) => {
     self.skipWaiting();
   }
 
-  if (event.data === 'clearCache') {
+  if (event.data === 'clearCache' || event.data === 'logout') {
+    // On logout, purge all caches to prevent cross-user data leaks
     caches.keys().then((names) => {
-      names.forEach((name) => caches.delete(name));
+      return Promise.all(names.map((name) => caches.delete(name)));
+    }).then(() => {
+      if (event.data === 'logout') {
+        console.log('[SW] Caches cleared on logout');
+      }
     });
   }
 });

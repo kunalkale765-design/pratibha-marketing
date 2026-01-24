@@ -50,6 +50,11 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Customer'
   },
+  // Token version: incremented on password change to invalidate all existing JWTs
+  tokenVersion: {
+    type: Number,
+    default: 0
+  },
   // Password reset
   resetPasswordToken: {
     type: String,
@@ -66,13 +71,17 @@ const userSchema = new mongoose.Schema({
 // Index for looking up users by their linked customer record
 userSchema.index({ customer: 1 }, { sparse: true });
 
-// Hash password before saving
+// Hash password before saving and bump tokenVersion to invalidate existing sessions
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) {
     return next();
   }
 
   try {
+    // Increment tokenVersion to invalidate all existing JWTs for this user
+    if (!this.isNew) {
+      this.tokenVersion = (this.tokenVersion || 0) + 1;
+    }
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
     next();

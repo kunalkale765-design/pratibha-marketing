@@ -441,10 +441,11 @@ async function generateBillForOrder(order, batch) {
 async function generateBillsForBatch(batch) {
   await ensureStorageDir();
 
-  // Get all confirmed orders in the batch
+  // Get confirmed orders that don't already have bills (idempotent)
   const orders = await Order.find({
     batch: batch._id,
-    status: 'confirmed'
+    status: 'confirmed',
+    deliveryBillGenerated: { $ne: true }
   }).populate('customer', 'name phone address pricingType markupPercentage');
 
   const results = {

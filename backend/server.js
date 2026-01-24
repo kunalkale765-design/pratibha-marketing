@@ -103,9 +103,22 @@ const app = express();
 // Security Middleware
 // ====================
 
-// Helmet - Set security headers with HSTS for HTTPS enforcement
+// Helmet - Set security headers with HSTS and CSP
 app.use(helmet({
-  contentSecurityPolicy: false, // Disable for now to allow inline scripts in HTML
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "https://cdnjs.cloudflare.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:"],
+      connectSrc: ["'self'"],
+      frameSrc: ["'none'"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"]
+    }
+  },
   crossOriginEmbedderPolicy: false,
   hsts: process.env.NODE_ENV === 'production' ? {
     maxAge: 31536000, // 1 year
@@ -258,9 +271,18 @@ app.use('/api/packing', require('./routes/packing'));
 app.use('/api/reconciliation', require('./routes/reconciliation'));
 app.use('/api/ledger', require('./routes/ledger'));
 
-// Health check endpoint
+// Public health check endpoint (minimal info only)
 app.get('/api/health', (req, res) => {
-  // Check actual MongoDB connection state
+  const isDbConnected = mongoose.connection.readyState === 1;
+  res.status(isDbConnected ? 200 : 503).json({
+    status: isDbConnected ? 'ok' : 'degraded',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Detailed health check (admin-only, full diagnostics)
+const { protect, authorize } = require('./middleware/auth');
+app.get('/api/health/detailed', protect, authorize('admin'), (req, res) => {
   const mongoState = mongoose.connection.readyState;
   const mongoStates = {
     0: 'disconnected',
@@ -275,12 +297,12 @@ app.get('/api/health', (req, res) => {
   const schedulerOk = (!batchHealth.lastAutoConfirmError || !batchHealth.lastAutoConfirmError.retryFailed)
     && (!rateHealth.lastResetError || !rateHealth.lastResetError.retryFailed);
 
-  res.status(isDbConnected ? 200 : 503).json({
+  res.json({
     status: isDbConnected && schedulerOk ? 'ok' : 'degraded',
     message: isDbConnected ? 'Server is running' : 'Database connection issue',
     timestamp: new Date().toISOString(),
     mongodb: mongoStates[mongoState] || 'unknown',
-    sentry: process.env.SENTRY_DSN ? 'configured' : 'not configured',
+    uptime: process.uptime(),
     scheduler: {
       batchAutoConfirm: {
         lastError: batchHealth.lastAutoConfirmError || null,

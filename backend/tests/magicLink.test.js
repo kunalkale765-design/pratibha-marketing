@@ -146,8 +146,8 @@ describe('Magic Link Authentication', () => {
       expect(res.status).toBe(401);
     });
 
-    it('should reject magic link token created more than 90 days ago', async () => {
-      // Magic links expire after 90 days
+    it('should reject magic link token created more than 24 hours ago', async () => {
+      // Magic links expire after 24 hours
       await Customer.findByIdAndUpdate(customer._id, {
         magicLinkCreatedAt: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000) // 1 year ago
       });
@@ -160,10 +160,10 @@ describe('Magic Link Authentication', () => {
       expect(res.body.message).toContain('expired');
     });
 
-    it('should accept magic link token created within 90 days', async () => {
-      // Magic links within 90 days should work
+    it('should accept magic link token created within 24 hours', async () => {
+      // Magic links within 24 hours should work
       await Customer.findByIdAndUpdate(customer._id, {
-        magicLinkCreatedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // 30 days ago
+        magicLinkCreatedAt: new Date(Date.now() - 12 * 60 * 60 * 1000) // 12 hours ago
       });
 
       const res = await request(app)

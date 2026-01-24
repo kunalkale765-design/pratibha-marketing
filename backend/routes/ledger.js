@@ -163,28 +163,19 @@ router.post('/payment',
       const performPayment = async (sessionOrNull) => {
         const sessionOpts = sessionOrNull ? { session: sessionOrNull } : {};
 
-        // Get customer's current balance
+        // Read current balance within transaction for isolation
         const freshCustomer = sessionOrNull
           ? await Customer.findById(customerId).session(sessionOrNull)
           : await Customer.findById(customerId);
         previousBalance = freshCustomer.balance || 0;
 
-        // Use atomic $inc to update balance - prevents race conditions
-        const updatedCustomer = await Customer.findByIdAndUpdate(
+        // Calculate and set new balance atomically (avoids $inc + correction race)
+        newBalance = roundTo2Decimals(previousBalance - paymentAmount);
+        await Customer.findByIdAndUpdate(
           customerId,
-          { $inc: { balance: -paymentAmount } },
-          { ...sessionOpts, new: true }
+          { $set: { balance: newBalance } },
+          sessionOpts
         );
-        newBalance = roundTo2Decimals(updatedCustomer.balance);
-
-        // Fix floating-point precision drift with conditional update
-        if (newBalance !== updatedCustomer.balance) {
-          await Customer.findOneAndUpdate(
-            { _id: customerId, balance: updatedCustomer.balance },
-            { $set: { balance: newBalance } },
-            sessionOpts
-          );
-        }
 
         // Create payment ledger entry
         if (sessionOrNull) {
@@ -283,28 +274,19 @@ router.post('/adjustment',
       const performAdjustment = async (sessionOrNull) => {
         const sessionOpts = sessionOrNull ? { session: sessionOrNull } : {};
 
-        // Get customer's current balance
+        // Read current balance within transaction for isolation
         const freshCustomer = sessionOrNull
           ? await Customer.findById(customerId).session(sessionOrNull)
           : await Customer.findById(customerId);
         previousBalance = freshCustomer.balance || 0;
 
-        // Use atomic $inc to update balance - prevents race conditions
-        const updatedCustomer = await Customer.findByIdAndUpdate(
+        // Calculate and set new balance atomically (avoids $inc + correction race)
+        newBalance = roundTo2Decimals(previousBalance + adjustmentAmount);
+        await Customer.findByIdAndUpdate(
           customerId,
-          { $inc: { balance: adjustmentAmount } },
-          { ...sessionOpts, new: true }
+          { $set: { balance: newBalance } },
+          sessionOpts
         );
-        newBalance = roundTo2Decimals(updatedCustomer.balance);
-
-        // Fix floating-point precision drift with conditional update
-        if (newBalance !== updatedCustomer.balance) {
-          await Customer.findOneAndUpdate(
-            { _id: customerId, balance: updatedCustomer.balance },
-            { $set: { balance: newBalance } },
-            sessionOpts
-          );
-        }
 
         // Create adjustment ledger entry
         if (sessionOrNull) {
