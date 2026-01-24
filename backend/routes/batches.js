@@ -1,15 +1,26 @@
 const express = require('express');
 const router = express.Router();
 const { param } = require('express-validator');
+const rateLimit = require('express-rate-limit');
 const Batch = require('../models/Batch');
 const Order = require('../models/Order');
 const { protect, authorize } = require('../middleware/auth');
+
+// Rate limiter for bill downloads - prevents resource exhaustion
+const downloadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30, // 30 downloads per 15 minutes per IP
+  message: { success: false, message: 'Too many download requests. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === 'test'
+});
 const {
   manuallyConfirmBatch,
   getBatchWithStats,
-  getISTTime,
   BATCH_CONFIG
 } = require('../services/batchScheduler');
+const { getISTTime } = require('../utils/dateTime');
 const deliveryBillService = require('../services/deliveryBillService');
 const { handleValidationErrors, parsePagination } = require('../utils/helpers');
 
@@ -552,6 +563,7 @@ router.post('/:id/bills',
 // @desc    Download delivery bill for a specific order in a batch
 // @access  Private (Admin, Staff)
 router.get('/:id/bills/:orderId/download',
+  downloadLimiter,
   protect,
   authorize('admin', 'staff'),
   param('id').isMongoId().withMessage('Invalid batch ID'),

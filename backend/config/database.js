@@ -4,7 +4,8 @@ const connectDB = async () => {
   try {
     const options = {
       // Connection options for better performance and security
-      maxPoolSize: 25,
+      // Pool size increased to handle batch confirmation peak (8 AM) without exhaustion
+      maxPoolSize: 50,
       minPoolSize: 5,
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,

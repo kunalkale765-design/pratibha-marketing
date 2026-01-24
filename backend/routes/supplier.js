@@ -7,17 +7,17 @@ const MarketRate = require('../models/MarketRate');
 const Product = require('../models/Product');
 const DailyProcurement = require('../models/DailyProcurement');
 const { protect, authorize } = require('../middleware/auth');
-const { getISTTime } = require('../services/batchScheduler');
+const { getISTTime } = require('../utils/dateTime');
 
 // @route   GET /api/supplier/quantity-summary
 // @desc    Get consolidated quantities needed across all pending orders
 // @access  Private (Admin, Staff)
 router.get('/quantity-summary', protect, authorize('admin', 'staff'), async (req, res, next) => {
   try {
-    // Get all pending/confirmed orders
+    // Get all pending/confirmed orders (capped to prevent OOM on large datasets)
     const orders = await Order.find({
       status: { $in: ['pending', 'confirmed'] }
-    }).populate('products.product', 'name unit').lean();
+    }).populate('products.product', 'name unit').limit(500).lean();
 
     // Aggregate quantities by product
     const quantityMap = new Map();
@@ -146,7 +146,7 @@ router.get('/daily-requirements', protect, authorize('admin', 'staff'), async (r
     const todayOrders = await Order.find({
       createdAt: { $gte: today, $lt: tomorrow },
       status: { $in: ['pending', 'confirmed'] }
-    }).populate('products.product', 'name unit');
+    }).populate('products.product', 'name unit').limit(500).lean();
 
     // Aggregate quantities
     const requirements = new Map();
@@ -207,7 +207,7 @@ router.get('/batch-summary', protect, authorize('admin', 'staff'), async (req, r
     const allOrders = await Order.find({
       batch: { $in: batchIds },
       status: { $nin: ['cancelled'] }
-    }).populate('products.product', 'name unit').lean();
+    }).populate('products.product', 'name unit').limit(500).lean();
 
     // Group orders by batch
     const ordersByBatch = new Map();
@@ -334,7 +334,7 @@ router.get('/procurement-summary', protect, authorize('admin', 'staff'), async (
       const allOrders = await Order.find({
         batch: { $in: batchIds },
         status: { $nin: ['cancelled'] }
-      }).select('products batch').populate('products.product', 'name unit').lean();
+      }).select('products batch').populate('products.product', 'name unit').limit(500).lean();
 
       // Aggregate quantities across ALL batches
       allOrders.forEach(order => {

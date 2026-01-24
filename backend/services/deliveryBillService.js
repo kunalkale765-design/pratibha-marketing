@@ -7,6 +7,9 @@ const Order = require('../models/Order');
 const Product = require('../models/Product');
 const MarketRate = require('../models/MarketRate');
 const Customer = require('../models/Customer');
+const { calculateEffectiveRate } = require('./pricingService');
+const { roundTo2Decimals } = require('../utils/helpers');
+const { formatDateIST, getISTYearMonthPrefix } = require('../utils/dateTime');
 
 // Storage directory for delivery bills
 const BILL_STORAGE_DIR = path.join(__dirname, '..', 'storage', 'delivery-bills');
@@ -23,31 +26,15 @@ async function ensureStorageDir() {
 }
 
 /**
- * Helper function to round to 2 decimal places
- */
-function roundTo2Decimals(num) {
-  return Math.round(num * 100) / 100;
-}
-
-/**
- * Format date for display (DD/MM/YYYY)
- * Throws on invalid dates to prevent incorrect documents
+ * Format date for display (DD/MM/YYYY) in IST.
+ * Wraps centralized utility with service-specific error messaging.
  */
 function formatDate(date, context = 'unknown') {
-  if (!date) {
-    throw new Error(`[DeliveryBillService] Cannot generate bill: missing date (context: ${context})`);
+  try {
+    return formatDateIST(date, context);
+  } catch (err) {
+    throw new Error(`[DeliveryBillService] Cannot generate bill: ${err.message}`);
   }
-  const d = new Date(date);
-  if (isNaN(d.getTime())) {
-    throw new Error(`[DeliveryBillService] Cannot generate bill: invalid date "${date}" (context: ${context})`);
-  }
-  // Display dates in IST to match business timezone
-  const istOffset = 5.5 * 60 * 60 * 1000;
-  const istDate = new Date(d.getTime() + istOffset);
-  const day = istDate.getUTCDate().toString().padStart(2, '0');
-  const month = (istDate.getUTCMonth() + 1).toString().padStart(2, '0');
-  const year = istDate.getUTCFullYear();
-  return `${day}/${month}/${year}`;
 }
 
 /**
@@ -66,17 +53,12 @@ function formatCurrency(amount, context = 'unknown') {
  * Format: BILL{YY}{MM}{0001}
  */
 async function generateBillNumber() {
-  // Use IST (UTC+5:30) for bill number prefix to match business day
-  const now = new Date();
-  const istOffset = 5.5 * 60 * 60 * 1000;
-  const istTime = new Date(now.getTime() + istOffset);
-  const year = istTime.getUTCFullYear().toString().slice(-2);
-  const month = (istTime.getUTCMonth() + 1).toString().padStart(2, '0');
-  const prefix = `BILL${year}${month}`;
-  const counterName = `deliverybill_${prefix}`;
+  const { prefix } = getISTYearMonthPrefix();
+  const billPrefix = `BILL${prefix}`;
+  const counterName = `deliverybill_${billPrefix}`;
 
   const seq = await Counter.getNextSequence(counterName);
-  return `${prefix}${seq.toString().padStart(4, '0')}`;
+  return `${billPrefix}${seq.toString().padStart(4, '0')}`;
 }
 
 /**
@@ -120,11 +102,7 @@ async function updateOrderPrices(order) {
       continue;
     }
 
-    let newRate = marketRate;
-    if (customer.pricingType === 'markup') {
-      const markup = customer.markupPercentage || 0;
-      newRate = roundTo2Decimals(marketRate * (1 + markup / 100));
-    }
+    const newRate = calculateEffectiveRate(customer, marketRate);
 
     const newAmount = roundTo2Decimals(item.quantity * newRate);
     updatedProducts.push({

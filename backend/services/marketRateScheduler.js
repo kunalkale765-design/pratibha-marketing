@@ -1,6 +1,7 @@
 const cron = require('node-cron');
 const MarketRate = require('../models/MarketRate');
 const Product = require('../models/Product');
+const { getISTTime, IST_TIMEZONE } = require('../utils/dateTime');
 
 // Import Sentry if available (optional dependency)
 let Sentry;
@@ -44,8 +45,6 @@ async function resetAllMarketRates() {
       return { success: true, count: 0, message: 'No active products in reset categories' };
     }
 
-    // Use IST for "today" calculation (consistent with batchScheduler)
-    const { getISTTime } = require('./batchScheduler');
     const today = getISTTime().dateOnly;
 
     let resetCount = 0;
@@ -127,10 +126,6 @@ function startScheduler() {
   }
 
   // Schedule for midnight every day: '0 0 * * *'
-  // Format: second(optional) minute hour day-of-month month day-of-week
-  // Use IST timezone consistently with batchScheduler to avoid day-boundary mismatches
-  const IST_TIMEZONE = 'Asia/Kolkata';
-
   scheduledTask = cron.schedule('0 0 * * *', async () => {
     try {
       await resetAllMarketRates();

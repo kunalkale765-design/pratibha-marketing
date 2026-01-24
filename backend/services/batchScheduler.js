@@ -2,6 +2,8 @@ const cron = require('node-cron');
 const Batch = require('../models/Batch');
 const Order = require('../models/Order');
 const { generateBillsForBatch } = require('./deliveryBillService');
+const { withLock } = require('../utils/locks');
+const { getISTTime, getNextDay, IST_TIMEZONE } = require('../utils/dateTime');
 
 // Import Sentry if available (optional dependency)
 let Sentry;
@@ -10,10 +12,8 @@ try {
   Sentry = require('@sentry/node');
   sentryAvailable = true;
 } catch (e) {
-  // Log at ERROR level so this is visible in deployment logs
   console.error('[BatchScheduler] WARNING: Sentry not available - batch scheduler errors will not be monitored!');
   console.error('[BatchScheduler] Sentry import error:', e.message);
-  // Sentry remains undefined, sentryAvailable stays false
 }
 
 let scheduledTask = null;
@@ -30,54 +30,11 @@ let isAutoConfirmRunning = false; // Concurrency guard
 let autoConfirmStartedAt = null; // Timestamp for deadlock detection
 const AUTO_CONFIRM_TIMEOUT_MS = 5 * 60 * 1000; // 5 minute safety timeout
 
-// IST timezone configuration
-const IST_TIMEZONE = 'Asia/Kolkata';
-
 // Batch cutoff hours (IST)
 const BATCH_CONFIG = {
   BATCH_1_CUTOFF_HOUR: 8,   // 8:00 AM IST
   BATCH_2_CUTOFF_HOUR: 12   // 12:00 PM IST (noon)
 };
-
-/**
- * Convert a date to IST timezone
- * @param {Date} date - Date to convert
- * @returns {Object} Object with IST hour, minutes, and full date
- */
-function getISTTime(date = new Date()) {
-  // IST is UTC+5:30
-  const istOffset = 5.5 * 60 * 60 * 1000;
-  const utcTime = date.getTime() + (date.getTimezoneOffset() * 60 * 1000);
-  const istTime = new Date(utcTime + istOffset);
-
-  // Calculate midnight IST as a UTC timestamp
-  // This ensures consistent date comparisons regardless of server timezone
-  const midnightIST = new Date(Date.UTC(
-    istTime.getFullYear(),
-    istTime.getMonth(),
-    istTime.getDate(),
-    0, 0, 0, 0
-  ) - istOffset);
-
-  return {
-    hour: istTime.getHours(),
-    minutes: istTime.getMinutes(),
-    date: istTime,
-    // Get just the date portion at midnight IST (as UTC timestamp)
-    dateOnly: midnightIST
-  };
-}
-
-/**
- * Get the next day's date at midnight (IST)
- * @param {Date} istDateOnly - Current date at midnight IST
- * @returns {Date} Next day at midnight IST
- */
-function getNextDay(istDateOnly) {
-  const nextDay = new Date(istDateOnly);
-  nextDay.setDate(nextDay.getDate() + 1);
-  return nextDay;
-}
 
 /**
  * Calculate which batch an order should be assigned to
@@ -248,7 +205,7 @@ async function autoConfirmFirstBatch() {
     console.log(`[BatchScheduler] ${statusMsg} in ${duration}ms`);
 
     return {
-      success: true,
+      success: !billGenerationFailed,
       ordersConfirmed: updateResult.modifiedCount,
       batchNumber: batch.batchNumber,
       billsGenerated: billResults.billsGenerated,
@@ -341,8 +298,17 @@ async function checkMissedBatches() {
 
       if (batch) {
         console.log('[BatchScheduler] RECOVERY: Found unconfirmed 1st batch on startup, confirming now');
-        await autoConfirmFirstBatch();
-        schedulerHealth.lastAutoConfirmSuccess = new Date();
+        const lockResult = await withLock('batch-auto-confirm', async () => {
+          return await autoConfirmFirstBatch();
+        }, { ttlMs: 5 * 60 * 1000, timeoutMs: 60000 });
+
+        if (lockResult.skipped) {
+          console.log('[BatchScheduler] RECOVERY: Another instance is handling the missed batch');
+        } else if (lockResult.error) {
+          throw lockResult.error;
+        } else {
+          schedulerHealth.lastAutoConfirmSuccess = new Date();
+        }
       }
     }
   } catch (error) {
@@ -358,9 +324,14 @@ async function checkMissedBatches() {
           const batch = await Batch.findOne({ date: today, batchType: '1st', status: 'open' });
           if (batch) {
             console.log('[BatchScheduler] RECOVERY RETRY: Confirming missed batch');
-            await autoConfirmFirstBatch();
-            schedulerHealth.lastAutoConfirmSuccess = new Date();
-            schedulerHealth.lastAutoConfirmError = null;
+            const retryLock = await withLock('batch-auto-confirm', async () => {
+              return await autoConfirmFirstBatch();
+            }, { ttlMs: 5 * 60 * 1000, timeoutMs: 60000 });
+
+            if (!retryLock.skipped && !retryLock.error) {
+              schedulerHealth.lastAutoConfirmSuccess = new Date();
+              schedulerHealth.lastAutoConfirmError = null;
+            }
           }
         }
       } catch (retryErr) {
@@ -389,28 +360,56 @@ function startScheduler() {
   });
 
   // Schedule 1st batch auto-confirmation at 8:00 AM IST daily
-  // Format: minute hour day-of-month month day-of-week
+  // Uses distributed lock to prevent duplicate execution across PM2 instances
   scheduledTask = cron.schedule('0 8 * * *', async () => {
-    try {
-      await autoConfirmFirstBatch();
-      schedulerHealth.lastAutoConfirmSuccess = new Date();
-      schedulerHealth.lastAutoConfirmError = null;
-    } catch (error) {
+    const lockResult = await withLock('batch-auto-confirm', async () => {
+      return await autoConfirmFirstBatch();
+    }, { ttlMs: 5 * 60 * 1000, timeoutMs: 60000 });
+
+    if (lockResult.skipped) {
+      console.log(`[BatchScheduler] Auto-confirm skipped: another instance (${lockResult.holder}) holds the lock`);
+      return;
+    }
+
+    if (lockResult.error) {
+      const error = lockResult.error;
       console.error('[BatchScheduler] Scheduled auto-confirm failed, retrying in 2 minutes:', error.message);
       schedulerHealth.lastAutoConfirmError = { message: error.message, at: new Date() };
 
-      // Retry once after 2 minutes
+      // Retry once after 2 minutes (also with lock)
       setTimeout(async () => {
-        try {
-          await autoConfirmFirstBatch();
+        const retryResult = await withLock('batch-auto-confirm', async () => {
+          return await autoConfirmFirstBatch();
+        }, { ttlMs: 5 * 60 * 1000, timeoutMs: 60000 });
+
+        if (retryResult.skipped) {
+          console.log('[BatchScheduler] Auto-confirm retry skipped: another instance already ran it');
+          return;
+        }
+        if (retryResult.error) {
+          console.error('[BatchScheduler] CRITICAL: Auto-confirm retry also failed:', retryResult.error.message);
+          schedulerHealth.lastAutoConfirmError = { message: retryResult.error.message, at: new Date(), retryFailed: true };
+        } else {
           console.log('[BatchScheduler] Auto-confirm retry succeeded');
           schedulerHealth.lastAutoConfirmSuccess = new Date();
           schedulerHealth.lastAutoConfirmError = null;
-        } catch (retryError) {
-          console.error('[BatchScheduler] CRITICAL: Auto-confirm retry also failed:', retryError.message);
-          schedulerHealth.lastAutoConfirmError = { message: retryError.message, at: new Date(), retryFailed: true };
         }
       }, 2 * 60 * 1000);
+      return;
+    }
+
+    // Success
+    schedulerHealth.lastAutoConfirmSuccess = new Date();
+    schedulerHealth.lastAutoConfirmError = null;
+
+    // Log if bill generation failed even though orders were confirmed
+    if (lockResult.result && lockResult.result.billGenerationFailed) {
+      console.error('[BatchScheduler] WARNING: Orders confirmed but bill generation failed!');
+      schedulerHealth.lastAutoConfirmError = {
+        message: `Bills failed: ${lockResult.result.billGenerationError}`,
+        at: new Date(),
+        ordersConfirmed: lockResult.result.ordersConfirmed
+      };
     }
   }, {
     scheduled: true,
@@ -419,27 +418,23 @@ function startScheduler() {
 
   // Also create next day batches at 12:01 PM IST (after 2nd batch cutoff)
   batchCreationTask = cron.schedule('1 12 * * *', async () => {
-    try {
-      await createNextDayBatches();
-      schedulerHealth.lastBatchCreationSuccess = new Date();
-      schedulerHealth.lastBatchCreationError = null;
-    } catch (error) {
-      console.error('[BatchScheduler] Scheduled batch creation failed, retrying in 2 minutes:', error.message);
-      schedulerHealth.lastBatchCreationError = { message: error.message, at: new Date() };
+    const lockResult = await withLock('batch-creation-daily', async () => {
+      return await createNextDayBatches();
+    }, { ttlMs: 2 * 60 * 1000, timeoutMs: 30000 });
 
-      // Retry once after 2 minutes
-      setTimeout(async () => {
-        try {
-          await createNextDayBatches();
-          console.log('[BatchScheduler] Batch creation retry succeeded');
-          schedulerHealth.lastBatchCreationSuccess = new Date();
-          schedulerHealth.lastBatchCreationError = null;
-        } catch (retryError) {
-          console.error('[BatchScheduler] Batch creation retry also failed:', retryError.message);
-          schedulerHealth.lastBatchCreationError = { message: retryError.message, at: new Date(), retryFailed: true };
-        }
-      }, 2 * 60 * 1000);
+    if (lockResult.skipped) {
+      console.log(`[BatchScheduler] Batch creation skipped: another instance (${lockResult.holder}) holds the lock`);
+      return;
     }
+
+    if (lockResult.error) {
+      console.error('[BatchScheduler] Scheduled batch creation failed:', lockResult.error.message);
+      schedulerHealth.lastBatchCreationError = { message: lockResult.error.message, at: new Date() };
+      return;
+    }
+
+    schedulerHealth.lastBatchCreationSuccess = new Date();
+    schedulerHealth.lastBatchCreationError = null;
   }, {
     scheduled: true,
     timezone: IST_TIMEZONE

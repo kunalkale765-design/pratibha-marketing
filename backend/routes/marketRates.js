@@ -6,16 +6,12 @@ const Product = require('../models/Product');
 const Order = require('../models/Order');
 const { protect, authorize } = require('../middleware/auth');
 const { resetAllMarketRates } = require('../services/marketRateScheduler');
+const { calculateEffectiveRate } = require('../services/pricingService');
+const { roundTo2Decimals } = require('../utils/helpers');
 
-// Helper function to round to 2 decimal places (avoids floating-point precision issues)
-function roundTo2Decimals(num) {
-  return Math.round(num * 100) / 100;
-}
-
-// Helper function to update pending orders with zero rates when market rate is set
+// Update pending orders with zero rates when market rate is set
 // Throws on failure so callers can surface the error appropriately
 async function updatePendingOrdersWithZeroRates(productId, newRate) {
-  // Find pending/confirmed orders that have this product with rate=0
   const ordersToUpdate = await Order.find({
     status: { $in: ['pending', 'confirmed'] },
     'products.product': productId,
@@ -25,20 +21,13 @@ async function updatePendingOrdersWithZeroRates(productId, newRate) {
   let updatedCount = 0;
 
   for (const order of ordersToUpdate) {
-    // Check if customer is market or markup pricing type
     const customer = order.customer;
     if (!customer || (customer.pricingType !== 'market' && customer.pricingType !== 'markup')) {
-      continue; // Skip contract customers
+      continue;
     }
 
-    // Calculate rate based on customer's pricing type
-    let calculatedRate = newRate;
-    if (customer.pricingType === 'markup') {
-      const markup = customer.markupPercentage || 0;
-      calculatedRate = roundTo2Decimals(newRate * (1 + markup / 100));
-    }
+    const calculatedRate = calculateEffectiveRate(customer, newRate);
 
-    // Update only the products with rate=0 for this product
     let orderModified = false;
     let newTotal = 0;
 

@@ -1,6 +1,7 @@
 const PDFDocument = require('pdfkit');
 const companies = require('../config/companies');
 const Counter = require('../models/Counter');
+const { formatDateIST, getISTYearMonthPrefix } = require('../utils/dateTime');
 
 /**
  * Invoice Service
@@ -284,24 +285,18 @@ async function generateInvoicePDF(invoiceData) {
 function formatDate(date, options = { allowFallback: false }) {
   if (!date) {
     if (options.allowFallback) {
-      return formatDate(new Date(), { allowFallback: false });
+      return formatDateIST(new Date(), 'invoice-fallback');
     }
     throw new Error('formatDate: date is required - received null/undefined');
   }
   const d = new Date(date);
   if (isNaN(d.getTime())) {
     if (options.allowFallback) {
-      return formatDate(new Date(), { allowFallback: false });
+      return formatDateIST(new Date(), 'invoice-fallback');
     }
     throw new Error(`formatDate: invalid date value - received "${date}"`);
   }
-  // Display dates in IST to match business timezone
-  const istOffset = 5.5 * 60 * 60 * 1000;
-  const istDate = new Date(d.getTime() + istOffset);
-  const day = istDate.getUTCDate().toString().padStart(2, '0');
-  const month = (istDate.getUTCMonth() + 1).toString().padStart(2, '0');
-  const year = istDate.getUTCFullYear();
-  return `${day}/${month}/${year}`;
+  return formatDateIST(d, 'invoice');
 }
 
 /**
@@ -334,17 +329,12 @@ function formatCurrency(amount, options = { allowZeroFallback: false }) {
  * @returns {Promise<string>} Unique invoice number
  */
 async function generateInvoiceNumber() {
-  // Use IST (UTC+5:30) for invoice number prefix to match business day
-  const now = new Date();
-  const istOffset = 5.5 * 60 * 60 * 1000;
-  const istTime = new Date(now.getTime() + istOffset);
-  const year = istTime.getUTCFullYear().toString().slice(-2);
-  const month = (istTime.getUTCMonth() + 1).toString().padStart(2, '0');
-  const prefix = `INV${year}${month}`;
-  const counterName = `invoice_${prefix}`;
+  const { prefix } = getISTYearMonthPrefix();
+  const invPrefix = `INV${prefix}`;
+  const counterName = `invoice_${invPrefix}`;
 
   const seq = await Counter.getNextSequence(counterName);
-  return `${prefix}${seq.toString().padStart(4, '0')}`;
+  return `${invPrefix}${seq.toString().padStart(4, '0')}`;
 }
 
 module.exports = {

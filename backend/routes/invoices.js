@@ -3,12 +3,23 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs').promises;
 const { body, param, validationResult } = require('express-validator');
+const rateLimit = require('express-rate-limit');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const Invoice = require('../models/Invoice');
 const { protect, authorize } = require('../middleware/auth');
 const companies = require('../config/companies');
 const invoiceService = require('../services/invoiceService');
+
+// Rate limiter for invoice downloads - prevents resource exhaustion
+const downloadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: { success: false, message: 'Too many download requests. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === 'test'
+});
 
 // Storage directory for PDF files
 const INVOICE_STORAGE_DIR = path.join(__dirname, '..', 'storage', 'invoices');
@@ -554,6 +565,7 @@ router.get('/',
 // @desc    Download existing invoice PDF
 // @access  Private (Staff, Admin)
 router.get('/:invoiceNumber/download',
+  downloadLimiter,
   protect,
   authorize('admin', 'staff'),
   async (req, res, next) => {
@@ -736,6 +748,7 @@ router.get('/my-order/:orderId',
 // @desc    Download invoice PDF (verifies customer ownership)
 // @access  Private (Customer, Staff, Admin)
 router.get('/my/:invoiceNumber/download',
+  downloadLimiter,
   protect,
   async (req, res, next) => {
     try {
