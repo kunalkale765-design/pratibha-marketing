@@ -69,11 +69,12 @@ const csrfProtection = (req, res, next) => {
   }
 
   // Skip for API endpoints that need to work without CSRF (e.g., magic links)
-  const exemptPaths = [
-    '/api/auth/magic/', // Magic link authentication
+  // Use regex with exact pattern matching to prevent path traversal bypasses
+  const exemptPatterns = [
+    /^\/api\/auth\/magic\/[a-f0-9]{64}$/, // Magic link authentication (exact 64-char hex token)
   ];
 
-  if (exemptPaths.some(path => req.path.startsWith(path))) {
+  if (exemptPatterns.some(pattern => pattern.test(req.path))) {
     return next();
   }
 

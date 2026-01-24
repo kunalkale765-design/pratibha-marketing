@@ -41,7 +41,13 @@ const protect = async (req, res, next) => {
         });
       }
 
-      // Magic links never expire - valid until explicitly revoked
+      // Verify magic link hasn't been revoked since JWT was issued
+      if (!customer.magicLinkToken) {
+        return res.status(401).json({
+          success: false,
+          message: 'Magic link has been revoked. Please request a new one.'
+        });
+      }
 
       // Create a virtual user object for magic link sessions
       req.user = {

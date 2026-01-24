@@ -100,29 +100,69 @@ Complete feature documentation with UI/UX design details for testing and modific
 | Products | `/products.html` | Default |
 | View Orders | `/orders.html` | Default |
 
-**Purchase List:**
-- Shows only **Indian Vegetables** (first) and **Fruits** (second)
-- Aggregated quantities from pending/confirmed/processing orders
-- Column headers: Product, Purchase Qty, Purchase Price
+**Purchase List (Two-Section Layout):**
 
-*Auto-Rotation Feature:*
-- Unsaved rates (rate=0) stay at **top** of each category
-- Saved rates (rate>0) move to **bottom** after saving
-- Re-sorts automatically after clicking Save
-- Designed for morning workflow: enter prices top-to-bottom without scrolling
+Shows procurement status for **Indian Vegetables** and **Fruits** with real-time order tracking.
+
+*Layout:*
+```
+┌─────────────────────────────────────────────────┐
+│  Purchase List            [🔍] [⎙] [↓] [Save]  │
+├─────────────────────────────────────────────────┤
+│  [All] [Vegetables] [Fruits]  ← Category Pills  │
+├─────────────────────────────────────────────────┤
+│  TO PROCURE                         🔔 3 new    │
+│  ─────────────────────────────────────────────  │
+│  Tomato     30+15=45 kg            [₹___]       │
+│  Onion      50+20=70 kg            [₹___]       │
+├─────────────────────────────────────────────────┤
+│  ▾ PROCURED (5 items)              ← Collapsible│
+│  ─────────────────────────────────────────────  │
+│  ✓ Cabbage   20+10=30 kg           ₹25         │
+│  ✓ Carrot    15+8=23 kg            ₹40         │
+└─────────────────────────────────────────────────┘
+```
+
+*Two-Section Logic:*
+| Section | Criteria | Purpose |
+|---------|----------|---------|
+| TO PROCURE | No rate saved today (IST) AND has order quantity | Items you need to buy |
+| PROCURED | Rate saved today (IST) | Items already purchased |
+
+*Quantity Breakdown Format:*
+- `1st Batch + 2nd Batch = Total` (e.g., `30+15=45 kg`)
+- Combines quantities from both daily batches for bulk purchasing
+
+*Key Features:*
+| Feature | Description |
+|---------|-------------|
+| Search | Filter products by name across both sections |
+| Category Pills | Quick filter: All / Vegetables / Fruits |
+| Real-time Polling | Auto-refreshes every 30 seconds |
+| Sound Alerts | Plays notification when new orders arrive |
+| New Order Badge | Shows count of products with increased quantities |
+| Collapsible Procured | Click header to expand/collapse procured section |
+| Expandable Rows | Click item to see: current rate, order count, est. cost, trend |
+
+*Procurement Workflow:*
+1. Staff arrives at shop, checks Purchase List
+2. Items in "TO PROCURE" need to be bought
+3. After calling supplier, enter rate in input field
+4. Click **Save** → item moves to "PROCURED" section
+5. New orders after procurement show additional quantity needed
 
 *Visual Indicators:*
-- Category dividers ("INDIAN VEGETABLES", "FRUITS")
-- Sticky column header (stays visible when scrolling)
-- Yellow border + dot for unsaved items (rate=0)
-- Bold, visible price input field
+| Indicator | Meaning |
+|-----------|---------|
+| ✓ (checkmark) | Item procured today |
+| 🔔 badge | New orders since last view |
+| Yellow border | Unsaved rate input |
+| Green header | Procured section |
+| Orange header | To Procure section |
 
-*Features:*
-- Expandable rows: current rate, order count, est. cost, trend
-- Print button for procurement list
-- Export CSV (same sort order, includes Category column)
-- Inline rate editing with Save button
-- Handles deleted products gracefully (skips in aggregation)
+*Print & Export:*
+- **Print**: Opens printable list with both sections
+- **Export CSV**: Downloads spreadsheet with all data
 
 **Design Elements:**
 - Header: Gunmetal with text-only logo

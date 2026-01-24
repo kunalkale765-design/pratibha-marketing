@@ -240,6 +240,7 @@ frontend/
 |--------|----------|--------|-------------|
 | GET | /quantity-summary | Admin/Staff | Aggregate order quantities |
 | GET | /batch-summary | Admin/Staff | Get today's batch-wise quantities |
+| GET | /procurement-summary | Admin/Staff | Get two-section procurement data (toProcure/procured) with batch quantities |
 
 ### Batches `/api/batches`
 | Method | Endpoint | Access | Description |
@@ -342,6 +343,56 @@ unpaid → partial → paid
 
 ### Customer-Facing UI Rules
 - **Never show prices to customers** - Customer pages (order form, order history) must not display product prices, rates, or order totals. Only staff/admin can see pricing information.
+
+### Procurement Summary Logic
+
+The `/api/supplier/procurement-summary` endpoint powers the two-section Purchase List on the dashboard.
+
+**Two-Section Classification:**
+| Section | Criteria | Items Shown |
+|---------|----------|-------------|
+| `toProcure` | No rate saved today (IST) AND `totalQty > 0` | Products needing purchase |
+| `procured` | Rate saved today (IST) | Already purchased products |
+
+**IST Day Boundary Calculation:**
+- "Today" is determined using IST (UTC+5:30) timezone
+- Rate's `effectiveDate` must fall within IST midnight-to-midnight
+- Example: IST 2026-01-22 = UTC 2026-01-21 18:30:00 to UTC 2026-01-22 18:29:59
+
+**Response Structure:**
+```javascript
+{
+  success: true,
+  currentTime: "2026-01-22T05:30:00.000Z",  // UTC timestamp
+  date: "2026-01-22",                        // IST date
+  categories: ["Indian Vegetables", "Fruits"],
+  batch1Status: "confirmed" | "open" | "none",
+  batch2Status: "open" | "none",
+  batch1ConfirmedAt: "2026-01-22T02:30:00.000Z" | null,
+  batch2ConfirmedAt: null,
+  toProcure: [{
+    productId, productName, unit, category,
+    batch1Qty, batch2Qty, totalQty,        // Combined batch quantities
+    batch1Orders, batch2Orders, totalOrders,
+    currentRate, trend                      // Latest rate (may not be today)
+  }],
+  procured: [{
+    productId, productName, unit, category,
+    batch1Qty, batch2Qty, totalQty,
+    batch1Orders, batch2Orders, totalOrders,
+    rate,                                   // Rate saved today
+    procuredAt,                             // When rate was saved
+    procuredQty, additionalQty              // For post-procurement tracking
+  }],
+  summary: {
+    toProcureCount, procuredCount, totalProducts
+  }
+}
+```
+
+**Sorting:** Indian Vegetables first, then Fruits; within category sorted by `totalQty` descending.
+
+**Product Filter:** Only includes products with `category` in `['Indian Vegetables', 'Fruits']` and `isActive: true`.
 
 ### Multi-Firm Invoicing
 Two firms are configured for invoice generation based on product categories:

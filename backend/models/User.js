@@ -63,6 +63,9 @@ const userSchema = new mongoose.Schema({
   timestamps: true
 });
 
+// Index for looking up users by their linked customer record
+userSchema.index({ customer: 1 }, { sparse: true });
+
 // Hash password before saving
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) {

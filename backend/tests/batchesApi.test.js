@@ -13,7 +13,13 @@ describe('Batches API Endpoints', () => {
   let testProduct;
   let testProduct2;
 
+  // Counter for unique batch creation
+  let batchCounter = 0;
+
   beforeEach(async () => {
+    // Reset batch counter for each test
+    batchCounter = 0;
+
     // Create test users
     const admin = await testUtils.createAdminUser();
     adminToken = admin.token;
@@ -34,14 +40,24 @@ describe('Batches API Endpoints', () => {
     await testUtils.createMarketRate(testProduct2, 50);
   });
 
-  // Helper to create a batch
+  // Helper to create a batch with unique date+batchType to avoid duplicate key errors
   const createBatch = async (options = {}) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    batchCounter++;
+    // Use provided date or offset by counter to ensure unique date+batchType combos
+    const batchDate = new Date(options.date || new Date());
+    if (!options.date) {
+      // Offset by counter days for unique dates when no specific date is provided
+      batchDate.setUTCDate(batchDate.getUTCDate() - batchCounter);
+    }
+    batchDate.setUTCHours(0, 0, 0, 0);
+
+    const cutoffTime = new Date(batchDate);
+    cutoffTime.setUTCHours(8, 0, 0, 0);
     return Batch.create({
-      batchNumber: `B${Date.now()}`,
+      batchNumber: `B${Date.now()}-${batchCounter}`,
       batchType: options.batchType || '1st',
-      date: options.date || today,
+      date: batchDate,
+      cutoffTime: options.cutoffTime || cutoffTime,
       status: options.status || 'open',
       ...options
     });
@@ -68,11 +84,18 @@ describe('Batches API Endpoints', () => {
   };
 
   describe('GET /api/batches', () => {
+    let todayDate;
+
     beforeEach(async () => {
-      // Create batches with different statuses
-      await createBatch({ status: 'open' });
-      await createBatch({ status: 'confirmed' });
-      await createBatch({ status: 'expired' });
+      // Create batches with different statuses using unique date+batchType combinations
+      todayDate = new Date();
+      todayDate.setUTCHours(0, 0, 0, 0);
+      const yesterdayDate = new Date(todayDate);
+      yesterdayDate.setUTCDate(yesterdayDate.getUTCDate() - 1);
+
+      await createBatch({ status: 'open', batchType: '1st', date: todayDate });
+      await createBatch({ status: 'confirmed', batchType: '2nd', date: todayDate });
+      await createBatch({ status: 'expired', batchType: '1st', date: yesterdayDate });
     });
 
     it('should return all batches for admin', async () => {
@@ -106,18 +129,13 @@ describe('Batches API Endpoints', () => {
     });
 
     it('should filter by date', async () => {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      yesterday.setHours(0, 0, 0, 0);
-      await createBatch({ date: yesterday });
-
       const today = new Date().toISOString().split('T')[0];
       const res = await request(app)
         .get(`/api/batches?date=${today}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(res.statusCode).toBe(200);
-      expect(res.body.count).toBe(3); // Only today's batches
+      expect(res.body.count).toBe(2); // Only today's batches (1st and 2nd)
     });
 
     it('should respect limit parameter', async () => {
@@ -492,10 +510,10 @@ describe('Batches API Endpoints', () => {
   describe('GET /api/batches/date/:date', () => {
     beforeEach(async () => {
       const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      today.setUTCHours(0, 0, 0, 0);
 
       const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setUTCDate(yesterday.getUTCDate() - 1);
 
       // Create batches for different dates
       await createBatch({ date: today, batchType: '1st' });

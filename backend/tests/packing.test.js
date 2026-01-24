@@ -36,10 +36,13 @@ describe('Packing Endpoints', () => {
     // Create a test batch
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const cutoffTime = new Date(today);
+    cutoffTime.setHours(8, 0, 0, 0);
     testBatch = await Batch.create({
       batchNumber: `B${Date.now()}`,
       batchType: '1st',
       date: today,
+      cutoffTime: cutoffTime,
       status: 'confirmed'
     });
   });
@@ -128,10 +131,14 @@ describe('Packing Endpoints', () => {
 
     it('should filter by batch when provided', async () => {
       // Create another batch with an order
+      const anotherDate = new Date();
+      const anotherCutoff = new Date(anotherDate);
+      anotherCutoff.setHours(12, 0, 0, 0);
       const anotherBatch = await Batch.create({
         batchNumber: `B${Date.now() + 1}`,
         batchType: '2nd',
-        date: new Date(),
+        date: anotherDate,
+        cutoffTime: anotherCutoff,
         status: 'confirmed'
       });
 

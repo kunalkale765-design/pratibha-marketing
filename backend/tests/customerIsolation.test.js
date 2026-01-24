@@ -205,6 +205,12 @@ describe('Customer Isolation', () => {
   });
 
   describe('Magic Link User Isolation', () => {
+    beforeEach(async () => {
+      // Set up magic link tokens on customers (required for revocation check in auth middleware)
+      await testUtils.setupMagicLinkForCustomer(customerA._id);
+      await testUtils.setupMagicLinkForCustomer(customerB._id);
+    });
+
     it('magic link user can only access their own orders', async () => {
       // Generate magic link for customer A
       const magicLinkToken = testUtils.createMagicLinkJWT(customerA._id);

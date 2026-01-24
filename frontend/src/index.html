@@ -122,61 +122,55 @@
             </a>
         </div>
 
-        <!-- Batch Management Section -->
-        <div class="batch-container" id="batchContainer">
-            <div class="batch-header">
-                <h2>Today's Batches</h2>
-                <div class="batch-time" id="batchCurrentTime"></div>
-            </div>
-            <div class="batch-info" id="batchInfo">
-                <span class="badge badge-info">Currently accepting: Loading...</span>
-            </div>
-            <div class="batch-cards" id="batchCards">
-                <div class="batch-card skeleton">
-                    <div class="skeleton skeleton-title" style="width: 60%;"></div>
-                    <div class="skeleton skeleton-text" style="width: 40%;"></div>
-                </div>
-            </div>
-        </div>
-
         <!-- Purchase List -->
         <div class="procurement-container">
             <div class="procurement-header">
                 <h2>Purchase List</h2>
                 <div class="header-actions">
-                    <input type="text" id="purchaseSearch" class="purchase-search" placeholder="Search...">
+                    <input type="text" class="purchase-search" id="purchaseSearch" placeholder="Search products...">
                     <button class="btn-icon" id="printBtn" title="Print">⎙</button>
                     <button class="btn-icon" id="exportBtn" title="Export CSV">↓</button>
                     <button class="btn-save-rates" id="saveRatesBtn">Save</button>
                 </div>
             </div>
-            <div class="batch-filter" id="batchFilter">
-                <button class="batch-filter-btn active" data-batch="all">All</button>
-                <button class="batch-filter-btn" data-batch="1st">1st Batch</button>
-                <button class="batch-filter-btn" data-batch="2nd">2nd Batch</button>
-            </div>
+
+            <!-- Category Filter Pills (dynamically populated) -->
             <div class="category-pills" id="categoryPills">
                 <button class="category-pill active" data-category="">All</button>
+                <!-- Categories loaded dynamically from API -->
             </div>
-            <div class="section-header to-procure-header">
-                <span class="section-title">To Procure</span>
-                <span id="newOrderBadge" class="new-order-badge hidden"></span>
-            </div>
-            <div id="procurementEmpty" class="procurement-empty hidden">
-                <div class="empty-icon">✓</div>
-                <div class="empty-text">All items procured!</div>
+
+            <!-- TO PROCURE Section -->
+            <div class="section-header to-procure-header" id="toProcureHeader">
+                <span class="section-title">TO PROCURE</span>
+                <span class="new-order-badge hidden" id="newOrderBadge">0 new</span>
             </div>
             <div class="procurement-list" id="toProcureList">
-                <!-- To procure items rendered here by JS -->
-            </div>
-            <div class="section-header procured-header" id="procuredHeader">
-                <span class="section-title">Procured (<span id="procuredCount">0</span>)</span>
-                <span class="collapse-icon">▼</span>
-            </div>
-            <div class="procured-section">
-                <div class="procurement-list" id="procuredList">
-                    <!-- Procured items rendered here by JS -->
+                <!-- Skeleton loading -->
+                <div class="skeleton-card" style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem;">
+                    <div class="skeleton skeleton-title" style="width: 35%;"></div>
+                    <div class="skeleton skeleton-text" style="width: 20%;"></div>
+                    <div class="skeleton" style="width: 80px; height: 32px; border-radius: 6px; margin-left: auto;"></div>
                 </div>
+                <div class="skeleton-card" style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem;">
+                    <div class="skeleton skeleton-title" style="width: 35%;"></div>
+                    <div class="skeleton skeleton-text" style="width: 20%;"></div>
+                    <div class="skeleton" style="width: 80px; height: 32px; border-radius: 6px; margin-left: auto;"></div>
+                </div>
+            </div>
+
+            <!-- PROCURED Section (Collapsible) -->
+            <div class="section-header procured-header" id="procuredHeader">
+                <span class="section-title"><span class="collapse-icon">▾</span> PROCURED (<span id="procuredCount">0</span> items)</span>
+            </div>
+            <div class="procurement-list procured-section" id="procuredList">
+                <!-- Procured items rendered here -->
+            </div>
+
+            <!-- Empty State -->
+            <div class="procurement-empty hidden" id="procurementEmpty">
+                <div class="empty-icon">🎉</div>
+                <div class="empty-text">All items procured!</div>
             </div>
         </div>
 

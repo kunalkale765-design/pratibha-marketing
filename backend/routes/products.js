@@ -94,7 +94,9 @@ router.post('/', protect, authorize('admin', 'staff'), validateProduct, async (r
       });
     }
 
-    const product = await Product.create(req.body);
+    // Only allow whitelisted fields to prevent mass assignment
+    const { name, unit, category } = req.body;
+    const product = await Product.create({ name, unit, category });
 
     res.status(201).json({
       success: true,
@@ -123,9 +125,15 @@ router.put('/:id',
       });
     }
 
+    // Only allow whitelisted fields to prevent mass assignment
+    const updateFields = {};
+    if (req.body.name !== undefined) updateFields.name = req.body.name;
+    if (req.body.unit !== undefined) updateFields.unit = req.body.unit;
+    if (req.body.category !== undefined) updateFields.category = req.body.category;
+
     const product = await Product.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      updateFields,
       { new: true, runValidators: true }
     );
 

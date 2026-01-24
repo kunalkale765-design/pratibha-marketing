@@ -295,9 +295,12 @@ function formatDate(date, options = { allowFallback: false }) {
     }
     throw new Error(`formatDate: invalid date value - received "${date}"`);
   }
-  const day = d.getDate().toString().padStart(2, '0');
-  const month = (d.getMonth() + 1).toString().padStart(2, '0');
-  const year = d.getFullYear();
+  // Display dates in IST to match business timezone
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const istDate = new Date(d.getTime() + istOffset);
+  const day = istDate.getUTCDate().toString().padStart(2, '0');
+  const month = (istDate.getUTCMonth() + 1).toString().padStart(2, '0');
+  const year = istDate.getUTCFullYear();
   return `${day}/${month}/${year}`;
 }
 
@@ -331,9 +334,12 @@ function formatCurrency(amount, options = { allowZeroFallback: false }) {
  * @returns {Promise<string>} Unique invoice number
  */
 async function generateInvoiceNumber() {
+  // Use IST (UTC+5:30) for invoice number prefix to match business day
   const now = new Date();
-  const year = now.getFullYear().toString().slice(-2);
-  const month = (now.getMonth() + 1).toString().padStart(2, '0');
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const istTime = new Date(now.getTime() + istOffset);
+  const year = istTime.getUTCFullYear().toString().slice(-2);
+  const month = (istTime.getUTCMonth() + 1).toString().padStart(2, '0');
   const prefix = `INV${year}${month}`;
   const counterName = `invoice_${prefix}`;
 

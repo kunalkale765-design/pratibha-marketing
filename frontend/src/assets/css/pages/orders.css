@@ -135,12 +135,6 @@ body {
     flex-wrap: wrap;
 }
 
-.order-datetime {
-    font-size: 0.6875rem;
-    color: var(--text-muted);
-    margin-top: 0.25rem;
-}
-
 .badge-batch {
     display: inline-block;
     padding: 0.125rem 0.375rem;

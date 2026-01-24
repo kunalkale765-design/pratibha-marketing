@@ -220,8 +220,7 @@ describe('Batch System', () => {
             amount: 500
           }],
           totalAmount: 500,
-          batch: batch._id,
-          batchLocked: false
+          batch: batch._id
         });
 
         const result = await manuallyConfirmBatch(batch._id, adminUser._id);
@@ -298,7 +297,7 @@ describe('Batch System', () => {
       await Order.deleteMany({});
     });
 
-    it('order should have batch and batchLocked fields', async () => {
+    it('order should have batch reference', async () => {
       const batch = await assignOrderToBatch(new Date());
 
       const order = await Order.create({
@@ -312,15 +311,13 @@ describe('Batch System', () => {
           amount: 500
         }],
         totalAmount: 500,
-        batch: batch._id,
-        batchLocked: false
+        batch: batch._id
       });
 
       expect(order.batch.toString()).toBe(batch._id.toString());
-      expect(order.batchLocked).toBe(false);
     });
 
-    it('batchLocked should be true after batch confirmation', async () => {
+    it('order status should change to confirmed after batch confirmation', async () => {
       const batch = await assignOrderToBatch(new Date());
 
       const order = await Order.create({
@@ -335,13 +332,13 @@ describe('Batch System', () => {
         }],
         totalAmount: 500,
         batch: batch._id,
-        batchLocked: false
+        status: 'pending'
       });
 
       await manuallyConfirmBatch(batch._id, adminUser._id);
 
       const updatedOrder = await Order.findById(order._id);
-      expect(updatedOrder.batchLocked).toBe(true);
+      expect(updatedOrder.status).toBe('confirmed');
     });
   });
 

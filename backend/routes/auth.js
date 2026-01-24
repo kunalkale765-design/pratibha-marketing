@@ -7,6 +7,7 @@ const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
 const Customer = require('../models/Customer');
 const { JWT_SECRET } = require('../config/secrets');
+const { handleValidationErrors, buildSafeCustomerResponse } = require('../utils/helpers');
 
 // SECURITY: Rate limiters for sensitive auth endpoints
 // Prevents brute force attacks on password reset and magic link tokens
@@ -56,13 +57,7 @@ router.post('/register', [
   body('phone').optional().matches(/^[0-9]{10}$/).withMessage('Phone must be 10 digits')
 ], async (req, res, next) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        errors: errors.array()
-      });
-    }
+    if (handleValidationErrors(req, res)) return;
 
     // Note: role is intentionally NOT accepted from user input to prevent privilege escalation
     const { name, email, password, phone } = req.body;
@@ -116,7 +111,9 @@ router.post('/register', [
         try {
           await Customer.findByIdAndDelete(customer._id);
         } catch (cleanupError) {
-          console.error('Failed to cleanup orphaned customer:', cleanupError.message);
+          console.error(`Failed to cleanup orphaned customer ${customer._id}:`, cleanupError.message);
+          // Augment the original error so admins know about the orphan
+          createError.message = `${createError.message} [WARNING: orphaned customer record ${customer._id} could not be cleaned up: ${cleanupError.message}]`;
         }
       }
       throw createError;
@@ -157,13 +154,7 @@ router.post('/login', [
   body('password').notEmpty().withMessage('Password is required')
 ], async (req, res, next) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        errors: errors.array()
-      });
-    }
+    if (handleValidationErrors(req, res)) return;
 
     const { email, password } = req.body;
 
@@ -204,21 +195,6 @@ router.post('/login', [
       maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
     });
 
-    // Only return essential customer data (exclude sensitive info)
-    // For contract customers, include contractPrices so frontend can filter products
-    // For markup customers, include markupPercentage so frontend can calculate prices
-    const safeCustomer = user.customer ? {
-      _id: user.customer._id,
-      name: user.customer.name,
-      pricingType: user.customer.pricingType,
-      ...(user.customer.pricingType === 'contract' && user.customer.contractPrices
-        ? { contractPrices: Object.fromEntries(user.customer.contractPrices) }
-        : {}),
-      ...(user.customer.pricingType === 'markup'
-        ? { markupPercentage: user.customer.markupPercentage || 0 }
-        : {})
-    } : null;
-
     res.json({
       success: true,
       user: {
@@ -226,7 +202,7 @@ router.post('/login', [
         name: user.name,
         email: user.email,
         role: user.role,
-        customer: safeCustomer
+        customer: buildSafeCustomerResponse(user.customer)
       },
       token
     });
@@ -277,9 +253,6 @@ router.get('/me', async (req, res, next) => {
           message: 'Invalid session'
         });
       }
-      // Only return essential customer data (exclude sensitive info)
-      // For contract customers, include contractPrices so frontend can filter products
-      // For markup customers, include markupPercentage so frontend can calculate prices
       return res.json({
         success: true,
         user: {
@@ -287,17 +260,7 @@ router.get('/me', async (req, res, next) => {
           name: customer.name,
           email: null,
           role: 'customer',
-          customer: {
-            _id: customer._id,
-            name: customer.name,
-            pricingType: customer.pricingType,
-            ...(customer.pricingType === 'contract' && customer.contractPrices
-              ? { contractPrices: Object.fromEntries(customer.contractPrices) }
-              : {}),
-            ...(customer.pricingType === 'markup'
-              ? { markupPercentage: customer.markupPercentage || 0 }
-              : {})
-          },
+          customer: buildSafeCustomerResponse(customer),
           isMagicLink: true
         }
       });
@@ -313,21 +276,6 @@ router.get('/me', async (req, res, next) => {
       });
     }
 
-    // Only return essential user/customer data (exclude sensitive info)
-    // For contract customers, include contractPrices so frontend can filter products
-    // For markup customers, include markupPercentage so frontend can calculate prices
-    const safeCustomer = user.customer ? {
-      _id: user.customer._id,
-      name: user.customer.name,
-      pricingType: user.customer.pricingType,
-      ...(user.customer.pricingType === 'contract' && user.customer.contractPrices
-        ? { contractPrices: Object.fromEntries(user.customer.contractPrices) }
-        : {}),
-      ...(user.customer.pricingType === 'markup'
-        ? { markupPercentage: user.customer.markupPercentage || 0 }
-        : {})
-    } : null;
-
     res.json({
       success: true,
       user: {
@@ -335,7 +283,7 @@ router.get('/me', async (req, res, next) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        customer: safeCustomer
+        customer: buildSafeCustomerResponse(user.customer)
       }
     });
   } catch (error) {
@@ -374,7 +322,21 @@ router.get('/magic/:token', magicLinkAuthLimiter, async (req, res, next) => {
       });
     }
 
-    // Magic links never expire - they remain valid until explicitly revoked
+    // Magic links expire after 90 days for security
+    const MAGIC_LINK_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
+    if (customer.magicLinkCreatedAt) {
+      const linkAge = Date.now() - new Date(customer.magicLinkCreatedAt).getTime();
+      if (linkAge > MAGIC_LINK_MAX_AGE_MS) {
+        // Clear expired magic link
+        customer.magicLinkToken = undefined;
+        customer.magicLinkCreatedAt = undefined;
+        await customer.save();
+        return res.status(401).json({
+          success: false,
+          message: 'Magic link has expired. Please request a new one.'
+        });
+      }
+    }
 
     // Find if there's a user account linked to this customer
     const user = await User.findOne({ customer: customer._id, isActive: true });
@@ -395,9 +357,6 @@ router.get('/magic/:token', magicLinkAuthLimiter, async (req, res, next) => {
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
       });
 
-      // Only return essential customer data (exclude sensitive info)
-      // For contract customers, include contractPrices so frontend can filter products
-      // For markup customers, include markupPercentage so frontend can calculate prices
       return res.json({
         success: true,
         user: {
@@ -405,17 +364,7 @@ router.get('/magic/:token', magicLinkAuthLimiter, async (req, res, next) => {
           name: customer.name,
           email: null,
           role: 'customer',
-          customer: {
-            _id: customer._id,
-            name: customer.name,
-            pricingType: customer.pricingType,
-            ...(customer.pricingType === 'contract' && customer.contractPrices
-              ? { contractPrices: Object.fromEntries(customer.contractPrices) }
-              : {}),
-            ...(customer.pricingType === 'markup'
-              ? { markupPercentage: customer.markupPercentage || 0 }
-              : {})
-          }
+          customer: buildSafeCustomerResponse(customer)
         },
         message: 'Magic link authenticated'
       });
@@ -431,9 +380,6 @@ router.get('/magic/:token', magicLinkAuthLimiter, async (req, res, next) => {
       maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
     });
 
-    // Only return essential customer data (exclude sensitive info)
-    // For contract customers, include contractPrices so frontend can filter products
-    // For markup customers, include markupPercentage so frontend can calculate prices
     res.json({
       success: true,
       user: {
@@ -441,17 +387,7 @@ router.get('/magic/:token', magicLinkAuthLimiter, async (req, res, next) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        customer: {
-          _id: customer._id,
-          name: customer.name,
-          pricingType: customer.pricingType,
-          ...(customer.pricingType === 'contract' && customer.contractPrices
-            ? { contractPrices: Object.fromEntries(customer.contractPrices) }
-            : {}),
-          ...(customer.pricingType === 'markup'
-            ? { markupPercentage: customer.markupPercentage || 0 }
-            : {})
-        }
+        customer: buildSafeCustomerResponse(customer)
       },
       message: 'Magic link authenticated'
     });
@@ -468,13 +404,7 @@ router.post('/forgot-password', passwordResetLimiter, [
   body('email').trim().notEmpty().withMessage('Username is required')
 ], async (req, res, next) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        errors: errors.array()
-      });
-    }
+    if (handleValidationErrors(req, res)) return;
 
     const { email } = req.body;
 
@@ -534,13 +464,7 @@ router.post('/reset-password/:token', passwordResetLimiter, [
     .matches(/[0-9]/).withMessage('Password must contain at least one number')
 ], async (req, res, next) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        errors: errors.array()
-      });
-    }
+    if (handleValidationErrors(req, res)) return;
 
     const { token } = req.params;
     const { password } = req.body;

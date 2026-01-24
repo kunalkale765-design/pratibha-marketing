@@ -13,56 +13,52 @@ function roundTo2Decimals(num) {
 }
 
 // Helper function to update pending orders with zero rates when market rate is set
+// Throws on failure so callers can surface the error appropriately
 async function updatePendingOrdersWithZeroRates(productId, newRate) {
-  try {
-    // Find pending/confirmed orders that have this product with rate=0
-    const ordersToUpdate = await Order.find({
-      status: { $in: ['pending', 'confirmed'] },
-      'products.product': productId,
-      'products.rate': 0
-    }).populate('customer');
+  // Find pending/confirmed orders that have this product with rate=0
+  const ordersToUpdate = await Order.find({
+    status: { $in: ['pending', 'confirmed'] },
+    'products.product': productId,
+    'products.rate': 0
+  }).populate('customer');
 
-    let updatedCount = 0;
+  let updatedCount = 0;
 
-    for (const order of ordersToUpdate) {
-      // Check if customer is market or markup pricing type
-      const customer = order.customer;
-      if (!customer || (customer.pricingType !== 'market' && customer.pricingType !== 'markup')) {
-        continue; // Skip contract customers
-      }
-
-      // Calculate rate based on customer's pricing type
-      let calculatedRate = newRate;
-      if (customer.pricingType === 'markup') {
-        const markup = customer.markupPercentage || 0;
-        calculatedRate = roundTo2Decimals(newRate * (1 + markup / 100));
-      }
-
-      // Update only the products with rate=0 for this product
-      let orderModified = false;
-      let newTotal = 0;
-
-      for (const item of order.products) {
-        if (item.product.toString() === productId.toString() && item.rate === 0) {
-          item.rate = calculatedRate;
-          item.amount = roundTo2Decimals(item.quantity * calculatedRate);
-          orderModified = true;
-        }
-        newTotal += item.amount;
-      }
-
-      if (orderModified) {
-        order.totalAmount = roundTo2Decimals(newTotal);
-        await order.save();
-        updatedCount++;
-      }
+  for (const order of ordersToUpdate) {
+    // Check if customer is market or markup pricing type
+    const customer = order.customer;
+    if (!customer || (customer.pricingType !== 'market' && customer.pricingType !== 'markup')) {
+      continue; // Skip contract customers
     }
 
-    return updatedCount;
-  } catch (error) {
-    console.error('Error updating pending orders with zero rates:', error);
-    return 0;
+    // Calculate rate based on customer's pricing type
+    let calculatedRate = newRate;
+    if (customer.pricingType === 'markup') {
+      const markup = customer.markupPercentage || 0;
+      calculatedRate = roundTo2Decimals(newRate * (1 + markup / 100));
+    }
+
+    // Update only the products with rate=0 for this product
+    let orderModified = false;
+    let newTotal = 0;
+
+    for (const item of order.products) {
+      if (item.product.toString() === productId.toString() && item.rate === 0) {
+        item.rate = calculatedRate;
+        item.amount = roundTo2Decimals(item.quantity * calculatedRate);
+        orderModified = true;
+      }
+      newTotal += item.amount;
+    }
+
+    if (orderModified) {
+      order.totalAmount = roundTo2Decimals(newTotal);
+      await order.save();
+      updatedCount++;
+    }
   }
+
+  return updatedCount;
 }
 
 // Validation middleware
@@ -386,15 +382,23 @@ router.post('/', protect, authorize('admin', 'staff'), validateMarketRate, async
 
     // Auto-update pending orders with zero rates for market/markup customers
     let ordersUpdated = 0;
+    let orderUpdateError = null;
     if (req.body.rate > 0) {
-      ordersUpdated = await updatePendingOrdersWithZeroRates(req.body.product, req.body.rate);
+      try {
+        ordersUpdated = await updatePendingOrdersWithZeroRates(req.body.product, req.body.rate);
+      } catch (error) {
+        console.error('Failed to update pending orders with zero rates:', error);
+        orderUpdateError = `Rate saved but failed to update pending orders: ${error.message}. Please check pending orders manually.`;
+      }
     }
+
+    const warnings = [rateChangeWarning, orderUpdateError].filter(Boolean);
 
     res.status(201).json({
       success: true,
       data: marketRate,
       ordersUpdated: ordersUpdated > 0 ? ordersUpdated : undefined,
-      warning: rateChangeWarning,
+      warning: warnings.length > 0 ? warnings.join('; ') : undefined,
       message: ordersUpdated > 0
         ? `Market rate updated. ${ordersUpdated} pending order(s) with zero rates were auto-updated.`
         : undefined
@@ -422,9 +426,19 @@ router.put('/:id',
       });
     }
 
+    // Whitelist allowed fields to prevent mass assignment
+    const updateFields = {};
+    if (req.body.rate !== undefined) updateFields.rate = req.body.rate;
+    if (req.body.previousRate !== undefined) updateFields.previousRate = req.body.previousRate;
+    if (req.body.effectiveDate !== undefined) updateFields.effectiveDate = req.body.effectiveDate;
+    if (req.body.trend !== undefined) updateFields.trend = req.body.trend;
+    if (req.body.changePercentage !== undefined) updateFields.changePercentage = req.body.changePercentage;
+    if (req.body.source !== undefined) updateFields.source = req.body.source;
+    if (req.body.notes !== undefined) updateFields.notes = req.body.notes;
+
     const marketRate = await MarketRate.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      updateFields,
       { new: true, runValidators: true }
     );
 

@@ -118,7 +118,7 @@ describe('CSRF Middleware', () => {
         process.env.NODE_ENV = 'development';
 
         mockReq.method = 'POST';
-        mockReq.path = '/api/auth/magic/some-token';
+        mockReq.path = '/api/auth/magic/' + 'a1b2c3d4e5f6'.repeat(5) + 'a1b2'; // 64-char hex token
 
         csrfProtection(mockReq, mockRes, nextFn);
 

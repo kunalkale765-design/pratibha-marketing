@@ -1,10 +1,15 @@
 
 import { showToast, createElement } from '/js/ui.js';
 
-// Wait for Auth to be available
-const waitForAuth = () => new Promise((resolve) => {
-    if (window.Auth) resolve(window.Auth);
-    else setTimeout(() => resolve(waitForAuth()), 10);
+// Wait for Auth to be available (with timeout to prevent infinite recursion)
+const waitForAuth = (maxWait = 10000) => new Promise((resolve, reject) => {
+    const startTime = Date.now();
+    const check = () => {
+        if (window.Auth) return resolve(window.Auth);
+        if (Date.now() - startTime > maxWait) return reject(new Error('Auth not available'));
+        setTimeout(check, 50);
+    };
+    check();
 });
 const Auth = await waitForAuth();
 
@@ -31,6 +36,13 @@ async function loadData() {
             fetch('/api/products', { credentials: 'include' }),
             fetch('/api/market-rates', { credentials: 'include' })
         ]);
+
+        if (!productsRes.ok) {
+            throw new Error(`Products: server returned ${productsRes.status}`);
+        }
+        if (!ratesRes.ok) {
+            throw new Error(`Market rates: server returned ${ratesRes.status}`);
+        }
 
         const productsData = await productsRes.json();
         const ratesData = await ratesRes.json();
@@ -246,14 +258,14 @@ async function saveRates() {
         }
     }
 
-    // Only clear rates that were successfully saved (keep failed ones for retry)
-    const successfulRates = {};
+    // Keep only failed rates for retry (clear successfully saved ones)
+    const remainingRates = {};
     Object.keys(changedRates).forEach(pid => {
         if (failedProducts.includes(pid)) {
-            successfulRates[pid] = changedRates[pid];
+            remainingRates[pid] = changedRates[pid];
         }
     });
-    changedRates = successfulRates;
+    changedRates = remainingRates;
     updateSaveButton();
 
     btn.classList.remove('btn-loading');

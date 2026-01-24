@@ -55,6 +55,9 @@ describe('Auth Middleware Extended Tests', () => {
         isActive: true
       });
 
+      // Set up magic link token on customer (required for revocation check)
+      await testUtils.setupMagicLinkForCustomer(customer._id);
+
       const token = jwt.sign(
         { type: 'magic', customerId: customer._id },
         JWT_SECRET,
@@ -66,6 +69,29 @@ describe('Auth Middleware Extended Tests', () => {
         .set('Authorization', `Bearer ${token}`);
 
       expect(res.status).toBe(200);
+    });
+
+    it('should reject magic link token when magic link has been revoked', async () => {
+      const customer = await Customer.create({
+        name: 'Revoked Customer',
+        phone: '1234567891',
+        pricingType: 'market',
+        isActive: true
+        // No magicLinkToken set = revoked
+      });
+
+      const token = jwt.sign(
+        { type: 'magic', customerId: customer._id },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+      );
+
+      const res = await request(app)
+        .get('/api/products')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(401);
+      expect(res.body.message).toContain('revoked');
     });
   });
 

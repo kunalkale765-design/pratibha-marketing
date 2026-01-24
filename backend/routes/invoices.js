@@ -24,9 +24,15 @@ async function ensureStorageDir() {
 
 // Safely resolve PDF path - prevents path traversal attacks
 function getSafePdfPath(pdfFilename) {
-  if (!pdfFilename) {
+  if (!pdfFilename || typeof pdfFilename !== 'string') {
     throw new Error('PDF filename is required');
   }
+
+  // Strict whitelist: only allow alphanumeric, hyphen, underscore, dot followed by .pdf
+  if (!/^[a-zA-Z0-9_-]+\.pdf$/.test(pdfFilename)) {
+    throw new Error('Invalid PDF filename format');
+  }
+
   // Remove any path components - only use the basename
   const sanitizedFilename = path.basename(pdfFilename);
   const fullPath = path.join(INVOICE_STORAGE_DIR, sanitizedFilename);
@@ -34,7 +40,12 @@ function getSafePdfPath(pdfFilename) {
   // Verify the resolved path is still within the storage directory
   const resolvedPath = path.resolve(fullPath);
   const resolvedStorageDir = path.resolve(INVOICE_STORAGE_DIR);
-  if (!resolvedPath.startsWith(resolvedStorageDir + path.sep)) {
+  if (!resolvedPath.startsWith(resolvedStorageDir + path.sep) && resolvedPath !== resolvedStorageDir) {
+    throw new Error('Invalid PDF path');
+  }
+
+  // Ensure it's not the directory itself
+  if (resolvedPath === resolvedStorageDir) {
     throw new Error('Invalid PDF path');
   }
 

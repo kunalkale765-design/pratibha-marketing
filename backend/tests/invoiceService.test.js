@@ -98,7 +98,7 @@ describe('Invoice Service', () => {
         ]
       };
 
-      const result = invoiceService.getInvoiceData(mockOrder, 'pratibha-marketing');
+      const result = invoiceService.getInvoiceData(mockOrder, 'pratibha');
 
       expect(result.orderNumber).toBe('ORD001');
       expect(result.invoiceNumber).toBe('INV001'); // Derived from order number
@@ -116,7 +116,7 @@ describe('Invoice Service', () => {
         ]
       };
 
-      const result = invoiceService.getInvoiceData(mockOrder, 'pratibha-marketing', null, 'CUSTOM123');
+      const result = invoiceService.getInvoiceData(mockOrder, 'pratibha', null, 'CUSTOM123');
 
       expect(result.invoiceNumber).toBe('CUSTOM123');
     });
@@ -132,7 +132,7 @@ describe('Invoice Service', () => {
         ]
       };
 
-      const result = invoiceService.getInvoiceData(mockOrder, 'pratibha-marketing', ['prod1', 'prod3']);
+      const result = invoiceService.getInvoiceData(mockOrder, 'pratibha', ['prod1', 'prod3']);
 
       expect(result.items).toHaveLength(2);
       expect(result.total).toBe(1480); // 1000 + 480
@@ -162,7 +162,7 @@ describe('Invoice Service', () => {
         products: []
       };
 
-      const result = invoiceService.getInvoiceData(mockOrder, 'pratibha-marketing');
+      const result = invoiceService.getInvoiceData(mockOrder, 'pratibha');
 
       expect(result.customer.address).toBe('Delivery Address');
     });
@@ -174,7 +174,7 @@ describe('Invoice Service', () => {
         products: []
       };
 
-      const result = invoiceService.getInvoiceData(mockOrder, 'pratibha-marketing');
+      const result = invoiceService.getInvoiceData(mockOrder, 'pratibha');
 
       expect(result.customer.name).toBe('Unknown Customer');
     });
@@ -189,7 +189,7 @@ describe('Invoice Service', () => {
         ]
       };
 
-      const result = invoiceService.getInvoiceData(mockOrder, 'pratibha-marketing');
+      const result = invoiceService.getInvoiceData(mockOrder, 'pratibha');
 
       expect(result.items[0].sno).toBe(1);
       expect(result.items[1].sno).toBe(2);

@@ -38,10 +38,13 @@ describe('Reconciliation Endpoints', () => {
     // Create a test batch
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const cutoffTime = new Date(today);
+    cutoffTime.setHours(8, 0, 0, 0);
     testBatch = await Batch.create({
       batchNumber: `B${Date.now()}`,
       batchType: '1st',
       date: today,
+      cutoffTime: cutoffTime,
       status: 'confirmed'
     });
   });
@@ -89,7 +92,7 @@ describe('Reconciliation Endpoints', () => {
         status: 'delivered',
         reconciliation: {
           completedAt: new Date(),
-          completedBy: 'someUserId',
+          completedBy: new (require('mongoose').Types.ObjectId)(),
           changes: [],
           originalTotal: 1250
         }
@@ -136,10 +139,14 @@ describe('Reconciliation Endpoints', () => {
 
     it('should filter by batch', async () => {
       // Create another batch with an order
+      const anotherDate = new Date();
+      const anotherCutoff = new Date(anotherDate);
+      anotherCutoff.setHours(12, 0, 0, 0);
       const anotherBatch = await Batch.create({
         batchNumber: `B${Date.now() + 1}`,
         batchType: '2nd',
-        date: new Date(),
+        date: anotherDate,
+        cutoffTime: anotherCutoff,
         status: 'confirmed'
       });
 
@@ -441,7 +448,8 @@ describe('Reconciliation Endpoints', () => {
         });
 
       expect(res.statusCode).toBe(400);
-      expect(res.body.message).toContain('already been reconciled');
+      // After first reconciliation, order status is 'delivered', so status check fails
+      expect(res.body.message).toContain('confirmed for reconciliation');
     });
 
     it('should reject for non-confirmed order', async () => {
@@ -639,9 +647,12 @@ describe('Reconciliation Endpoints', () => {
       expect(customer.balance).toBe(1250);
     });
 
-    it('should handle order without customer gracefully', async () => {
-      // Create order without customer for edge case
-      const orderWithoutCustomer = await Order.create({
+    it('should reject reconciliation for order with deleted customer', async () => {
+      // Create order with a non-existent customer ID (simulating deleted customer)
+      const mongoose = require('mongoose');
+      const deletedCustomerId = new mongoose.Types.ObjectId();
+      const orderWithDeletedCustomer = await Order.create({
+        customer: deletedCustomerId,
         products: [{
           product: testProduct._id,
           productName: testProduct.name,
@@ -658,19 +669,20 @@ describe('Reconciliation Endpoints', () => {
         paymentStatus: 'unpaid'
       });
 
-      // Should still complete but without ledger entry
+      // Should reject - orders without valid customers cannot be reconciled
       const res = await request(app)
-        .post(`/api/reconciliation/${orderWithoutCustomer._id}/complete`)
+        .post(`/api/reconciliation/${orderWithDeletedCustomer._id}/complete`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
           items: [{ product: testProduct._id.toString(), deliveredQty: 10 }]
         });
 
-      expect(res.statusCode).toBe(200);
+      expect(res.statusCode).toBe(400);
+      expect(res.body.message).toContain('Cannot reconcile order without customer');
 
-      // Order should be marked as delivered
-      const updatedOrder = await Order.findById(orderWithoutCustomer._id);
-      expect(updatedOrder.status).toBe('delivered');
+      // Order should remain in confirmed status (not changed)
+      const updatedOrder = await Order.findById(orderWithDeletedCustomer._id);
+      expect(updatedOrder.status).toBe('confirmed');
     });
   });
 });

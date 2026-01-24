@@ -6,6 +6,7 @@ const { body, param, validationResult } = require('express-validator');
 const Customer = require('../models/Customer');
 const User = require('../models/User');
 const { protect, authorize } = require('../middleware/auth');
+const { handleValidationErrors, parsePagination } = require('../utils/helpers');
 
 // Rate limiter for magic link generation - 5 per hour per IP to prevent abuse
 const magicLinkLimiter = rateLimit({
@@ -29,13 +30,9 @@ const validateCustomer = [
 // @access  Private (Admin, Staff)
 router.get('/', protect, authorize('admin', 'staff'), async (req, res, next) => {
   try {
-    const { search, isActive, includeTest, limit: rawLimit, page: rawPage } = req.query;
+    const { search, isActive, includeTest } = req.query;
+    const { limit, page, skip } = parsePagination(req.query, { limit: 100, maxLimit: 500 });
     const filter = {};
-
-    // Validate and cap limit to prevent DoS (min 1, max 500, default 100)
-    const limit = Math.min(Math.max(parseInt(rawLimit) || 100, 1), 500);
-    const page = Math.max(parseInt(rawPage) || 1, 1);
-    const skip = (page - 1) * limit;
 
     if (search) {
       // Escape regex special characters to prevent ReDoS attacks
@@ -98,10 +95,7 @@ router.get('/:id',
   param('id').isMongoId().withMessage('Invalid customer ID'),
   async (req, res, next) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ success: false, errors: errors.array() });
-    }
+    if (handleValidationErrors(req, res)) return;
 
     const customer = await Customer.findById(req.params.id).select('-__v');
 
@@ -124,19 +118,24 @@ router.get('/:id',
 // @access  Private (Admin, Staff)
 router.post('/', protect, authorize('admin', 'staff'), validateCustomer, async (req, res, next) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        errors: errors.array()
-      });
-    }
+    if (handleValidationErrors(req, res)) return;
 
-    // Add audit field
+    // Only allow whitelisted fields to prevent mass assignment
     const customerData = {
-      ...req.body,
+      name: req.body.name,
+      phone: req.body.phone,
+      whatsapp: req.body.whatsapp,
+      address: req.body.address,
+      pricingType: req.body.pricingType,
+      markupPercentage: req.body.markupPercentage,
+      isTestCustomer: req.body.isTestCustomer,
       createdBy: req.user._id
     };
+
+    // Handle contractPrices Map
+    if (req.body.contractPrices) {
+      customerData.contractPrices = new Map(Object.entries(req.body.contractPrices));
+    }
 
     const customer = await Customer.create(customerData);
 
@@ -159,13 +158,7 @@ router.put('/:id',
   ...validateCustomer,
   async (req, res, next) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        errors: errors.array()
-      });
-    }
+    if (handleValidationErrors(req, res)) return;
 
     const customer = await Customer.findById(req.params.id);
 
@@ -197,6 +190,7 @@ router.put('/:id',
     await customer.save();
 
     // Sync name change to linked User record
+    let nameSyncWarning = null;
     if (req.body.name && req.body.name !== oldName) {
       try {
         await User.updateMany(
@@ -205,13 +199,14 @@ router.put('/:id',
         );
       } catch (syncError) {
         console.error('Failed to sync customer name to user:', syncError.message);
-        // Continue - customer was updated, user sync can be retried
+        nameSyncWarning = `Customer updated but login name sync failed: ${syncError.message}. The customer may still see their old name when logged in.`;
       }
     }
 
     res.json({
       success: true,
-      data: customer
+      data: customer,
+      warning: nameSyncWarning || undefined
     });
   } catch (error) {
     next(error);
@@ -227,10 +222,7 @@ router.delete('/:id',
   param('id').isMongoId().withMessage('Invalid customer ID'),
   async (req, res, next) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ success: false, errors: errors.array() });
-    }
+    if (handleValidationErrors(req, res)) return;
 
     const customer = await Customer.findByIdAndUpdate(
       req.params.id,
@@ -270,10 +262,7 @@ router.post('/:id/magic-link',
   param('id').isMongoId().withMessage('Invalid customer ID'),
   async (req, res, next) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ success: false, errors: errors.array() });
-    }
+    if (handleValidationErrors(req, res)) return;
 
     const customer = await Customer.findById(req.params.id);
 
@@ -324,10 +313,7 @@ router.delete('/:id/magic-link',
   param('id').isMongoId().withMessage('Invalid customer ID'),
   async (req, res, next) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ success: false, errors: errors.array() });
-    }
+    if (handleValidationErrors(req, res)) return;
 
     const customer = await Customer.findById(req.params.id);
 

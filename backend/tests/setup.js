@@ -278,13 +278,24 @@ const testUtils = {
     return token;
   },
 
-  // Create magic link JWT token for testing
+  // Create magic link JWT token for testing (sync - just creates the JWT)
   createMagicLinkJWT(customerId) {
     return jwt.sign(
       { customerId: customerId, type: 'magic' },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
+  },
+
+  // Set up magic link token on customer for auth middleware revocation check
+  async setupMagicLinkForCustomer(customerId) {
+    // Use customerId to generate unique token (avoids unique index conflicts)
+    const crypto = require('crypto');
+    const uniqueToken = crypto.createHash('sha256').update(customerId.toString() + Date.now()).digest('hex');
+    await Customer.findByIdAndUpdate(customerId, {
+      magicLinkToken: uniqueToken,
+      magicLinkCreatedAt: new Date()
+    });
   }
 };
 

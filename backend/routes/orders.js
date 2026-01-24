@@ -233,14 +233,27 @@ router.get('/customer/:customerId', protect, async (req, res, next) => {
       }
     }
 
-    const orders = await Order.find({ customer: req.params.customerId })
-      .populate('products.product', 'name unit')
-      .select('-__v')
-      .sort({ createdAt: -1 });
+    const page = parseInt(req.query.page) || 1;
+    const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+    const skip = (page - 1) * limit;
+
+    const [orders, total] = await Promise.all([
+      Order.find({ customer: req.params.customerId })
+        .populate('products.product', 'name unit')
+        .select('-__v')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Order.countDocuments({ customer: req.params.customerId })
+    ]);
 
     res.json({
       success: true,
       count: orders.length,
+      total,
+      page,
+      pages: Math.ceil(total / limit),
       data: orders
     });
   } catch (error) {
@@ -428,6 +441,9 @@ router.post('/', protect, validateOrder, async (req, res, next) => {
 
     // Assign order to appropriate batch based on current time (IST)
     const batch = await assignOrderToBatch(new Date());
+    if (!batch || !batch._id) {
+      throw new Error('Failed to assign order to a batch. Please try again or contact support.');
+    }
 
     // Create order (include idempotencyKey if provided)
     const orderData = {
@@ -1050,11 +1066,20 @@ router.put('/:id/status', protect, authorize('admin', 'staff'), [
       }
     }
 
-    const updatedOrder = await Order.findByIdAndUpdate(
-      req.params.id,
+    // Use conditional update to prevent race condition:
+    // Only update if status hasn't changed since we read it
+    const updatedOrder = await Order.findOneAndUpdate(
+      { _id: req.params.id, status: currentStatus },
       updateData,
       { new: true, runValidators: true }
     ).populate('customer', 'name phone');
+
+    if (!updatedOrder) {
+      return res.status(409).json({
+        success: false,
+        message: 'Order was modified by another request. Please refresh and try again.'
+      });
+    }
 
     res.json({
       success: true,

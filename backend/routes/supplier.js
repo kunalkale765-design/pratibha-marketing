@@ -17,7 +17,7 @@ router.get('/quantity-summary', protect, authorize('admin', 'staff'), async (req
     // Get all pending/confirmed orders
     const orders = await Order.find({
       status: { $in: ['pending', 'confirmed'] }
-    }).populate('products.product', 'name unit');
+    }).populate('products.product', 'name unit').lean();
 
     // Aggregate quantities by product
     const quantityMap = new Map();
@@ -135,8 +135,9 @@ router.get('/pending-orders', protect, authorize('admin', 'staff'), async (req, 
 // @access  Private (Admin, Staff)
 router.get('/daily-requirements', protect, authorize('admin', 'staff'), async (req, res, next) => {
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Use IST for "today" calculation (consistent with batchScheduler)
+    const ist = getISTTime();
+    const today = ist.dateOnly;
 
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -190,7 +191,8 @@ router.get('/batch-summary', protect, authorize('admin', 'staff'), async (req, r
 
     // Get today's batches
     const batches = await Batch.find({ date: today })
-      .sort({ batchType: 1 });
+      .sort({ batchType: 1 })
+      .lean();
 
     if (batches.length === 0) {
       return res.json({
@@ -205,7 +207,7 @@ router.get('/batch-summary', protect, authorize('admin', 'staff'), async (req, r
     const allOrders = await Order.find({
       batch: { $in: batchIds },
       status: { $nin: ['cancelled'] }
-    }).populate('products.product', 'name unit');
+    }).populate('products.product', 'name unit').lean();
 
     // Group orders by batch
     const ordersByBatch = new Map();
@@ -286,15 +288,17 @@ router.get('/procurement-summary', protect, authorize('admin', 'staff'), async (
     const datesToQuery = ist.hour >= 12 ? [today, tomorrow] : [today];
 
     // Get batches for relevant dates (today and possibly tomorrow)
-    const batches = await Batch.find({ date: { $in: datesToQuery } }).sort({ date: 1, batchType: 1 });
+    const batches = await Batch.find({ date: { $in: datesToQuery } }).sort({ date: 1, batchType: 1 }).lean();
 
     // Get all active products (all categories for procurement)
     const products = await Product.find({
       isActive: true
     }).select('_id name unit category');
 
-    // Get ALL latest market rates for current rate display
+    // Get latest market rates only for active products (avoids full collection scan)
+    const productIds = products.map(p => p._id);
     const allLatestRates = await MarketRate.aggregate([
+      { $match: { product: { $in: productIds } } },
       { $sort: { effectiveDate: -1 } },
       {
         $group: {
@@ -330,7 +334,7 @@ router.get('/procurement-summary', protect, authorize('admin', 'staff'), async (
       const allOrders = await Order.find({
         batch: { $in: batchIds },
         status: { $nin: ['cancelled'] }
-      }).populate('products.product', 'name unit');
+      }).select('products batch').populate('products.product', 'name unit').lean();
 
       // Aggregate quantities across ALL batches
       allOrders.forEach(order => {

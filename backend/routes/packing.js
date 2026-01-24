@@ -5,11 +5,11 @@ const Order = require('../models/Order');
 const Batch = require('../models/Batch');
 const { protect, authorize } = require('../middleware/auth');
 const deliveryBillService = require('../services/deliveryBillService');
-
-// Helper function to round to 2 decimal places
-function roundTo2Decimals(num) {
-  return Math.round(num * 100) / 100;
-}
+const {
+  roundTo2Decimals,
+  handleValidationErrors,
+  transformOrderForList
+} = require('../utils/helpers');
 
 // @route   GET /api/packing/queue
 // @desc    Get orders ready for packing (confirmed status, not yet packed)
@@ -34,31 +34,11 @@ router.get('/queue', protect, authorize('admin', 'staff'), async (req, res, next
       .populate('customer', 'name phone address')
       .populate('batch', 'batchNumber batchType status')
       .sort({ batch: 1, createdAt: 1 })
-      .limit(parseInt(limit));
+      .limit(parseInt(limit))
+      .lean();
 
-    // Transform for queue view
-    const queueItems = orders.map(order => ({
-      _id: order._id,
-      orderNumber: order.orderNumber,
-      customer: {
-        _id: order.customer?._id,
-        name: order.customer?.name || 'Unknown',
-        phone: order.customer?.phone || ''
-      },
-      batch: order.batch ? {
-        _id: order.batch._id,
-        batchNumber: order.batch.batchNumber,
-        batchType: order.batch.batchType,
-        status: order.batch.status
-      } : null,
-      itemCount: order.products.length,
-      totalAmount: order.totalAmount,
-      status: order.status,
-      packingDone: order.packingDone || false,
-      notes: order.notes,
-      deliveryAddress: order.deliveryAddress || order.customer?.address,
-      createdAt: order.createdAt
-    }));
+    // Transform for queue view using shared helper
+    const queueItems = orders.map(transformOrderForList);
 
     // Group by batch for better display
     const grouped = {};
@@ -136,10 +116,7 @@ router.get('/:orderId',
   param('orderId').isMongoId().withMessage('Invalid order ID'),
   async (req, res, next) => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ success: false, errors: errors.array() });
-      }
+      if (handleValidationErrors(req, res)) return;
 
       const order = await Order.findById(req.params.orderId)
         .populate('customer', 'name phone address')
@@ -202,10 +179,7 @@ router.put('/:orderId/item/:productId',
   ],
   async (req, res, next) => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ success: false, errors: errors.array() });
-      }
+      if (handleValidationErrors(req, res)) return;
 
       const { orderId, productId } = req.params;
       const { quantity, notes, packed } = req.body;
@@ -328,10 +302,7 @@ router.post('/:orderId/done',
   param('orderId').isMongoId().withMessage('Invalid order ID'),
   async (req, res, next) => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ success: false, errors: errors.array() });
-      }
+      if (handleValidationErrors(req, res)) return;
 
       const order = await Order.findById(req.params.orderId);
       if (!order) {
@@ -399,10 +370,7 @@ router.post('/:orderId/reprint-bill',
   param('orderId').isMongoId().withMessage('Invalid order ID'),
   async (req, res, next) => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ success: false, errors: errors.array() });
-      }
+      if (handleValidationErrors(req, res)) return;
 
       const order = await Order.findById(req.params.orderId)
         .populate('customer', 'name phone address')
@@ -429,7 +397,8 @@ router.post('/:orderId/reprint-bill',
       // Generate bill for first firm
       const firmId = firmIds[0];
       const firmData = firmSplit[firmId];
-      const billNumber = await deliveryBillService.generateBillNumber();
+      // Reuse existing bill number for reprints (don't generate new one each time)
+      const billNumber = order.deliveryBillNumber || await deliveryBillService.generateBillNumber();
 
       const billData = {
         billNumber: billNumber,

@@ -31,32 +31,32 @@ function roundTo2Decimals(num) {
 
 /**
  * Format date for display (DD/MM/YYYY)
- * Logs warning if fallback value is used
+ * Throws on invalid dates to prevent incorrect documents
  */
 function formatDate(date, context = 'unknown') {
   if (!date) {
-    console.warn(`[DeliveryBillService] formatDate: received null/undefined date (context: ${context})`);
-    return '-';
+    throw new Error(`[DeliveryBillService] Cannot generate bill: missing date (context: ${context})`);
   }
   const d = new Date(date);
   if (isNaN(d.getTime())) {
-    console.warn(`[DeliveryBillService] formatDate: invalid date value "${date}" (context: ${context})`);
-    return '-';
+    throw new Error(`[DeliveryBillService] Cannot generate bill: invalid date "${date}" (context: ${context})`);
   }
-  const day = d.getDate().toString().padStart(2, '0');
-  const month = (d.getMonth() + 1).toString().padStart(2, '0');
-  const year = d.getFullYear();
+  // Display dates in IST to match business timezone
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const istDate = new Date(d.getTime() + istOffset);
+  const day = istDate.getUTCDate().toString().padStart(2, '0');
+  const month = (istDate.getUTCMonth() + 1).toString().padStart(2, '0');
+  const year = istDate.getUTCFullYear();
   return `${day}/${month}/${year}`;
 }
 
 /**
  * Format number as currency
- * Logs warning if fallback value is used
+ * Throws on invalid amounts to prevent incorrect bills from being printed
  */
 function formatCurrency(amount, context = 'unknown') {
   if (amount === null || amount === undefined || isNaN(amount)) {
-    console.warn(`[DeliveryBillService] formatCurrency: invalid amount "${amount}" (context: ${context})`);
-    return 'Rs. 0.00';
+    throw new Error(`[DeliveryBillService] Cannot generate bill: invalid amount "${amount}" (context: ${context}). Fix the order data before generating bills.`);
   }
   return `Rs. ${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -66,9 +66,12 @@ function formatCurrency(amount, context = 'unknown') {
  * Format: BILL{YY}{MM}{0001}
  */
 async function generateBillNumber() {
+  // Use IST (UTC+5:30) for bill number prefix to match business day
   const now = new Date();
-  const year = now.getFullYear().toString().slice(-2);
-  const month = (now.getMonth() + 1).toString().padStart(2, '0');
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const istTime = new Date(now.getTime() + istOffset);
+  const year = istTime.getUTCFullYear().toString().slice(-2);
+  const month = (istTime.getUTCMonth() + 1).toString().padStart(2, '0');
   const prefix = `BILL${year}${month}`;
   const counterName = `deliverybill_${prefix}`;
 
@@ -82,8 +85,7 @@ async function generateBillNumber() {
 async function updateOrderPrices(order) {
   const customer = await Customer.findById(order.customer);
   if (!customer) {
-    console.warn(`[DeliveryBillService] updateOrderPrices: Customer not found for order ${order.orderNumber || order._id}, using existing prices`);
-    return order;
+    throw new Error(`[DeliveryBillService] Cannot generate bill for order ${order.orderNumber || order._id}: customer not found (ID: ${order.customer}). Customer may have been deleted.`);
   }
 
   // Only update for market and markup pricing types
@@ -373,7 +375,88 @@ async function generateBillPDF(billData) {
 }
 
 /**
+ * Process a single order's bill generation
+ * @param {Object} order - Order document (populated)
+ * @param {Object} batch - Batch document
+ * @returns {Object} Result for this order
+ */
+async function generateBillForOrder(order, batch) {
+  // Update prices for market/markup customers
+  const updatedOrder = await updateOrderPrices(order);
+  await updatedOrder.save();
+
+  // Split order by firm
+  const firmSplit = await splitOrderByFirm(updatedOrder);
+
+  const orderBills = [];
+  let orderBillNumber = null;
+
+  // Generate bill for each firm portion
+  for (const [firmId, firmData] of Object.entries(firmSplit)) {
+    if (firmData.items.length === 0) continue;
+
+    const billNumber = await generateBillNumber();
+
+    if (!orderBillNumber) {
+      orderBillNumber = billNumber;
+    }
+
+    const billData = {
+      billNumber: billNumber,
+      orderNumber: updatedOrder.orderNumber,
+      batchNumber: batch.batchNumber,
+      date: new Date(),
+      firm: {
+        id: firmId,
+        name: firmData.firm.name,
+        address: firmData.firm.address,
+        phone: firmData.firm.phone,
+        email: firmData.firm.email
+      },
+      customer: {
+        name: updatedOrder.customer?.name || 'Unknown Customer',
+        phone: updatedOrder.customer?.phone || '',
+        address: updatedOrder.deliveryAddress || updatedOrder.customer?.address || ''
+      },
+      items: firmData.items.map(item => ({
+        name: item.productName,
+        quantity: item.quantity,
+        unit: item.unit,
+        rate: item.rate,
+        amount: item.amount
+      })),
+      total: firmData.subtotal
+    };
+
+    // Generate combined PDF with both ORIGINAL and DUPLICATE copies
+    const billPdf = await generateBillPDF(billData);
+
+    // Save PDF
+    const filename = `${billNumber}.pdf`;
+    await fs.writeFile(path.join(BILL_STORAGE_DIR, filename), billPdf);
+
+    orderBills.push({
+      billNumber: billNumber,
+      orderNumber: updatedOrder.orderNumber,
+      firmId: firmId,
+      firmName: firmData.firm.name,
+      total: firmData.subtotal,
+      pdfPath: filename
+    });
+  }
+
+  // Mark order as having delivery bill generated
+  updatedOrder.deliveryBillGenerated = true;
+  updatedOrder.deliveryBillGeneratedAt = new Date();
+  updatedOrder.deliveryBillNumber = orderBillNumber;
+  await updatedOrder.save();
+
+  return orderBills;
+}
+
+/**
  * Generate delivery bills for all orders in a batch
+ * Uses controlled concurrency to avoid blocking the event loop
  * @param {Object} batch - Batch document
  * @returns {Object} Result with generated bills info
  */
@@ -393,88 +476,27 @@ async function generateBillsForBatch(batch) {
     bills: []
   };
 
-  for (const order of orders) {
-    try {
-      // Update prices for market/markup customers
-      const updatedOrder = await updateOrderPrices(order);
-      await updatedOrder.save();
+  // Process orders in parallel with concurrency limit of 5
+  const CONCURRENCY = 5;
+  for (let i = 0; i < orders.length; i += CONCURRENCY) {
+    const chunk = orders.slice(i, i + CONCURRENCY);
+    const chunkResults = await Promise.allSettled(
+      chunk.map(order => generateBillForOrder(order, batch))
+    );
 
-      // Split order by firm
-      const firmSplit = await splitOrderByFirm(updatedOrder);
-
-      // Track the first bill number for this order (order can have multiple bills if split by firm)
-      let orderBillNumber = null;
-
-      // Generate bill for each firm portion
-      for (const [firmId, firmData] of Object.entries(firmSplit)) {
-        if (firmData.items.length === 0) continue;
-
-        const billNumber = await generateBillNumber();
-
-        // Store first bill number for the order
-        if (!orderBillNumber) {
-          orderBillNumber = billNumber;
-        }
-
-        const billData = {
-          billNumber: billNumber,
-          orderNumber: updatedOrder.orderNumber,
-          batchNumber: batch.batchNumber,
-          date: new Date(),
-          firm: {
-            id: firmId,
-            name: firmData.firm.name,
-            address: firmData.firm.address,
-            phone: firmData.firm.phone,
-            email: firmData.firm.email
-          },
-          customer: {
-            name: updatedOrder.customer?.name || 'Unknown Customer',
-            phone: updatedOrder.customer?.phone || '',
-            address: updatedOrder.deliveryAddress || updatedOrder.customer?.address || ''
-          },
-          items: firmData.items.map(item => ({
-            name: item.productName,
-            quantity: item.quantity,
-            unit: item.unit,
-            rate: item.rate,
-            amount: item.amount
-          })),
-          total: firmData.subtotal
-        };
-
-        // Generate combined PDF with both ORIGINAL and DUPLICATE copies
-        const billPdf = await generateBillPDF(billData);
-
-        // Save PDF
-        const filename = `${billNumber}.pdf`;
-        await fs.writeFile(path.join(BILL_STORAGE_DIR, filename), billPdf);
-
-        results.bills.push({
-          billNumber: billNumber,
-          orderNumber: updatedOrder.orderNumber,
-          firmId: firmId,
-          firmName: firmData.firm.name,
-          total: firmData.subtotal,
-          pdfPath: filename
+    chunkResults.forEach((result, idx) => {
+      if (result.status === 'fulfilled') {
+        results.bills.push(...result.value);
+        results.billsGenerated += result.value.length;
+      } else {
+        const order = chunk[idx];
+        console.error(`Error generating bill for order ${order.orderNumber}:`, result.reason);
+        results.errors.push({
+          orderNumber: order.orderNumber,
+          error: result.reason.message
         });
-
-        results.billsGenerated++;
       }
-
-      // Mark order as having delivery bill generated and store bill number
-      updatedOrder.deliveryBillGenerated = true;
-      updatedOrder.deliveryBillGeneratedAt = new Date();
-      updatedOrder.deliveryBillNumber = orderBillNumber;  // Store for consistent redownloads
-      await updatedOrder.save();
-
-    } catch (error) {
-      console.error(`Error generating bill for order ${order.orderNumber}:`, error);
-      results.errors.push({
-        orderNumber: order.orderNumber,
-        error: error.message
-      });
-    }
+    });
   }
 
   return results;
@@ -484,15 +506,25 @@ async function generateBillsForBatch(batch) {
  * Get bill PDF path safely (prevents path traversal)
  */
 function getSafeBillPath(filename) {
-  if (!filename) {
+  if (!filename || typeof filename !== 'string') {
     throw new Error('Bill filename is required');
   }
+
+  // Strict whitelist: only allow alphanumeric, hyphen, underscore, dot followed by .pdf
+  if (!/^[a-zA-Z0-9_-]+\.pdf$/.test(filename)) {
+    throw new Error('Invalid bill filename format');
+  }
+
   const sanitizedFilename = path.basename(filename);
   const fullPath = path.join(BILL_STORAGE_DIR, sanitizedFilename);
 
   const resolvedPath = path.resolve(fullPath);
   const resolvedStorageDir = path.resolve(BILL_STORAGE_DIR);
-  if (!resolvedPath.startsWith(resolvedStorageDir + path.sep)) {
+  if (!resolvedPath.startsWith(resolvedStorageDir + path.sep) && resolvedPath !== resolvedStorageDir) {
+    throw new Error('Invalid bill path');
+  }
+
+  if (resolvedPath === resolvedStorageDir) {
     throw new Error('Invalid bill path');
   }
 

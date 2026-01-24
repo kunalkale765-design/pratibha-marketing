@@ -12,6 +12,7 @@ const {
   BATCH_CONFIG
 } = require('../services/batchScheduler');
 const deliveryBillService = require('../services/deliveryBillService');
+const { handleValidationErrors, parsePagination } = require('../utils/helpers');
 
 /**
  * @swagger
@@ -41,8 +42,8 @@ const deliveryBillService = require('../services/deliveryBillService');
 // @access  Private (Admin, Staff)
 router.get('/', protect, authorize('admin', 'staff'), async (req, res, next) => {
   try {
-    const { status, date, limit: rawLimit = 20 } = req.query;
-    const limit = Math.min(Math.max(parseInt(rawLimit) || 20, 1), 100);
+    const { status, date } = req.query;
+    const { limit } = parsePagination(req.query, { limit: 20, maxLimit: 100 });
 
     const query = {};
 
@@ -53,8 +54,8 @@ router.get('/', protect, authorize('admin', 'staff'), async (req, res, next) => 
     if (date) {
       const targetDate = new Date(date);
       if (!isNaN(targetDate.getTime())) {
-        // Set to midnight for comparison
-        targetDate.setHours(0, 0, 0, 0);
+        // Set to UTC midnight to match how batch dates are stored
+        targetDate.setUTCHours(0, 0, 0, 0);
         query.date = targetDate;
       }
     }
@@ -180,10 +181,7 @@ router.get('/:id',
   param('id').isMongoId().withMessage('Invalid batch ID'),
   async (req, res, next) => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ success: false, errors: errors.array() });
-      }
+      if (handleValidationErrors(req, res)) return;
 
       const batchWithStats = await getBatchWithStats(req.params.id);
 
@@ -235,10 +233,7 @@ router.get('/:id/orders',
   param('id').isMongoId().withMessage('Invalid batch ID'),
   async (req, res, next) => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ success: false, errors: errors.array() });
-      }
+      if (handleValidationErrors(req, res)) return;
 
       const batch = await Batch.findById(req.params.id);
       if (!batch) {
@@ -303,10 +298,7 @@ router.post('/:id/confirm',
   param('id').isMongoId().withMessage('Invalid batch ID'),
   async (req, res, next) => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ success: false, errors: errors.array() });
-      }
+      if (handleValidationErrors(req, res)) return;
 
       const { generateBills = true } = req.body;
 
@@ -368,10 +360,7 @@ router.get('/:id/quantity-summary',
   param('id').isMongoId().withMessage('Invalid batch ID'),
   async (req, res, next) => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ success: false, errors: errors.array() });
-      }
+      if (handleValidationErrors(req, res)) return;
 
       const batch = await Batch.findById(req.params.id);
       if (!batch) {
@@ -455,8 +444,8 @@ router.get('/date/:date',
         });
       }
 
-      // Set to midnight
-      targetDate.setHours(0, 0, 0, 0);
+      // Set to UTC midnight to match how batch dates are stored
+      targetDate.setUTCHours(0, 0, 0, 0);
 
       const batches = await Batch.find({ date: targetDate })
         .sort({ batchType: 1 })
@@ -501,10 +490,7 @@ router.post('/:id/bills',
   param('id').isMongoId().withMessage('Invalid batch ID'),
   async (req, res, next) => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ success: false, errors: errors.array() });
-      }
+      if (handleValidationErrors(req, res)) return;
 
       const batch = await Batch.findById(req.params.id);
       if (!batch) {
@@ -573,10 +559,7 @@ router.get('/:id/bills/:orderId/download',
   param('orderId').isMongoId().withMessage('Invalid order ID'),
   async (req, res, next) => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ success: false, errors: errors.array() });
-      }
+      if (handleValidationErrors(req, res)) return;
 
       // Find the order
       const order = await Order.findOne({
@@ -620,19 +603,27 @@ router.get('/:id/bills/:orderId/download',
       let billNumber = order.deliveryBillNumber;
 
       if (!billNumber) {
-        // First time generating bill for this order - generate and save bill number
+        // First time generating bill for this order - generate and save bill number atomically
         billNumber = await deliveryBillService.generateBillNumber();
-      }
 
-      // Mark order as having delivery bill generated (if not already)
-      if (!order.deliveryBillGenerated || !order.deliveryBillNumber) {
-        await Order.findByIdAndUpdate(order._id, {
-          $set: {
-            deliveryBillGenerated: true,
-            deliveryBillGeneratedAt: new Date(),
-            deliveryBillNumber: billNumber
-          }
-        });
+        // Use conditional update to prevent race condition (only set if not already generated)
+        const updated = await Order.findOneAndUpdate(
+          { _id: order._id, deliveryBillGenerated: { $ne: true } },
+          {
+            $set: {
+              deliveryBillGenerated: true,
+              deliveryBillGeneratedAt: new Date(),
+              deliveryBillNumber: billNumber
+            }
+          },
+          { new: true }
+        );
+
+        // If no update (already generated by another request), use existing bill number
+        if (!updated) {
+          const existingOrder = await Order.findById(order._id).select('deliveryBillNumber');
+          billNumber = existingOrder.deliveryBillNumber;
+        }
       }
 
       const billData = {
@@ -672,6 +663,73 @@ router.get('/:id/bills/:orderId/download',
       });
 
       res.send(pdfBuffer);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/batches/fix-dates:
+ *   post:
+ *     summary: Fix batch date format inconsistency (one-time migration)
+ *     tags: [Batches]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Batch dates fixed
+ */
+// @route   POST /api/batches/fix-dates
+// @desc    Fix batch date format (UTC midnight → IST midnight in UTC)
+// @access  Private (Admin only)
+router.post('/fix-dates',
+  protect,
+  authorize('admin'),
+  async (req, res, next) => {
+    try {
+      const batches = await Batch.find({});
+      let fixedCount = 0;
+      let skippedCount = 0;
+      const changes = [];
+
+      for (const batch of batches) {
+        const currentDate = new Date(batch.date);
+        const hours = currentDate.getUTCHours();
+        const minutes = currentDate.getUTCMinutes();
+
+        // Check if date is at UTC midnight (needs fixing) vs IST midnight (18:30 UTC, correct)
+        if (hours === 0 && minutes === 0) {
+          // This is stored as UTC midnight, needs to be converted to IST midnight
+          // IST midnight = UTC - 5:30 = previous day 18:30
+          const correctedDate = new Date(currentDate.getTime() - (5.5 * 60 * 60 * 1000));
+
+          changes.push({
+            batchNumber: batch.batchNumber,
+            oldDate: currentDate.toISOString(),
+            newDate: correctedDate.toISOString()
+          });
+
+          batch.date = correctedDate;
+          await batch.save();
+          fixedCount++;
+        } else if (hours === 18 && minutes === 30) {
+          // Already in correct format (IST midnight = 18:30 UTC)
+          skippedCount++;
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Fixed ${fixedCount} batches, skipped ${skippedCount} (already correct)`,
+        data: {
+          fixed: fixedCount,
+          skipped: skippedCount,
+          total: batches.length,
+          changes
+        }
+      });
     } catch (error) {
       next(error);
     }

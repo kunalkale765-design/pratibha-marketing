@@ -29,6 +29,14 @@ describe('Reports Endpoints', () => {
 
   // Helper to create invoice
   const createInvoice = async (options = {}) => {
+    const items = options.items || [{
+      productName: 'Test Product',
+      quantity: 10,
+      unit: 'kg',
+      rate: 100,
+      amount: 1000
+    }];
+    const subtotal = items.reduce((sum, item) => sum + item.amount, 0);
     return Invoice.create({
       invoiceNumber: `INV${Date.now()}`,
       order: options.orderId || '507f1f77bcf86cd799439011',
@@ -39,18 +47,13 @@ describe('Reports Endpoints', () => {
         address: 'Test Address'
       },
       firm: {
-        id: 'pratibha-marketing',
+        id: 'pratibha',
         name: options.firmName || 'Pratibha Marketing',
         address: 'Test Address'
       },
-      items: options.items || [{
-        name: 'Test Product',
-        quantity: 10,
-        unit: 'kg',
-        rate: 100,
-        amount: 1000
-      }],
-      total: options.total || 1000,
+      items: items,
+      subtotal: options.subtotal || subtotal,
+      total: options.total || subtotal,
       generatedAt: options.generatedAt || new Date(),
       generatedBy: options.generatedBy || '507f1f77bcf86cd799439011',
       ...options

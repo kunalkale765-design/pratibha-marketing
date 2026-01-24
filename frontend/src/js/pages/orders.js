@@ -1,9 +1,14 @@
 import { showToast, createElement } from '/js/ui.js';
 
 // Wait for Auth to be available
-const waitForAuth = () => new Promise((resolve) => {
-    if (window.Auth) resolve(window.Auth);
-    else setTimeout(() => resolve(waitForAuth()), 10);
+const waitForAuth = (maxWait = 10000) => new Promise((resolve, reject) => {
+    const startTime = Date.now();
+    const check = () => {
+        if (window.Auth) return resolve(window.Auth);
+        if (Date.now() - startTime > maxWait) return reject(new Error('Auth not available'));
+        setTimeout(check, 50);
+    };
+    check();
 });
 const Auth = await waitForAuth();
 

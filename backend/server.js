@@ -73,8 +73,8 @@ const { notFound, errorHandler } = require('./middleware/errorHandler');
 const { csrfTokenSetter, csrfProtection, csrfTokenHandler } = require('./middleware/csrf');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
-const { startScheduler, stopScheduler } = require('./services/marketRateScheduler');
-const { startScheduler: startBatchScheduler, stopScheduler: stopBatchScheduler } = require('./services/batchScheduler');
+const { startScheduler, stopScheduler, getSchedulerHealth: getMarketRateSchedulerHealth } = require('./services/marketRateScheduler');
+const { startScheduler: startBatchScheduler, stopScheduler: stopBatchScheduler, getSchedulerHealth } = require('./services/batchScheduler');
 
 if (process.env.CI || process.env.DEBUG_STARTUP) {
   console.log('[DEBUG] All modules loaded successfully');
@@ -116,10 +116,14 @@ app.use(helmet({
 
 // HTTPS redirect in production (when behind reverse proxy like Nginx)
 if (process.env.NODE_ENV === 'production') {
+  // Trust proxy headers (required when behind Nginx/load balancer)
+  app.set('trust proxy', 1);
+
   app.use((req, res, next) => {
     // Trust X-Forwarded-Proto header from reverse proxy
     if (req.headers['x-forwarded-proto'] !== 'https') {
-      return res.redirect(301, `https://${req.headers.host}${req.url}`);
+      // Use req.hostname (sanitized by Express with trust proxy) instead of raw Host header
+      return res.redirect(301, `https://${req.hostname}${req.url}`);
     }
     next();
   });
@@ -188,7 +192,7 @@ const authLimiter = rateLimit({
 // Rate limiting for write operations (create/update/delete) on sensitive resources
 const writeOperationsLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 50, // Allow 50 write operations per 15 minutes
+  max: 200, // Allow 200 write operations per 15 minutes per IP
   message: 'Too many requests, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -266,12 +270,31 @@ app.get('/api/health', (req, res) => {
   };
   const isDbConnected = mongoState === 1;
 
+  const batchHealth = getSchedulerHealth();
+  const rateHealth = getMarketRateSchedulerHealth();
+  const schedulerOk = (!batchHealth.lastAutoConfirmError || !batchHealth.lastAutoConfirmError.retryFailed)
+    && (!rateHealth.lastResetError || !rateHealth.lastResetError.retryFailed);
+
   res.status(isDbConnected ? 200 : 503).json({
-    status: isDbConnected ? 'ok' : 'degraded',
+    status: isDbConnected && schedulerOk ? 'ok' : 'degraded',
     message: isDbConnected ? 'Server is running' : 'Database connection issue',
     timestamp: new Date().toISOString(),
     mongodb: mongoStates[mongoState] || 'unknown',
-    sentry: process.env.SENTRY_DSN ? 'configured' : 'not configured'
+    sentry: process.env.SENTRY_DSN ? 'configured' : 'not configured',
+    scheduler: {
+      batchAutoConfirm: {
+        lastError: batchHealth.lastAutoConfirmError || null,
+        lastSuccess: batchHealth.lastAutoConfirmSuccess || null
+      },
+      batchCreation: {
+        lastError: batchHealth.lastBatchCreationError || null,
+        lastSuccess: batchHealth.lastBatchCreationSuccess || null
+      },
+      marketRateReset: {
+        lastError: rateHealth.lastResetError || null,
+        lastSuccess: rateHealth.lastResetSuccess || null
+      }
+    }
   });
 });
 
@@ -315,13 +338,16 @@ app.use(errorHandler);
 // =============
 const PORT = process.env.PORT || 5000;
 
+// Store server reference for graceful shutdown
+let server = null;
+
 // Async startup function to properly await database connection
 const startServer = async () => {
   try {
     // Wait for database connection before starting server
     await connectDB();
 
-    app.listen(PORT, () => {
+    server = app.listen(PORT, () => {
       console.log(`
 ╔═══════════════════════════════════════════════╗
 ║   Server running in ${process.env.NODE_ENV} mode   ║
@@ -332,6 +358,12 @@ const startServer = async () => {
       // Start the schedulers after server is ready
       startScheduler();
       startBatchScheduler();
+
+      // Signal PM2 that the app is ready to accept connections
+      // Required because ecosystem.config.js has wait_ready: true
+      if (process.send) {
+        process.send('ready');
+      }
     });
   } catch (error) {
     console.error('Failed to start server:', error.message);
@@ -381,6 +413,24 @@ const gracefulShutdown = async (signal) => {
   console.log(`${signal} received. Shutting down gracefully...`);
   stopScheduler();
   stopBatchScheduler();
+
+  // Force exit after 4 seconds (PM2 kill_timeout is 5s)
+  const forceExitTimeout = setTimeout(() => {
+    console.error('Graceful shutdown timed out, forcing exit');
+    process.exit(1);
+  }, 4000);
+  forceExitTimeout.unref();
+
+  // Close HTTP server first (stop accepting new connections)
+  if (server) {
+    await new Promise((resolve) => {
+      server.close((err) => {
+        if (err) console.error('Error closing HTTP server:', err.message);
+        else console.log('HTTP server closed');
+        resolve();
+      });
+    });
+  }
 
   // Close MongoDB connection
   try {

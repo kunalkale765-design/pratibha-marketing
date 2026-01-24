@@ -21,7 +21,7 @@ const orderSchema = new mongoose.Schema({
     quantity: {
       type: Number,
       required: [true, 'Quantity is required'],
-      min: [0.01, 'Quantity must be greater than 0']
+      min: [0, 'Quantity cannot be negative']
     },
     unit: {
       type: String,
@@ -101,12 +101,6 @@ const orderSchema = new mongoose.Schema({
   batch: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Batch',
-    index: true
-  },
-  // Whether the order is locked from customer edits (batch confirmed)
-  batchLocked: {
-    type: Boolean,
-    default: false,
     index: true
   },
   // Audit log for price changes (who changed what and when)
@@ -189,9 +183,14 @@ orderSchema.virtual('displayStatus').get(function() {
 orderSchema.pre('save', async function(next) {
   if (!this.orderNumber) {
     try {
-      const date = new Date();
-      const year = date.getFullYear().toString().slice(-2);
-      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      // Use IST (UTC+5:30) for order number prefix to match business day
+      // On a UTC server, orders placed between IST midnight and 5:30 AM
+      // would otherwise get the previous month's prefix
+      const now = new Date();
+      const istOffset = 5.5 * 60 * 60 * 1000;
+      const istTime = new Date(now.getTime() + istOffset);
+      const year = istTime.getUTCFullYear().toString().slice(-2);
+      const month = (istTime.getUTCMonth() + 1).toString().padStart(2, '0');
       const prefix = `ORD${year}${month}`;
 
       // Use atomic counter for guaranteed unique sequence numbers
@@ -220,9 +219,6 @@ orderSchema.index({ customer: 1, createdAt: -1 });
 
 // Compound index for batch queries: orders in a batch by status
 orderSchema.index({ batch: 1, status: 1 });
-
-// Index for finding editable orders
-orderSchema.index({ batchLocked: 1, status: 1 });
 
 // Index for packing and reconciliation queries
 orderSchema.index({ packingDone: 1, status: 1 });

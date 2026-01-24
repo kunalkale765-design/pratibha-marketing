@@ -28,10 +28,13 @@ describe('Delivery Bill Service', () => {
     // Create test batch
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const cutoffTime = new Date(today);
+    cutoffTime.setHours(8, 0, 0, 0);
     testBatch = await Batch.create({
       batchNumber: `B${Date.now()}`,
       batchType: '1st',
       date: today,
+      cutoffTime: cutoffTime,
       status: 'confirmed'
     });
   });
@@ -150,8 +153,12 @@ describe('Delivery Bill Service', () => {
       expect(updatedOrder.totalAmount).toBe(900);
     });
 
-    it('should handle order without customer gracefully', async () => {
+    it('should throw when customer not found (prevents bills with wrong prices)', async () => {
+      // Create order with a customer that will be "deleted" (non-existent ObjectId)
+      const mongoose = require('mongoose');
+      const deletedCustomerId = new mongoose.Types.ObjectId();
       const order = await Order.create({
+        customer: deletedCustomerId,
         products: [{
           product: testProduct._id,
           productName: testProduct.name,
@@ -165,10 +172,9 @@ describe('Delivery Bill Service', () => {
         paymentStatus: 'unpaid'
       });
 
-      const updatedOrder = await deliveryBillService.updateOrderPrices(order);
-
-      // Should return order unchanged
-      expect(updatedOrder.totalAmount).toBe(1000);
+      // Should throw to prevent generating bills with potentially incorrect prices
+      await expect(deliveryBillService.updateOrderPrices(order))
+        .rejects.toThrow('customer not found');
     });
   });
 
@@ -454,16 +460,16 @@ describe('Delivery Bill Service', () => {
   });
 
   describe('getSafeBillPath', () => {
-    it('should prevent path traversal attacks', () => {
+    it('should reject path traversal attacks', () => {
       expect(() => {
         deliveryBillService.getSafeBillPath('../../../etc/passwd');
-      }).toThrow();
+      }).toThrow('Invalid bill filename format');
     });
 
-    it('should prevent absolute path injection', () => {
+    it('should reject absolute path injection', () => {
       expect(() => {
         deliveryBillService.getSafeBillPath('/etc/passwd');
-      }).not.toThrow(); // path.basename will extract just the filename
+      }).toThrow('Invalid bill filename format');
     });
 
     it('should accept valid bill filenames', () => {
