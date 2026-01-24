@@ -227,7 +227,7 @@ router.post('/logout', async (req, res) => {
         await RevokedToken.revokeToken(decoded.jti, decoded.id, expiresAt, 'logout');
       }
     }
-  } catch (err) {
+  } catch (_err) {
     // Token may be expired/invalid, that's fine - still clear cookie
   }
 

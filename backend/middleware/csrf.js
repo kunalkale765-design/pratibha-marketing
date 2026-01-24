@@ -67,13 +67,13 @@ const validateOrigin = (req) => {
       try {
         const url = new URL(origin);
         if (devHosts.includes(url.hostname)) return true;
-      } catch (e) { /* invalid origin */ }
+      } catch (_e) { /* invalid origin */ }
     }
     if (referer) {
       try {
         const url = new URL(referer);
         if (devHosts.includes(url.hostname)) return true;
-      } catch (e) { /* invalid referer */ }
+      } catch (_e) { /* invalid referer */ }
     }
     // No origin/referer in dev is ok (Postman, curl)
     if (!origin && !referer) return true;
@@ -90,7 +90,7 @@ const validateOrigin = (req) => {
     try {
       const refOrigin = new URL(referer).origin;
       if (allowedOrigins.some(allowed => refOrigin === allowed)) return true;
-    } catch (e) { /* invalid referer */ }
+    } catch (_e) { /* invalid referer */ }
   }
 
   // Allow requests with no origin/referer (non-browser clients)

@@ -49,7 +49,7 @@ revokedTokenSchema.statics.revokeToken = async function(jti, userId, expiresAt, 
 // Static method to revoke all tokens for a user (via tokenVersion bump)
 // This is used when password changes - we don't need to find individual tokens
 // because protect() middleware checks tokenVersion
-revokedTokenSchema.statics.revokeAllForUser = async function(userId, reason = 'password_change') {
+revokedTokenSchema.statics.revokeAllForUser = async function(_userId, _reason = 'password_change') {
   // No-op: tokenVersion check in protect() handles this without needing to track individual tokens
 };
 
