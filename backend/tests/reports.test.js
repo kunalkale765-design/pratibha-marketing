@@ -1,7 +1,6 @@
 const request = require('supertest');
 const app = require('../server');
 const Invoice = require('../models/Invoice');
-const Customer = require('../models/Customer');
 const { testUtils } = require('./setup');
 
 describe('Reports Endpoints', () => {

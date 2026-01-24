@@ -3,23 +3,20 @@ const app = require('../server');
 const { testUtils } = require('./setup');
 
 describe('Supplier Endpoints', () => {
-  let adminUser, adminToken;
-  let staffUser, staffToken;
-  let customerUser, customerToken, customer;
+  let adminToken;
+  let staffToken;
+  let customerToken, customer;
   let product1, product2;
 
   beforeEach(async () => {
     // Create users
     const admin = await testUtils.createAdminUser();
-    adminUser = admin.user;
     adminToken = admin.token;
 
     const staff = await testUtils.createStaffUser();
-    staffUser = staff.user;
     staffToken = staff.token;
 
     const customerData = await testUtils.createCustomerUser();
-    customerUser = customerData.user;
     customerToken = customerData.token;
     customer = customerData.customer;
 
@@ -242,10 +239,10 @@ describe('Supplier Endpoints', () => {
     });
 
     it('should sort by createdAt descending', async () => {
-      const order1 = await testUtils.createTestOrder(customer, product1, { status: 'pending' });
+      await testUtils.createTestOrder(customer, product1, { status: 'pending' });
       // Small delay to ensure different timestamps
       await new Promise(resolve => setTimeout(resolve, 10));
-      const order2 = await testUtils.createTestOrder(customer, product2, { status: 'pending' });
+      await testUtils.createTestOrder(customer, product2, { status: 'pending' });
 
       const res = await request(app)
         .get('/api/supplier/pending-orders')

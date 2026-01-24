@@ -126,7 +126,7 @@ describe('Integration Tests', () => {
       const customerId = registerRes.body.user.customer;
 
       // Step 2: Create a product (as admin)
-      const admin = await testUtils.createAdminUser();
+      await testUtils.createAdminUser();
       const product = await testUtils.createTestProduct();
       await testUtils.createMarketRate(product, 100);
 

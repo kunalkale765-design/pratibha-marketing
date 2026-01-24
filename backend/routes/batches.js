@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const path = require('path');
-const { param, validationResult } = require('express-validator');
+const { param } = require('express-validator');
 const Batch = require('../models/Batch');
 const Order = require('../models/Order');
 const { protect, authorize } = require('../middleware/auth');

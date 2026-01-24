@@ -26,7 +26,6 @@ try {
 initPage();
 
 // State
-let products = [];
 let rates = [];
 let procurementData = { toProcure: [], procured: [], categories: [] };
 let searchQuery = '';
@@ -265,11 +264,9 @@ async function loadDashboardStats() {
         }
 
         const orders = await ordersRes.json();
-        const productsData = await productsRes.json();
         const ratesData = await ratesRes.json();
         const procurementResponse = await procurementRes.json();
 
-        products = productsData.data || [];
         rates = ratesData.data || [];
         procurementData = {
             toProcure: procurementResponse.toProcure || [],

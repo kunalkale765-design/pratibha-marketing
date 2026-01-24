@@ -129,7 +129,7 @@ async function test() {
     try {
       invoiceService.splitOrderByFirm(null);
       console.log('❌ Should have thrown error for null order');
-    } catch (e) {
+    } catch (_e) {
       console.log('✅ Correctly handles null order');
     }
 

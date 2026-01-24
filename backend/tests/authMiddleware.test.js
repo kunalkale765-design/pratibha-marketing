@@ -3,7 +3,6 @@ const jwt = require('jsonwebtoken');
 const app = require('../server');
 const { testUtils, JWT_SECRET } = require('./setup');
 const Customer = require('../models/Customer');
-const User = require('../models/User');
 
 describe('Auth Middleware Extended Tests', () => {
   describe('Magic Link Authentication', () => {
@@ -159,7 +158,7 @@ describe('Auth Middleware Extended Tests', () => {
     });
 
     it('should reject token for deactivated user', async () => {
-      const { user, token } = await testUtils.createTestUser({
+      const { token } = await testUtils.createTestUser({
         isActive: false
       });
 
@@ -240,7 +239,7 @@ describe('Auth Middleware Extended Tests', () => {
     });
 
     it('should attach user when valid token provided to optional auth route', async () => {
-      const { token, user } = await testUtils.createAdminUser();
+      const { token } = await testUtils.createAdminUser();
 
       // Health endpoint uses optional auth (or no auth)
       const res = await request(app)

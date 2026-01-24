@@ -32,8 +32,6 @@ async function test() {
 
     const Order = mongoose.model('Order');
     const Invoice = mongoose.model('Invoice');
-    const Customer = mongoose.model('Customer');
-    const Product = mongoose.model('Product');
     const fs = require('fs').promises;
     const path = require('path');
 

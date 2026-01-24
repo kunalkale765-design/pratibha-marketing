@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
-const { param, body, query, validationResult } = require('express-validator');
+const { param, body } = require('express-validator');
 const LedgerEntry = require('../models/LedgerEntry');
 const Customer = require('../models/Customer');
 const { protect, authorize } = require('../middleware/auth');

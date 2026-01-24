@@ -71,7 +71,7 @@ describe('Security Tests', () => {
     });
 
     describe('Order Access Control', () => {
-      let otherCustomer, otherCustomerToken;
+      let otherCustomer;
 
       beforeEach(async () => {
         const otherData = await testUtils.createCustomerUser({
@@ -79,7 +79,6 @@ describe('Security Tests', () => {
           phone: '9999999999'
         });
         otherCustomer = otherData.customer;
-        otherCustomerToken = otherData.token;
       });
 
       it('should prevent customer from viewing other customer orders', async () => {

@@ -1,5 +1,5 @@
 const invoiceService = require('../services/invoiceService');
-const { testUtils } = require('./setup');
+require('./setup');
 
 describe('Invoice Service', () => {
   describe('splitOrderByFirm', () => {

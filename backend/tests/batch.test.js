@@ -5,7 +5,6 @@ const {
   getISTTime,
   calculateBatchAssignment,
   assignOrderToBatch,
-  autoConfirmFirstBatch,
   manuallyConfirmBatch,
   getBatchWithStats,
   BATCH_CONFIG
@@ -13,24 +12,18 @@ const {
 const { testUtils } = require('./setup');
 
 describe('Batch System', () => {
-  let adminToken, adminUser;
-  let staffToken, staffUser;
-  let customerToken, customerUser, testCustomer;
+  let adminUser;
+  let testCustomer;
   let testProduct;
 
   beforeAll(async () => {
     // Create users
     const admin = await testUtils.createAdminUser();
-    adminToken = admin.token;
     adminUser = admin.user;
 
-    const staff = await testUtils.createStaffUser();
-    staffToken = staff.token;
-    staffUser = staff.user;
+    await testUtils.createStaffUser();
 
     const customer = await testUtils.createCustomerUser();
-    customerToken = customer.token;
-    customerUser = customer.user;
     testCustomer = customer.customer;
 
     // Create test product

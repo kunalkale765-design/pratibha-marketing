@@ -4,7 +4,7 @@ const router = express.Router();
 // untrusted Excel files. This code only WRITES Excel files from trusted database data,
 // which is a lower-risk operation. Do NOT use xlsx to parse user-uploaded files.
 const XLSX = require('xlsx');
-const { query, validationResult } = require('express-validator');
+const { query } = require('express-validator');
 const Invoice = require('../models/Invoice');
 const Customer = require('../models/Customer');
 const { protect, authorize } = require('../middleware/auth');

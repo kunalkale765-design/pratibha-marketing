@@ -1,5 +1,4 @@
 const { testUtils } = require('./setup');
-const Product = require('../models/Product');
 const MarketRate = require('../models/MarketRate');
 
 // Import the scheduler functions directly for unit testing
@@ -106,7 +105,7 @@ describe('Market Rate Scheduler', () => {
     });
 
     it('should return duration in result', async () => {
-      const product = await testUtils.createTestProduct({ name: 'Test', isActive: true, category: RESET_CATEGORY });
+      await testUtils.createTestProduct({ name: 'Test', isActive: true, category: RESET_CATEGORY });
 
       const result = await resetAllMarketRates();
 

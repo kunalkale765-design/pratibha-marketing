@@ -10,7 +10,6 @@ const app = require('../server');
 describe('Customer Isolation', () => {
   let adminToken;
   let customerAToken;
-  let customerBToken;
   let customerA;
   let customerB;
   let product;
@@ -25,7 +24,6 @@ describe('Customer Isolation', () => {
     customerA = customerUserA.customer;
 
     const customerUserB = await testUtils.createCustomerUser({ name: 'Customer B' });
-    customerBToken = customerUserB.token;
     customerB = customerUserB.customer;
 
     product = await testUtils.createTestProduct();
@@ -394,7 +392,7 @@ describe('Customer Isolation', () => {
   describe('Customer Account Link Validation', () => {
     it('should reject customer user with no linked customer account', async () => {
       // Create a customer user without proper customer link
-      const { user, token } = await testUtils.createTestUser({
+      const { token } = await testUtils.createTestUser({
         name: 'Orphan Customer',
         role: 'customer',
         customer: null // No customer link

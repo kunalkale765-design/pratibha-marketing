@@ -1,10 +1,6 @@
 const deliveryBillService = require('../services/deliveryBillService');
 const Order = require('../models/Order');
-const Customer = require('../models/Customer');
-const Product = require('../models/Product');
 const Batch = require('../models/Batch');
-const MarketRate = require('../models/MarketRate');
-const Counter = require('../models/Counter');
 const { testUtils } = require('./setup');
 
 describe('Delivery Bill Service', () => {

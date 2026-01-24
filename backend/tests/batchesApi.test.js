@@ -2,7 +2,6 @@ const request = require('supertest');
 const app = require('../server');
 const Batch = require('../models/Batch');
 const Order = require('../models/Order');
-const Customer = require('../models/Customer');
 const { testUtils } = require('./setup');
 
 describe('Batches API Endpoints', () => {
@@ -170,7 +169,7 @@ describe('Batches API Endpoints', () => {
 
       // Create today's batches
       const batch1 = await createBatch({ batchType: '1st', date: today, status: 'confirmed' });
-      const batch2 = await createBatch({ batchType: '2nd', date: today, status: 'open' });
+      await createBatch({ batchType: '2nd', date: today, status: 'open' });
 
       // Add orders to batch1
       await createOrderInBatch(batch1, { status: 'pending' });

@@ -2,7 +2,6 @@ const request = require('supertest');
 const app = require('../server');
 const Customer = require('../models/Customer');
 const LedgerEntry = require('../models/LedgerEntry');
-const Order = require('../models/Order');
 const { testUtils } = require('./setup');
 
 describe('Ledger Endpoints', () => {
@@ -12,7 +11,6 @@ describe('Ledger Endpoints', () => {
   let testCustomer;
   let testCustomer2;
   let adminUser;
-  let staffUser;
 
   beforeEach(async () => {
     // Create test users
@@ -22,7 +20,6 @@ describe('Ledger Endpoints', () => {
 
     const staff = await testUtils.createStaffUser();
     staffToken = staff.token;
-    staffUser = staff.user;
 
     const customerUser = await testUtils.createCustomerUser({ name: 'Test Customer' });
     customerToken = customerUser.token;
@@ -57,7 +54,7 @@ describe('Ledger Endpoints', () => {
       await Customer.findByIdAndUpdate(testCustomer2._id, { balance: 0 });
 
       // Create customer with negative balance (credit)
-      const creditCustomer = await testUtils.createTestCustomer({ name: 'Credit Customer', balance: -200 });
+      await testUtils.createTestCustomer({ name: 'Credit Customer', balance: -200 });
     });
 
     it('should return all customer balances for admin', async () => {

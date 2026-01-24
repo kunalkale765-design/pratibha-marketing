@@ -23,8 +23,6 @@ let currentUser = null;
 let priceChanges = {};
 let quantityChanges = {};
 let isSaving = false; // Prevent concurrent saves
-let marketRatesLoadFailed = false; // Track if market rates failed to load
-let productsLoadFailed = false; // Track if products failed to load
 
 // Track if global listeners have been initialized (prevents memory leak)
 let globalListenersInitialized = false;
@@ -32,7 +30,6 @@ let globalListenersInitialized = false;
 // Packing panel state
 let packingOrder = null;
 let packingItems = [];
-let isPackingPanelOpen = false;
 
 async function init() {
     currentUser = await Auth.requireAuth();
@@ -217,10 +214,8 @@ async function loadMarketRates() {
             const pid = typeof r.product === 'object' ? r.product._id : r.product;
             marketRates[pid] = r.rate;
         });
-        marketRatesLoadFailed = false;
     } catch (e) {
         console.error('Failed to load market rates:', e);
-        marketRatesLoadFailed = true;
         // Show a subtle warning that can be dismissed
         showDataLoadWarning('market-rates', 'Market rates may be outdated');
     }
@@ -232,10 +227,8 @@ async function loadProducts() {
         if (!res.ok) throw new Error(`Server returned ${res.status}`);
         const data = await res.json();
         allProducts = (data.data || []).filter(p => p.isActive !== false);
-        productsLoadFailed = false;
     } catch (e) {
         console.error('Failed to load products:', e);
-        productsLoadFailed = true;
         // Show warning - this affects "Add Product" functionality
         showDataLoadWarning('products', 'Product list unavailable');
     }
@@ -1877,7 +1870,6 @@ async function openPackingPanel(orderId) {
     panel.classList.add('active');
     overlay.classList.add('active');
     document.body.style.overflow = 'hidden';
-    isPackingPanelOpen = true;
 
     document.getElementById('packingPanelBody').innerHTML = '<div class="packing-loading">Loading order...</div>';
     document.getElementById('packingCompleteBtn').disabled = true;
@@ -2174,7 +2166,6 @@ function closePackingPanel() {
     panel.classList.remove('active');
     overlay.classList.remove('active');
     document.body.style.overflow = '';
-    isPackingPanelOpen = false;
 
     packingOrder = null;
     packingItems = [];

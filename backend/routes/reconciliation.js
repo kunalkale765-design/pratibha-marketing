@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
-const { param, body, validationResult } = require('express-validator');
+const { param, body } = require('express-validator');
 const Order = require('../models/Order');
 const Customer = require('../models/Customer');
 const LedgerEntry = require('../models/LedgerEntry');

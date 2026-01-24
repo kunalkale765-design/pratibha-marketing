@@ -46,7 +46,7 @@ async function httpRequest(method, path, body = null, cookie = null) {
           } else {
             resolve({ status: res.statusCode, headers: res.headers, data, binary: true });
           }
-        } catch (e) {
+        } catch (_e) {
           resolve({ status: res.statusCode, headers: res.headers, data, binary: true });
         }
       });
@@ -74,7 +74,6 @@ async function test() {
 
     const User = mongoose.model('User');
     const Order = mongoose.model('Order');
-    const Invoice = mongoose.model('Invoice');
 
     // ========================================
     console.log('='.repeat(50));
