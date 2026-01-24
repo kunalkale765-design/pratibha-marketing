@@ -273,6 +273,9 @@ async function saveProduct(_isRetry = false) {
                 await Auth.refreshCsrfToken();
                 return saveProduct(true);
             }
+            // Non-CSRF 403: show error from already-parsed response
+            showToast(err.message || 'Could not save', 'info');
+            return;
         }
 
         if (res.ok) {
@@ -322,6 +325,8 @@ async function deleteProduct(id, _isRetry = false) {
                 await Auth.refreshCsrfToken();
                 return deleteProduct(id, true);
             }
+            showToast(err.message || 'Could not delete', 'info');
+            return;
         }
 
         if (res.ok) {

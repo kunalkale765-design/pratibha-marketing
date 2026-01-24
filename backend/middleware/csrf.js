@@ -60,6 +60,22 @@ const validateOrigin = (req) => {
   const origin = req.headers.origin;
   const referer = req.headers.referer;
 
+  // Allow requests with no origin/referer (non-browser clients like Postman, curl)
+  if (!origin && !referer) return true;
+
+  // Same-origin check: if Origin matches the Host header, always allow.
+  // Same-origin requests are by definition not CSRF attacks.
+  if (origin) {
+    try {
+      const originUrl = new URL(origin);
+      const host = req.headers.host || '';
+      // Compare origin's host (hostname:port) with the request Host header
+      if (originUrl.host === host) return true;
+      // Also match hostname-only (when port is default 443/80 and omitted from Host)
+      if (originUrl.hostname === host) return true;
+    } catch (_e) { /* invalid origin */ }
+  }
+
   // In development, allow localhost origins
   if (process.env.NODE_ENV === 'development') {
     const devHosts = ['localhost', '127.0.0.1'];
@@ -75,8 +91,6 @@ const validateOrigin = (req) => {
         if (devHosts.includes(url.hostname)) return true;
       } catch (_e) { /* invalid referer */ }
     }
-    // No origin/referer in dev is ok (Postman, curl)
-    if (!origin && !referer) return true;
     return false;
   }
 
@@ -92,9 +106,6 @@ const validateOrigin = (req) => {
       if (allowedOrigins.some(allowed => refOrigin === allowed)) return true;
     } catch (_e) { /* invalid referer */ }
   }
-
-  // Allow requests with no origin/referer (non-browser clients)
-  if (!origin && !referer) return true;
 
   return false;
 };

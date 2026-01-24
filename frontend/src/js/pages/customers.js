@@ -360,6 +360,8 @@ async function deleteCustomer(id, _isRetry = false) {
                 await Auth.refreshCsrfToken();
                 return deleteCustomer(id, true);
             }
+            showToast(err.message || 'Could not delete', 'info');
+            return;
         }
 
         if (res.ok) {
@@ -638,6 +640,9 @@ async function saveContractPrices() {
                         body: JSON.stringify(payload)
                     });
                 }
+            } else {
+                showToast(err.message || 'Could not save', 'info');
+                return;
             }
         }
 
