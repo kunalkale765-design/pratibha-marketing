@@ -9,6 +9,7 @@
  */
 
 import { setupModalCloseOnEscape } from './ui.js';
+import { getCsrfToken, ensureCsrfToken } from './csrf.js';
 
 /* ===================
    GLOBAL ERROR HANDLERS
@@ -50,14 +51,6 @@ export function registerServiceWorker() {
 /* ===================
    LOGOUT
    =================== */
-
-/**
- * Get CSRF token from cookie
- */
-function getCsrfToken() {
-  const match = document.cookie.match(/csrf_token=([^;]+)/);
-  return match ? match[1] : null;
-}
 
 /**
  * Logout the user
@@ -116,10 +109,11 @@ export function setupLogoutButton() {
  * @param {boolean} options.serviceWorker - Register service worker (default: true)
  * @param {boolean} options.logout - Setup logout button (default: true)
  * @param {boolean} options.modalEscape - Close modals on Escape (default: true)
+ * @param {boolean} options.csrfPreFetch - Pre-fetch CSRF token (default: true)
  *
  * @example
  * // In your page script:
- * import { initPage } from './js/init.js';
+ * import { initPage } from '/js/init.js';
  * initPage();
  */
 export function initPage(options = {}) {
@@ -131,8 +125,8 @@ export function initPage(options = {}) {
   } = options;
 
   // Pre-fetch CSRF token to ensure it's ready before form submissions
-  if (csrfPreFetch && typeof Auth !== 'undefined' && Auth.ensureCsrfToken) {
-    Auth.ensureCsrfToken().catch(err => console.warn('CSRF pre-fetch failed:', err));
+  if (csrfPreFetch) {
+    ensureCsrfToken().catch(err => console.warn('CSRF pre-fetch failed:', err));
   }
 
   // Register service worker
@@ -149,55 +143,6 @@ export function initPage(options = {}) {
   if (modalEscape) {
     setupModalCloseOnEscape();
   }
-}
-
-/* ===================
-   AUTH HELPERS
-   =================== */
-
-/**
- * Get the current user from localStorage
- */
-export function getUser() {
-  try {
-    const user = localStorage.getItem('user');
-    return user ? JSON.parse(user) : null;
-  } catch (e) {
-    console.warn('Corrupted user data in localStorage, clearing:', e.message);
-    localStorage.removeItem('user');
-    return null;
-  }
-}
-
-/**
- * Check if user is logged in
- */
-export function isLoggedIn() {
-  return !!getUser();
-}
-
-/**
- * Check if user has a specific role
- */
-export function hasRole(role) {
-  const user = getUser();
-  return user && user.role === role;
-}
-
-/**
- * Check if user is admin or staff
- */
-export function isStaff() {
-  const user = getUser();
-  return user && (user.role === 'admin' || user.role === 'staff');
-}
-
-/**
- * Check if user is customer
- */
-export function isCustomer() {
-  const user = getUser();
-  return user && user.role === 'customer';
 }
 
 /* ===================

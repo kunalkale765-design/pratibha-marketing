@@ -3,6 +3,7 @@
 
 const CACHE_NAME = 'pratibha-v37';
 const API_CACHE_NAME = 'pratibha-api-v1';
+const MAX_API_CACHE_ENTRIES = 50;
 
 // Static assets to cache immediately
 const STATIC_ASSETS = [
@@ -15,6 +16,8 @@ const STATIC_ASSETS = [
   '/pages/order-form/',
   '/pages/customers/',
   '/pages/market-rates/',
+  '/pages/packing/',
+  '/pages/reconciliation/',
   '/manifest.json',
   '/js/api.js',
   '/js/auth.js',
@@ -40,8 +43,6 @@ const STATIC_ASSETS = [
   '/css/animations/segments.css',
   '/css/animations/page.css',
   '/css/animations/swipe.css',
-  '/css/animations/toasts.css',
-  '/css/animations/modals.css',
   // Page-specific CSS
   '/css/pages/login.css',
   '/css/pages/signup.css',
@@ -50,13 +51,23 @@ const STATIC_ASSETS = [
   '/css/pages/products.css',
   '/css/pages/market-rates.css',
   '/css/pages/customer-management.css',
-  '/css/pages/customer-order-form.css'
+  '/css/pages/customer-order-form.css',
+  '/css/pages/packing.css',
+  '/css/pages/reconciliation.css'
 ];
 
-// API endpoints to cache (read-only data)
+// API endpoints safe to cache (read-only data, network-first with fallback)
 const CACHEABLE_API_ROUTES = [
   '/api/products',
   '/api/market-rates'
+];
+
+// API endpoints that must NEVER be cached (security/mutation-critical)
+const NEVER_CACHE_ROUTES = [
+  '/api/auth/',
+  '/api/csrf-token',
+  '/api/ledger/payment',
+  '/api/reconciliation/'
 ];
 
 // Install event - cache static assets
@@ -106,8 +117,17 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Never cache PDF/storage files
+  if (url.pathname.startsWith('/storage/')) {
+    return;
+  }
+
   // Handle API requests
   if (url.pathname.startsWith('/api/')) {
+    // Never cache security-critical or mutation-related API routes
+    if (NEVER_CACHE_ROUTES.some(route => url.pathname.startsWith(route))) {
+      return;
+    }
     event.respondWith(handleApiRequest(request));
     return;
   }
@@ -224,6 +244,8 @@ async function handleApiRequest(request) {
     if (networkResponse.ok) {
       const cache = await caches.open(API_CACHE_NAME);
       cache.put(request, networkResponse.clone());
+      // Trim cache to prevent unbounded growth
+      trimCache(API_CACHE_NAME, MAX_API_CACHE_ENTRIES);
     }
 
     return networkResponse;
@@ -274,6 +296,19 @@ async function updateCacheInBackground(request) {
     }).catch(() => {
       // Ignore errors when notifying clients
     });
+  }
+}
+
+// Evict oldest entries when cache exceeds max size (LRU approximation)
+async function trimCache(cacheName, maxItems) {
+  const cache = await caches.open(cacheName);
+  const keys = await cache.keys();
+  if (keys.length > maxItems) {
+    // Delete oldest entries (first in list)
+    const toDelete = keys.length - maxItems;
+    for (let i = 0; i < toDelete; i++) {
+      await cache.delete(keys[i]);
+    }
   }
 }
 

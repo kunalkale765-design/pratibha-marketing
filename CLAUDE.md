@@ -81,26 +81,47 @@ backend/
 
 **Auth Flow**: JWT stored in httpOnly cookie (30 days), verified via `protect` middleware. Roles restrict access via `authorize('admin', 'staff')`.
 
-### Frontend (Vanilla JS + Inline CSS)
+### Frontend (Vanilla JS + Vite + ES6 Modules)
+
+> **Full rules:** See [`frontend/FRONTEND_RULES.md`](frontend/FRONTEND_RULES.md) for naming conventions, JS organization, CSS discipline, and service worker caching rules.
 
 ```
-frontend/
+frontend/src/
+├── index.html                     # Dashboard (staff/admin landing)
+├── pages/
+│   ├── auth/                      # login.html, signup.html, reset-password.html
+│   ├── orders/index.html          # Staff order management
+│   ├── order-form/index.html      # Customer order form
+│   ├── customers/index.html       # Customer management
+│   ├── products/index.html        # Product inventory
+│   ├── market-rates/index.html    # Daily pricing
+│   ├── packing/index.html         # Packing station
+│   └── reconciliation/index.html  # Delivery reconciliation
 ├── js/
-│   ├── api.js             # Centralized fetch wrapper with error handling
-│   └── auth.js            # Auth state management, token verification
-├── index.html             # Admin dashboard with stats
-├── login.html             # User login
-├── signup.html            # Customer registration
-├── customer-order-form.html   # Customer-facing order form
-├── customer-management.html   # Staff: manage customers
-├── orders.html                # Staff: view/manage orders
-├── products.html              # Staff: product inventory
-├── market-rates.html          # Staff: daily pricing updates
-├── service-worker.js          # PWA offline support
-└── manifest.json              # PWA manifest
+│   ├── api.js                     # Fetch wrapper (shared)
+│   ├── auth.js                    # Auth state (shared)
+│   ├── csrf.js                    # CSRF tokens (shared)
+│   ├── ui.js                      # DOM helpers (shared)
+│   ├── utils.js                   # Formatters/helpers (shared)
+│   ├── init.js                    # Page bootstrap (shared)
+│   └── pages/                     # 1:1 page scripts (dashboard.js, orders.js, etc.)
+├── assets/
+│   ├── css/                       # variables → base → components → utilities → responsive
+│   │   ├── animations/            # Import only what the page uses
+│   │   └── pages/                 # Page-specific overrides
+│   ├── icons/
+│   └── sounds/
+├── service-worker.js              # PWA caching (v37)
+└── manifest.json
 ```
 
-**Auth Redirects**: Staff/Admin → index.html (dashboard), Customers → customer-order-form.html
+**Auth Redirects**: Staff/Admin → `/` (dashboard), Customers → `/pages/order-form/`
+
+**Key JS Rules:**
+- One page script per HTML page (in `js/pages/`)
+- No globals except `window.Auth` (legacy, being removed)
+- Shared modules max: 8. Page helpers go in `js/helpers/`
+- Max 400 lines per page script
 
 ## Database Models
 

@@ -1,1 +1,0 @@
-import{b as o,s as n}from"./ui-D1Am529b.js";window.addEventListener("online",()=>{console.log("Connection restored"),o("Connection restored")});window.addEventListener("offline",()=>{console.log("Connection lost"),n("No internet connection","info")});
