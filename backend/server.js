@@ -108,7 +108,7 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", 'https://cdnjs.cloudflare.com'],
+      scriptSrc: ["'self'", 'https://cdnjs.cloudflare.com', 'https://cdn.jsdelivr.net'],
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
       imgSrc: ["'self'", 'data:'],
@@ -147,16 +147,6 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',')
   : ['http://localhost:5000'];
 
-// Additional localhost origins for development (restrict to localhost only, not any origin)
-const devOrigins = [
-  'http://localhost:5000',
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'http://127.0.0.1:5000',
-  'http://127.0.0.1:5173',
-  'http://127.0.0.1:3000'
-];
-
 app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (mobile apps, Postman, etc.)
@@ -167,9 +157,14 @@ app.use(cors({
       return callback(null, true);
     }
 
-    // In development, only allow localhost origins (not any origin)
-    if (process.env.NODE_ENV === 'development' && devOrigins.indexOf(origin) !== -1) {
-      return callback(null, true);
+    // In development, allow any localhost/127.0.0.1 origin (any port)
+    if (process.env.NODE_ENV === 'development') {
+      try {
+        const url = new URL(origin);
+        if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+          return callback(null, true);
+        }
+      } catch (_e) { /* invalid origin */ }
     }
 
     callback(new Error('Not allowed by CORS'));
