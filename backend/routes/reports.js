@@ -5,43 +5,16 @@ const router = express.Router();
 // which is a lower-risk operation. Do NOT use xlsx to parse user-uploaded files.
 const XLSX = require('xlsx');
 const { query } = require('express-validator');
-const Invoice = require('../models/Invoice');
+const LedgerEntry = require('../models/LedgerEntry');
 const Customer = require('../models/Customer');
 const { protect, authorize } = require('../middleware/auth');
 const { handleValidationErrors, buildDateRangeFilter } = require('../utils/helpers');
 
-/**
- * @swagger
- * /api/reports/ledger:
- *   get:
- *     summary: Download customer ledger as Excel
- *     tags: [Reports]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: customerId
- *         schema:
- *           type: string
- *       - in: query
- *         name: fromDate
- *         schema:
- *           type: string
- *           format: date
- *       - in: query
- *         name: toDate
- *         schema:
- *           type: string
- *           format: date
- *     responses:
- *       200:
- *         description: Excel file
- */
-// Maximum invoices to export (prevent memory exhaustion)
+// Maximum entries to export (prevent memory exhaustion)
 const MAX_EXPORT_LIMIT = 10000;
 
 // @route   GET /api/reports/ledger
-// @desc    Download customer ledger as Excel (Date, Invoice No, Customer, Firm, Amount)
+// @desc    Download customer ledger as Excel (from LedgerEntry - invoices, payments, adjustments)
 // @access  Private (Staff, Admin)
 router.get('/ledger',
   protect,
@@ -56,70 +29,77 @@ router.get('/ledger',
       const { customerId, fromDate, toDate } = req.query;
       let customerForFilename = null;
 
-      // Build query
-      const invoiceQuery = {};
+      // Build query for LedgerEntry
+      const ledgerQuery = {};
 
       if (customerId) {
-        // Get customer name to filter invoices
         const customer = await Customer.findById(customerId);
         if (!customer) {
           res.status(404);
           throw new Error('Customer not found');
         }
         customerForFilename = customer;
-        invoiceQuery['customer.name'] = customer.name;
+        ledgerQuery.customer = customer._id;
       }
 
-      // Build date range filter using shared helper
+      // Build date range filter
       const { filter: dateFilter, error: dateError } = buildDateRangeFilter(fromDate, toDate);
       if (dateError) {
         return res.status(400).json({ success: false, message: dateError });
       }
       if (dateFilter) {
-        invoiceQuery.generatedAt = dateFilter;
+        ledgerQuery.date = dateFilter;
       }
 
       // Check count first to prevent memory exhaustion
-      const count = await Invoice.countDocuments(invoiceQuery);
+      const count = await LedgerEntry.countDocuments(ledgerQuery);
       if (count > MAX_EXPORT_LIMIT) {
         res.status(400);
-        throw new Error(`Too many invoices to export (${count}). Please narrow your date range. Maximum: ${MAX_EXPORT_LIMIT}`);
+        throw new Error(`Too many entries to export (${count}). Please narrow your date range. Maximum: ${MAX_EXPORT_LIMIT}`);
       }
 
-      // Use aggregation for total calculation (more efficient)
-      const [totalsResult] = await Invoice.aggregate([
-        { $match: invoiceQuery },
-        { $group: { _id: null, totalAmount: { $sum: '$total' } } }
-      ]);
-      const totalAmount = totalsResult?.totalAmount || 0;
-
-      // Get invoices with limit
-      const invoices = await Invoice.find(invoiceQuery)
-        .sort({ generatedAt: -1 })
+      // Get ledger entries with customer populated
+      const entries = await LedgerEntry.find(ledgerQuery)
+        .populate('customer', 'name')
+        .sort({ date: -1 })
         .limit(MAX_EXPORT_LIMIT)
         .lean();
 
+      // Calculate totals
+      let totalDebit = 0;
+      let totalCredit = 0;
+      entries.forEach(entry => {
+        if (entry.amount > 0) totalDebit += entry.amount;
+        else totalCredit += Math.abs(entry.amount);
+      });
+
       // Format data for Excel
-      const data = invoices.map(inv => ({
-        'Date': new Date(inv.generatedAt).toLocaleDateString('en-IN', {
+      const data = entries.map(entry => ({
+        'Date': new Date(entry.date).toLocaleDateString('en-IN', {
           day: '2-digit',
           month: '2-digit',
           year: 'numeric'
         }),
-        'Invoice No': inv.invoiceNumber,
-        'Customer': inv.customer?.name || 'Unknown',
-        'Firm': inv.firm?.name || 'Unknown',
-        'Amount (Rs.)': inv.total || 0
+        'Type': entry.type.charAt(0).toUpperCase() + entry.type.slice(1),
+        'Order No': entry.orderNumber || '',
+        'Customer': entry.customer?.name || 'Unknown',
+        'Description': entry.description || '',
+        'Debit (Rs.)': entry.amount > 0 ? entry.amount : '',
+        'Credit (Rs.)': entry.amount < 0 ? Math.abs(entry.amount) : '',
+        'Balance (Rs.)': entry.balance
       }));
 
-      // Add totals row if there's data
+      // Add totals row
       if (data.length > 0) {
         data.push({
           'Date': '',
-          'Invoice No': '',
+          'Type': '',
+          'Order No': '',
           'Customer': '',
-          'Firm': 'TOTAL',
-          'Amount (Rs.)': totalAmount
+          'Description': 'TOTAL',
+          'Debit (Rs.)': totalDebit,
+          'Credit (Rs.)': totalCredit,
+          'Balance (Rs.)': ''
         });
       }
 
@@ -130,10 +110,13 @@ router.get('/ledger',
       // Set column widths
       ws['!cols'] = [
         { wch: 12 },  // Date
-        { wch: 15 },  // Invoice No
-        { wch: 25 },  // Customer
-        { wch: 20 },  // Firm
-        { wch: 15 }   // Amount
+        { wch: 12 },  // Type
+        { wch: 14 },  // Order No
+        { wch: 22 },  // Customer
+        { wch: 30 },  // Description
+        { wch: 14 },  // Debit
+        { wch: 14 },  // Credit
+        { wch: 14 }   // Balance
       ];
 
       XLSX.utils.book_append_sheet(wb, ws, 'Ledger');
@@ -141,14 +124,13 @@ router.get('/ledger',
       // Generate buffer
       const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
 
-      // Generate filename (reuse customer from earlier query)
+      // Generate filename
       const dateStr = new Date().toISOString().split('T')[0];
       let filename = `ledger_${dateStr}`;
       if (customerForFilename) {
         filename = `ledger_${customerForFilename.name.replace(/[^a-zA-Z0-9]/g, '_')}_${dateStr}`;
       }
 
-      // Send response
       res.set({
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'Content-Disposition': `attachment; filename="${filename}.xlsx"`,
@@ -162,15 +144,8 @@ router.get('/ledger',
   }
 );
 
-/**
- * @swagger
- * /api/reports/ledger/preview:
- *   get:
- *     summary: Preview ledger data as JSON
- *     tags: [Reports]
- */
 // @route   GET /api/reports/ledger/preview
-// @desc    Preview ledger data as JSON (for UI preview before download)
+// @desc    Preview ledger data as JSON (from LedgerEntry)
 // @access  Private (Staff, Admin)
 router.get('/ledger/preview',
   protect,
@@ -186,7 +161,7 @@ router.get('/ledger/preview',
       const { customerId, fromDate, toDate, limit = 20 } = req.query;
 
       // Build query
-      const previewQuery = {};
+      const ledgerQuery = {};
 
       if (customerId) {
         const customer = await Customer.findById(customerId);
@@ -194,46 +169,54 @@ router.get('/ledger/preview',
           res.status(404);
           throw new Error('Customer not found');
         }
-        previewQuery['customer.name'] = customer.name;
+        ledgerQuery.customer = customer._id;
       }
 
-      // Build date range filter using shared helper
+      // Build date range filter
       const { filter: dateFilter, error: dateError } = buildDateRangeFilter(fromDate, toDate);
       if (dateError) {
         return res.status(400).json({ success: false, message: dateError });
       }
       if (dateFilter) {
-        previewQuery.generatedAt = dateFilter;
+        ledgerQuery.date = dateFilter;
       }
 
-      // Get count and invoices
-      const total = await Invoice.countDocuments(previewQuery);
-      const invoices = await Invoice.find(previewQuery)
-        .sort({ generatedAt: -1 })
+      const total = await LedgerEntry.countDocuments(ledgerQuery);
+      const entries = await LedgerEntry.find(ledgerQuery)
+        .populate('customer', 'name')
+        .sort({ date: -1 })
         .limit(parseInt(limit))
         .lean();
 
-      // Calculate total amount using aggregation (more efficient)
-      const [totalsResult] = await Invoice.aggregate([
-        { $match: previewQuery },
-        { $group: { _id: null, totalAmount: { $sum: '$total' } } }
+      // Calculate totals across all matching entries
+      const [totalsResult] = await LedgerEntry.aggregate([
+        { $match: ledgerQuery },
+        {
+          $group: {
+            _id: null,
+            totalDebit: { $sum: { $cond: [{ $gt: ['$amount', 0] }, '$amount', 0] } },
+            totalCredit: { $sum: { $cond: [{ $lt: ['$amount', 0] }, { $abs: '$amount' }, 0] } }
+          }
+        }
       ]);
-      const totalAmount = totalsResult?.totalAmount || 0;
 
       res.json({
         success: true,
         data: {
-          invoices: invoices.map(inv => ({
-            date: inv.generatedAt,
-            invoiceNumber: inv.invoiceNumber,
-            customer: inv.customer?.name,
-            firm: inv.firm?.name,
-            amount: inv.total
+          entries: entries.map(entry => ({
+            date: entry.date,
+            type: entry.type,
+            orderNumber: entry.orderNumber,
+            customer: entry.customer?.name,
+            description: entry.description,
+            amount: entry.amount,
+            balance: entry.balance
           })),
           summary: {
-            totalInvoices: total,
-            totalAmount,
-            showing: invoices.length
+            totalEntries: total,
+            totalDebit: totalsResult?.totalDebit || 0,
+            totalCredit: totalsResult?.totalCredit || 0,
+            showing: entries.length
           }
         }
       });

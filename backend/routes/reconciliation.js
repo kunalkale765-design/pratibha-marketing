@@ -1,12 +1,126 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
+const path = require('path');
+const fs = require('fs').promises;
 const { param, body } = require('express-validator');
 const Order = require('../models/Order');
 const Customer = require('../models/Customer');
 const LedgerEntry = require('../models/LedgerEntry');
+const Invoice = require('../models/Invoice');
+const Product = require('../models/Product');
 const { protect, authorize } = require('../middleware/auth');
 const { roundTo2Decimals, handleValidationErrors } = require('../utils/helpers');
+const invoiceService = require('../services/invoiceService');
+
+const INVOICE_STORAGE_DIR = path.join(__dirname, '..', 'storage', 'invoices');
+
+async function ensureInvoiceStorageDir() {
+  try {
+    await fs.mkdir(INVOICE_STORAGE_DIR, { recursive: true });
+  } catch (err) {
+    if (err.code !== 'EEXIST') throw err;
+  }
+}
+
+/**
+ * Auto-generate and save invoice PDFs for a reconciled order.
+ * Splits items by firm (based on product categories) and creates one invoice per firm.
+ * Non-critical: failures are logged but don't block reconciliation.
+ */
+async function autoGenerateInvoices(order, userId) {
+  try {
+    // Get the order with customer populated
+    const fullOrder = await Order.findById(order._id)
+      .populate('customer', 'name phone whatsapp address');
+    if (!fullOrder) return;
+
+    // Check if invoices already exist for this order (prevent duplicates)
+    const existingCount = await Invoice.countDocuments({ order: order._id });
+    if (existingCount > 0) return;
+
+    // Get product categories
+    const productIds = fullOrder.products.map(p => p.product);
+    const products = await Product.find({ _id: { $in: productIds } }).select('_id category');
+    const categoryMap = {};
+    products.forEach(p => {
+      categoryMap[p._id.toString()] = p.category;
+    });
+
+    // Add category to each order product
+    const orderWithCategories = {
+      ...fullOrder.toObject(),
+      products: fullOrder.products.map(p => ({
+        ...p.toObject ? p.toObject() : p,
+        category: categoryMap[p.product?.toString()] || 'Other'
+      }))
+    };
+
+    // Split by firm
+    const split = invoiceService.splitOrderByFirm(orderWithCategories);
+
+    await ensureInvoiceStorageDir();
+
+    // Generate invoice for each firm portion
+    for (const firmId of Object.keys(split)) {
+      const firmData = split[firmId];
+      if (firmData.items.length === 0) continue;
+
+      const invoiceNumber = await invoiceService.generateInvoiceNumber();
+      const productIdsForFirm = firmData.items.map(item => item.product?.toString());
+      const invoiceData = invoiceService.getInvoiceData(fullOrder, firmId, productIdsForFirm, invoiceNumber);
+
+      if (invoiceData.items.length === 0) continue;
+
+      const filename = `${invoiceNumber}.pdf`;
+
+      // Create invoice record
+      const invoice = new Invoice({
+        invoiceNumber: invoiceData.invoiceNumber,
+        orderNumber: invoiceData.orderNumber,
+        order: fullOrder._id,
+        firm: {
+          id: firmId,
+          name: invoiceData.firm.name,
+          address: invoiceData.firm.address,
+          phone: invoiceData.firm.phone,
+          email: invoiceData.firm.email
+        },
+        customer: {
+          name: invoiceData.customer.name,
+          phone: invoiceData.customer.phone,
+          address: invoiceData.customer.address
+        },
+        items: invoiceData.items.map(item => ({
+          productName: item.name,
+          quantity: item.quantity,
+          unit: item.unit,
+          rate: item.rate,
+          amount: item.amount
+        })),
+        subtotal: invoiceData.total,
+        total: invoiceData.total,
+        pdfPath: null,
+        generatedBy: userId
+      });
+      await invoice.save();
+
+      try {
+        const pdfBuffer = await invoiceService.generateInvoicePDF(invoiceData);
+        const pdfFilePath = path.join(INVOICE_STORAGE_DIR, filename);
+        await fs.writeFile(pdfFilePath, pdfBuffer);
+        invoice.pdfPath = filename;
+        await invoice.save();
+      } catch (pdfError) {
+        // PDF generation failed but invoice record exists - can be regenerated later
+        console.error(`[Reconciliation] PDF generation failed for ${invoiceNumber}:`, pdfError.message);
+      }
+    }
+  } catch (error) {
+    // Non-critical: log and continue
+    console.error(`[Reconciliation] Auto-invoice generation failed for order ${order.orderNumber}:`, error.message);
+  }
+}
 
 // @route   GET /api/reconciliation/pending
 // @desc    Get orders awaiting reconciliation (confirmed status with packing done)
@@ -272,8 +386,33 @@ router.post('/:orderId/complete',
         const performReconciliation = async (sessionOrNull) => {
           const sessionOpts = sessionOrNull ? { session: sessionOrNull } : {};
 
-          // Save order
-          await order.save(sessionOpts);
+          // Atomically claim the order: verify status is still 'confirmed' and not yet reconciled.
+          // This prevents TOCTOU race conditions where two concurrent requests both pass the
+          // initial checks and attempt to reconcile the same order.
+          const claimed = await Order.findOneAndUpdate(
+            {
+              _id: order._id,
+              status: 'confirmed',
+              'reconciliation.completedAt': { $exists: false }
+            },
+            {
+              $set: {
+                products: order.products,
+                totalAmount: order.totalAmount,
+                status: order.status,
+                deliveredAt: order.deliveredAt,
+                reconciliation: order.reconciliation,
+                notes: order.notes
+              }
+            },
+            { new: true, ...sessionOpts }
+          );
+
+          if (!claimed) {
+            const err = new Error('Order was already reconciled by another user');
+            err.statusCode = 409;
+            throw err;
+          }
 
           // Read current balance within transaction for isolation
           const freshCustomer = sessionOrNull
@@ -345,6 +484,11 @@ router.post('/:orderId/complete',
           }
         }
       }
+
+      // Auto-generate invoices in background (non-blocking)
+      autoGenerateInvoices(order, req.user._id).catch(err => {
+        console.error(`[Reconciliation] Background invoice generation error:`, err.message);
+      });
 
       res.json({
         success: true,

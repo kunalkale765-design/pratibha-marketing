@@ -1,19 +1,19 @@
 const request = require('supertest');
 const app = require('../server');
-const Invoice = require('../models/Invoice');
+const LedgerEntry = require('../models/LedgerEntry');
 const { testUtils } = require('./setup');
 
 describe('Reports Endpoints', () => {
-  let adminToken;
+  let adminToken, adminUser;
   let staffToken;
   let customerToken;
   let testCustomer;
   let testCustomer2;
 
   beforeEach(async () => {
-    // Create test users
     const admin = await testUtils.createAdminUser();
     adminToken = admin.token;
+    adminUser = admin.user;
 
     const staff = await testUtils.createStaffUser();
     staffToken = staff.token;
@@ -22,61 +22,30 @@ describe('Reports Endpoints', () => {
     customerToken = customerUser.token;
     testCustomer = customerUser.customer;
 
-    // Create another customer
     testCustomer2 = await testUtils.createTestCustomer({ name: 'Customer 2' });
   });
 
-  // Helper to create invoice
-  const createInvoice = async (options = {}) => {
-    const items = options.items || [{
-      productName: 'Test Product',
-      quantity: 10,
-      unit: 'kg',
-      rate: 100,
-      amount: 1000
-    }];
-    const subtotal = items.reduce((sum, item) => sum + item.amount, 0);
-    return Invoice.create({
-      invoiceNumber: `INV${Date.now()}`,
+  // Helper to create ledger entry
+  const createLedgerEntry = async (options = {}) => {
+    return LedgerEntry.create({
+      customer: options.customerId || testCustomer._id,
+      type: options.type || 'invoice',
+      date: options.date || new Date(),
       order: options.orderId || '507f1f77bcf86cd799439011',
       orderNumber: options.orderNumber || 'ORD001',
-      customer: {
-        name: options.customerName || testCustomer.name,
-        phone: testCustomer.phone || '1234567890',
-        address: 'Test Address'
-      },
-      firm: {
-        id: 'pratibha',
-        name: options.firmName || 'Pratibha Marketing',
-        address: 'Test Address'
-      },
-      items: items,
-      subtotal: options.subtotal || subtotal,
-      total: options.total || subtotal,
-      generatedAt: options.generatedAt || new Date(),
-      generatedBy: options.generatedBy || '507f1f77bcf86cd799439011',
-      ...options
+      description: options.description || 'Invoice for order ORD001',
+      amount: options.amount || 1000,
+      balance: options.balance || 1000,
+      createdBy: options.createdBy || adminUser._id,
+      createdByName: 'Admin'
     });
   };
 
   describe('GET /api/reports/ledger', () => {
     beforeEach(async () => {
-      // Create invoices for testing
-      await createInvoice({
-        customerName: testCustomer.name,
-        total: 1000,
-        generatedAt: new Date()
-      });
-      await createInvoice({
-        customerName: testCustomer.name,
-        total: 1500,
-        generatedAt: new Date()
-      });
-      await createInvoice({
-        customerName: testCustomer2.name,
-        total: 750,
-        generatedAt: new Date()
-      });
+      await createLedgerEntry({ customerId: testCustomer._id, amount: 1000, balance: 1000 });
+      await createLedgerEntry({ customerId: testCustomer._id, amount: 1500, balance: 2500 });
+      await createLedgerEntry({ customerId: testCustomer2._id, amount: 750, balance: 750 });
     });
 
     it('should return Excel file for admin', async () => {
@@ -106,7 +75,6 @@ describe('Reports Endpoints', () => {
 
       expect(res.statusCode).toBe(200);
       expect(res.headers['content-type']).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      // Filename should include customer name
       expect(res.headers['content-disposition']).toMatch(/ledger_.*\.xlsx/);
     });
 
@@ -163,21 +131,27 @@ describe('Reports Endpoints', () => {
 
   describe('GET /api/reports/ledger/preview', () => {
     beforeEach(async () => {
-      // Create invoices for testing
-      await createInvoice({
-        customerName: testCustomer.name,
-        firmName: 'Pratibha Marketing',
-        total: 1000
+      await createLedgerEntry({
+        customerId: testCustomer._id,
+        amount: 1000,
+        balance: 1000,
+        orderNumber: 'ORD001',
+        description: 'Invoice for order ORD001'
       });
-      await createInvoice({
-        customerName: testCustomer.name,
-        firmName: 'Vikas Frozen Foods',
-        total: 1500
+      await createLedgerEntry({
+        customerId: testCustomer._id,
+        amount: -500,
+        balance: 500,
+        type: 'payment',
+        orderNumber: '',
+        description: 'Payment received'
       });
-      await createInvoice({
-        customerName: testCustomer2.name,
-        firmName: 'Pratibha Marketing',
-        total: 750
+      await createLedgerEntry({
+        customerId: testCustomer2._id,
+        amount: 750,
+        balance: 750,
+        orderNumber: 'ORD002',
+        description: 'Invoice for order ORD002'
       });
     });
 
@@ -189,9 +163,9 @@ describe('Reports Endpoints', () => {
       expect(res.statusCode).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.data).toBeDefined();
-      expect(res.body.data.invoices).toBeDefined();
+      expect(res.body.data.entries).toBeDefined();
       expect(res.body.data.summary).toBeDefined();
-      expect(Array.isArray(res.body.data.invoices)).toBe(true);
+      expect(Array.isArray(res.body.data.entries)).toBe(true);
     });
 
     it('should return preview for staff', async () => {
@@ -209,8 +183,9 @@ describe('Reports Endpoints', () => {
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(res.statusCode).toBe(200);
-      expect(res.body.data.summary.totalInvoices).toBe(3);
-      expect(res.body.data.summary.totalAmount).toBe(3250); // 1000 + 1500 + 750
+      expect(res.body.data.summary.totalEntries).toBe(3);
+      expect(res.body.data.summary.totalDebit).toBe(1750); // 1000 + 750
+      expect(res.body.data.summary.totalCredit).toBe(500); // abs(-500)
       expect(res.body.data.summary.showing).toBeDefined();
     });
 
@@ -220,15 +195,16 @@ describe('Reports Endpoints', () => {
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(res.statusCode).toBe(200);
-      expect(res.body.data.summary.totalInvoices).toBe(2);
-      expect(res.body.data.summary.totalAmount).toBe(2500); // 1000 + 1500
+      expect(res.body.data.summary.totalEntries).toBe(2);
+      expect(res.body.data.summary.totalDebit).toBe(1000);
+      expect(res.body.data.summary.totalCredit).toBe(500);
     });
 
     it('should filter by date range', async () => {
-      // Create invoice from last month
+      // Create entry from last month
       const lastMonth = new Date();
       lastMonth.setMonth(lastMonth.getMonth() - 1);
-      await createInvoice({ customerName: 'Old Customer', total: 500, generatedAt: lastMonth });
+      await createLedgerEntry({ customerId: testCustomer._id, amount: 500, balance: 1000, date: lastMonth });
 
       const today = new Date().toISOString().split('T')[0];
       const res = await request(app)
@@ -236,7 +212,7 @@ describe('Reports Endpoints', () => {
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(res.statusCode).toBe(200);
-      expect(res.body.data.summary.totalInvoices).toBe(3); // Only today's invoices
+      expect(res.body.data.summary.totalEntries).toBe(3); // Only today's entries
     });
 
     it('should respect limit parameter', async () => {
@@ -245,25 +221,26 @@ describe('Reports Endpoints', () => {
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(res.statusCode).toBe(200);
-      expect(res.body.data.invoices).toHaveLength(2);
+      expect(res.body.data.entries).toHaveLength(2);
       expect(res.body.data.summary.showing).toBe(2);
-      expect(res.body.data.summary.totalInvoices).toBe(3); // Total is still 3
+      expect(res.body.data.summary.totalEntries).toBe(3);
     });
 
-    it('should return invoice details in response', async () => {
+    it('should return entry details in response', async () => {
       const res = await request(app)
         .get('/api/reports/ledger/preview')
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(res.statusCode).toBe(200);
-      expect(res.body.data.invoices.length).toBeGreaterThan(0);
+      expect(res.body.data.entries.length).toBeGreaterThan(0);
 
-      const invoice = res.body.data.invoices[0];
-      expect(invoice).toHaveProperty('date');
-      expect(invoice).toHaveProperty('invoiceNumber');
-      expect(invoice).toHaveProperty('customer');
-      expect(invoice).toHaveProperty('firm');
-      expect(invoice).toHaveProperty('amount');
+      const entry = res.body.data.entries[0];
+      expect(entry).toHaveProperty('date');
+      expect(entry).toHaveProperty('type');
+      expect(entry).toHaveProperty('customer');
+      expect(entry).toHaveProperty('description');
+      expect(entry).toHaveProperty('amount');
+      expect(entry).toHaveProperty('balance');
     });
 
     it('should return 400 for invalid customer ID', async () => {
@@ -310,9 +287,8 @@ describe('Reports Endpoints', () => {
 
   describe('Report Workflow Integration', () => {
     it('should preview and then download report', async () => {
-      // Create test data
-      await createInvoice({ customerName: testCustomer.name, total: 1000 });
-      await createInvoice({ customerName: testCustomer.name, total: 2000 });
+      await createLedgerEntry({ customerId: testCustomer._id, amount: 1000, balance: 1000 });
+      await createLedgerEntry({ customerId: testCustomer._id, amount: 2000, balance: 3000 });
 
       // 1. Preview the report
       let res = await request(app)
@@ -320,8 +296,8 @@ describe('Reports Endpoints', () => {
         .set('Authorization', `Bearer ${staffToken}`);
 
       expect(res.statusCode).toBe(200);
-      expect(res.body.data.summary.totalInvoices).toBe(2);
-      expect(res.body.data.summary.totalAmount).toBe(3000);
+      expect(res.body.data.summary.totalEntries).toBe(2);
+      expect(res.body.data.summary.totalDebit).toBe(3000);
 
       // 2. Download the Excel file
       res = await request(app)
@@ -337,9 +313,8 @@ describe('Reports Endpoints', () => {
       const lastWeek = new Date();
       lastWeek.setDate(lastWeek.getDate() - 7);
 
-      // Create invoices at different times
-      await createInvoice({ customerName: testCustomer.name, total: 1000, generatedAt: today });
-      await createInvoice({ customerName: testCustomer.name, total: 500, generatedAt: lastWeek });
+      await createLedgerEntry({ customerId: testCustomer._id, amount: 1000, balance: 1000, date: today });
+      await createLedgerEntry({ customerId: testCustomer._id, amount: 500, balance: 500, date: lastWeek });
 
       const todayStr = today.toISOString().split('T')[0];
 
@@ -349,8 +324,8 @@ describe('Reports Endpoints', () => {
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(res.statusCode).toBe(200);
-      expect(res.body.data.summary.totalInvoices).toBe(1);
-      expect(res.body.data.summary.totalAmount).toBe(1000);
+      expect(res.body.data.summary.totalEntries).toBe(1);
+      expect(res.body.data.summary.totalDebit).toBe(1000);
 
       // Download with same filter
       res = await request(app)
