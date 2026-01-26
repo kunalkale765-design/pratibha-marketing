@@ -8,6 +8,7 @@
  * - Global error handling
  */
 
+import { captureException, setSentryUser } from './sentry.js';
 import { setupModalCloseOnEscape } from './ui.js';
 import { getCsrfToken, ensureCsrfToken } from './csrf.js';
 
@@ -16,14 +17,18 @@ import { getCsrfToken, ensureCsrfToken } from './csrf.js';
    =================== */
 
 // Catch uncaught errors silently (prevent browser error dialogs)
-window.onerror = function (message, source, lineno, colno, _error) {
+window.onerror = function (message, source, lineno, colno, error) {
   console.error('Uncaught error:', message, 'at', source, lineno, colno);
+  if (error) {
+    captureException(error, { source, lineno, colno });
+  }
   return true; // Prevents the browser's default error handling
 };
 
 // Catch unhandled promise rejections silently
 window.addEventListener('unhandledrejection', function (event) {
   console.error('Unhandled promise rejection:', event.reason);
+  captureException(event.reason || new Error('Unhandled rejection'));
   event.preventDefault(); // Prevents the browser's default handling
 });
 
@@ -155,6 +160,12 @@ export function initPage(options = {}) {
   if (modalEscape) {
     setupModalCloseOnEscape();
   }
+
+  // Set Sentry user context from stored auth
+  try {
+    const stored = localStorage.getItem('user');
+    if (stored) setSentryUser(JSON.parse(stored));
+  } catch (_) { /* ignore parse errors */ }
 }
 
 /* ===================

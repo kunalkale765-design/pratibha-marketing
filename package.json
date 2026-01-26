@@ -29,6 +29,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@sentry/browser": "^10.36.0",
     "@sentry/node": "^10.32.1",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",

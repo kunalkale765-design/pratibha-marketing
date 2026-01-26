@@ -76,8 +76,29 @@ else
 fi
 
 echo ""
-echo "Step 9: Installing application dependencies..."
-npm install --production
+echo "Step 9: Installing dependencies and building frontend..."
+npm install
+
+echo "Building frontend..."
+npm run build:frontend
+
+# Upload source maps to Sentry (if configured)
+if [ -n "$VITE_SENTRY_DSN" ] && [ -n "$SENTRY_AUTH_TOKEN" ] && [ -n "$SENTRY_ORG" ] && [ -n "$SENTRY_PROJECT_FRONTEND" ]; then
+    echo "Uploading source maps to Sentry..."
+    RELEASE=$(git rev-parse --short HEAD)
+    npx @sentry/cli releases new "$RELEASE" --org "$SENTRY_ORG" --project "$SENTRY_PROJECT_FRONTEND"
+    npx @sentry/cli releases files "$RELEASE" upload-sourcemaps frontend/dist --org "$SENTRY_ORG" --project "$SENTRY_PROJECT_FRONTEND"
+    npx @sentry/cli releases finalize "$RELEASE" --org "$SENTRY_ORG" --project "$SENTRY_PROJECT_FRONTEND"
+    echo "Source maps uploaded. Removing from dist..."
+    find frontend/dist -name '*.map' -delete
+else
+    echo "Sentry source map upload skipped (SENTRY_AUTH_TOKEN/SENTRY_ORG/SENTRY_PROJECT_FRONTEND not set)"
+    # Still remove source maps from dist so they aren't served
+    find frontend/dist -name '*.map' -delete
+fi
+
+# Prune to production dependencies only
+npm prune --production
 
 echo ""
 echo "Step 10: Creating environment file..."

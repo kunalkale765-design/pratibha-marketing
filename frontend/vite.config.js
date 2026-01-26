@@ -4,10 +4,11 @@ import { resolve } from 'path';
 export default defineConfig({
   root: 'src', // Set root to src/ so index.html files are found easily
   publicDir: '../public', // We don't have this yet, acts as static folder
-  // Base public path when served in development or production.
+  envDir: resolve(__dirname, '..'), // Load .env from project root
   build: {
     outDir: '../dist',
     emptyOutDir: true,
+    sourcemap: 'hidden',
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'src/index.html'),

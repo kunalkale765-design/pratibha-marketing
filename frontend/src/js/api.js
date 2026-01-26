@@ -6,6 +6,7 @@
 // Import CSRF functions from shared module (single source of truth)
 import { getCsrfToken, refreshCsrfToken, ensureCsrfToken } from './csrf.js';
 import { showToast, showSuccess } from './ui.js';
+import { captureException, addBreadcrumb } from './sentry.js';
 
 const API = {
     // Re-export CSRF functions for backwards compatibility
@@ -62,6 +63,9 @@ const API = {
                     offline: true
                 };
             }
+
+            // Add breadcrumb for API call tracking
+            addBreadcrumb(`${options.method || 'GET'} ${endpoint}`, 'api');
 
             // Create abort controller for timeout
             const controller = new AbortController();
@@ -128,10 +132,12 @@ const API = {
             }
 
             if (response.status === 500) {
+                captureException(new Error(`API 500: ${endpoint}`), { endpoint, method: options.method, responseBody: data });
                 return { success: false, error: data?.message || 'Server error. Please try again later.', status: 500 };
             }
 
             if (response.status === 502 || response.status === 503 || response.status === 504) {
+                captureException(new Error(`API ${response.status}: ${endpoint}`), { endpoint, method: options.method, status: response.status });
                 return { success: false, error: 'Service temporarily unavailable. Please try again later.', status: response.status };
             }
 
@@ -163,6 +169,7 @@ const API = {
 
             // Don't retry aborted/timeout requests
             if (error.name === 'AbortError') {
+                captureException(error, { endpoint, method: options.method, type: 'timeout' });
                 return {
                     success: false,
                     error: 'Request timed out. Please try again.',
@@ -178,7 +185,10 @@ const API = {
                 return this.request(endpoint, options, _isRetry, _retryCount + 1);
             }
 
-            // All retries exhausted - return error silently for GET requests
+            // All retries exhausted
+            captureException(error, { endpoint, method: options.method, type: 'network', retries: MAX_RETRIES });
+
+            // Return error silently for GET requests
             // For state-changing requests, we need to inform the user
             const isGet = !options.method || options.method.toUpperCase() === 'GET';
             if (isGet) {
