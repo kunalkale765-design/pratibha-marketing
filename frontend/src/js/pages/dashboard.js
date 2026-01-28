@@ -1,5 +1,5 @@
 import { formatCurrency } from '/js/utils.js';
-import { initPage, logout } from '/js/init.js';
+import { initPage } from '/js/init.js';
 import { showToast, createElement } from '/js/ui.js';
 
 // Wait for Auth to be available (with timeout to prevent infinite recursion)
@@ -143,7 +143,6 @@ function playWebAudioNotification() {
 }
 
 // Elements
-const logoutBtn = document.getElementById('logoutBtn');
 const printBtn = document.getElementById('printBtn');
 const exportBtn = document.getElementById('exportBtn');
 const saveRatesBtn = document.getElementById('saveRatesBtn');

@@ -1,5 +1,3 @@
-import { showToast } from '/js/ui.js';
-
 // HTML escape function to prevent XSS
 function escapeHtml(text) {
     if (text === null || text === undefined) return '';

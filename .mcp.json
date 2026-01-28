@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "TestSprite": {
+      "command": "npx",
+      "args": ["-y", "@anthropic-ai/mcp-testsprite"],
+      "env": {
+        "TESTSPRITE_API_KEY": "sk-user-Omjgmzoc4aXCDYNsm6EicA6HyngmcGIJ9tUuAS_qyP9lzaSmHtbcZGj3Ds-tIY2hDxtdQbaTnNpyipOUwgfiID3GcruY_UL29APd3gJc3D9alo0Bef-vgN22zpErGmo-YfQ"
+      }
+    }
+  }
+}

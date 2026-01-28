@@ -451,21 +451,13 @@ router.post('/forgot-password', passwordResetLimiter, [
     user.resetPasswordExpires = Date.now() + 60 * 60 * 1000; // 1 hour
     await user.save({ validateBeforeSave: false });
 
-    // Build response - only include token details in non-production environments
+    // Return reset URL directly (admin-assisted flow, no email service integrated)
     const response = {
       success: true,
-      message: process.env.NODE_ENV === 'production'
-        ? 'If an account exists, a password reset link will be sent to your email'
-        : 'Password reset token generated'
+      message: 'Password reset link generated',
+      resetUrl: `/pages/auth/reset-password.html?token=${resetToken}`,
+      expiresIn: '1 hour'
     };
-
-    // Only expose token in development/test environments (for manual testing)
-    // In production with email integration, token would be sent via email only
-    if (process.env.NODE_ENV !== 'production') {
-      response.resetToken = resetToken;
-      response.resetUrl = `/pages/auth/reset-password.html?token=${resetToken}`;
-      response.expiresIn = '1 hour';
-    }
 
     res.json(response);
   } catch (error) {

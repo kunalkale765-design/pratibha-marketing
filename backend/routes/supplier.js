@@ -497,28 +497,61 @@ router.post('/procure', protect, authorize('admin', 'staff'), async (req, res, n
     const ist = getISTTime();
     const today = ist.dateOnly;
 
-    // Mark as procured
-    const procurement = await DailyProcurement.markProcured(
-      productId,
-      product.name,
-      today,
-      rate,
-      quantity || 0,
-      req.user._id
-    );
+    // Helper to perform both writes (DailyProcurement + MarketRate)
+    const performProcure = async (sessionOrNull) => {
+      const sessionOpts = sessionOrNull ? { session: sessionOrNull } : {};
 
-    // Also update the market rate (so pricing is updated)
-    await MarketRate.findOneAndUpdate(
-      { product: productId },
-      {
-        product: productId,
-        productName: product.name,
-        rate: rate,
-        effectiveDate: new Date(),
-        $inc: { __v: 1 }
-      },
-      { upsert: true, new: true }
-    );
+      // Mark as procured
+      const result = await DailyProcurement.findOneAndUpdate(
+        { product: productId, date: today },
+        {
+          product: productId,
+          productName: product.name,
+          date: today,
+          rate,
+          quantityAtProcurement: quantity || 0,
+          procuredAt: new Date(),
+          procuredBy: req.user._id
+        },
+        { upsert: true, new: true, ...sessionOpts }
+      );
+
+      // Update market rate using .save() to trigger pre-save hook (trend/changePercentage)
+      let marketRate = sessionOrNull
+        ? await MarketRate.findOne({ product: productId }).session(sessionOrNull)
+        : await MarketRate.findOne({ product: productId });
+      if (marketRate) {
+        marketRate.previousRate = marketRate.rate;
+        marketRate.rate = rate;
+        marketRate.productName = product.name;
+        marketRate.effectiveDate = new Date();
+      } else {
+        marketRate = new MarketRate({
+          product: productId,
+          productName: product.name,
+          rate: rate,
+          previousRate: 0,
+          effectiveDate: new Date()
+        });
+      }
+      await marketRate.save(sessionOpts);
+      return result;
+    };
+
+    // Use transaction for atomicity (skip in test — in-memory MongoDB doesn't support them)
+    let procurement;
+    if (process.env.NODE_ENV === 'test') {
+      procurement = await performProcure(null);
+    } else {
+      const session = await mongoose.startSession();
+      try {
+        await session.withTransaction(async () => {
+          procurement = await performProcure(session);
+        });
+      } finally {
+        await session.endSession();
+      }
+    }
 
     res.json({
       success: true,
@@ -531,7 +564,7 @@ router.post('/procure', protect, authorize('admin', 'staff'), async (req, res, n
 });
 
 // @route   DELETE /api/supplier/procure/:productId
-// @desc    Remove procurement status for a product (undo)
+// @desc    Remove procurement status for a product (undo) and revert market rate
 // @access  Private (Admin, Staff)
 router.delete('/procure/:productId', protect, authorize('admin', 'staff'), async (req, res, next) => {
   try {
@@ -540,7 +573,47 @@ router.delete('/procure/:productId', protect, authorize('admin', 'staff'), async
     const ist = getISTTime();
     const today = ist.dateOnly;
 
-    const result = await DailyProcurement.removeProcurement(productId, today);
+    // Helper to perform removal + rate revert
+    const performUndo = async (sessionOrNull) => {
+      const sessionOpts = sessionOrNull ? { session: sessionOrNull } : {};
+
+      const deleted = await DailyProcurement.findOneAndDelete(
+        { product: productId, date: today },
+        sessionOpts
+      );
+
+      if (!deleted) {
+        return null;
+      }
+
+      // Revert market rate to previousRate if one exists
+      const marketRate = sessionOrNull
+        ? await MarketRate.findOne({ product: productId }).session(sessionOrNull)
+        : await MarketRate.findOne({ product: productId });
+      if (marketRate && marketRate.previousRate > 0) {
+        marketRate.rate = marketRate.previousRate;
+        marketRate.previousRate = 0;
+        marketRate.effectiveDate = new Date();
+        await marketRate.save(sessionOpts);
+      }
+
+      return deleted;
+    };
+
+    // Use transaction for atomicity (skip in test — in-memory MongoDB doesn't support them)
+    let result;
+    if (process.env.NODE_ENV === 'test') {
+      result = await performUndo(null);
+    } else {
+      const session = await mongoose.startSession();
+      try {
+        await session.withTransaction(async () => {
+          result = await performUndo(session);
+        });
+      } finally {
+        await session.endSession();
+      }
+    }
 
     if (!result) {
       return res.status(404).json({
@@ -555,6 +628,12 @@ router.delete('/procure/:productId', protect, authorize('admin', 'staff'), async
       data: result
     });
   } catch (error) {
+    if (error.statusCode === 404) {
+      return res.status(404).json({
+        success: false,
+        message: error.message
+      });
+    }
     next(error);
   }
 });

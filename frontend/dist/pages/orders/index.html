@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Orders - Pratibha Marketing</title>
     <link rel="manifest" href="/assets/manifest-Czt1-xKq.json">
     <meta name="theme-color" content="#2e3532">
@@ -13,10 +13,10 @@
     <!-- Animations -->
 
     <!-- Page-specific styles -->
-  <script type="module" crossorigin src="/assets/orders-7EwcLkvi.js"></script>
+  <script type="module" crossorigin src="/assets/orders-s6hC9ov5.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/responsive-D1ZTW0b0.js">
-  <link rel="modulepreload" crossorigin href="/assets/ui-Bns_kLia.js">
-  <link rel="modulepreload" crossorigin href="/assets/api-CCOw0EgE.js">
+  <link rel="modulepreload" crossorigin href="/assets/ui-CbzHyiqg.js">
+  <link rel="modulepreload" crossorigin href="/assets/api-CPXug1OA.js">
   <link rel="stylesheet" crossorigin href="/assets/responsive-BaXdD4wa.css">
   <link rel="stylesheet" crossorigin href="/assets/orders-DwZ2g_iY.css">
   <link rel="stylesheet" crossorigin href="/assets/page-BklDA2cI.css">
@@ -134,33 +134,12 @@
         </div>
 
         <div class="packing-panel-footer">
-            <button class="btn-modal secondary btn-animated" id="packingHoldBtn" onclick="holdPackingOrder()">
-                <span class="btn-text">Hold</span>
-            </button>
             <button class="btn-modal primary btn-animated" id="packingCompleteBtn" onclick="completePackingSession()" disabled>
                 <span class="btn-text">Complete Packing</span>
             </button>
         </div>
     </div>
     <div id="packingPanelOverlay" class="packing-panel-overlay" onclick="closePackingPanel()"></div>
-
-    <!-- Hold Reason Modal (for packing) -->
-    <div id="packingHoldModal" class="modal-overlay">
-        <div class="modal modal-sm">
-            <div class="modal-header">
-                <div class="modal-title">Hold Order</div>
-                <button class="btn-close" onclick="closePackingHoldModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <label class="input-label">Reason for hold:</label>
-                <textarea id="packingHoldReason" class="input-textarea" rows="3" placeholder="Why is this order being held?"></textarea>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-modal secondary" onclick="closePackingHoldModal()">Cancel</button>
-                <button class="btn-modal primary" onclick="confirmPackingHold()">Confirm Hold</button>
-            </div>
-        </div>
-    </div>
 
     <!-- Invoice Modal -->
     <div id="invoiceModal" class="modal-overlay">

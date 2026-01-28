@@ -9,6 +9,7 @@ const {
   handleValidationErrors,
   transformOrderForList
 } = require('../utils/helpers');
+const { getISTTime } = require('../utils/dateTime');
 
 // @route   GET /api/packing/queue
 // @desc    Get orders ready for packing (confirmed status, not yet packed)
@@ -69,8 +70,7 @@ router.get('/queue', protect, authorize('admin', 'staff'), async (req, res, next
 // NOTE: This route MUST be defined before /:orderId to prevent "stats" being matched as an orderId
 router.get('/stats', protect, authorize('admin', 'staff'), async (req, res, next) => {
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const { dateOnly: today } = getISTTime();
 
     // Count orders by packing status
     const [confirmedCount, packingDoneCount, reconciliationPending] = await Promise.all([

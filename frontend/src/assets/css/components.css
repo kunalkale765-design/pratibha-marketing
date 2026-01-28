@@ -383,6 +383,8 @@
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   overflow: hidden;
   animation: slideUp var(--transition-slow);
+  display: flex;
+  flex-direction: column;
 }
 
 @keyframes slideUp {
@@ -402,6 +404,7 @@
   align-items: center;
   padding: var(--space-md);
   border-bottom: 1px solid var(--cream-dark);
+  flex-shrink: 0;
 }
 
 .modal-title {
@@ -433,7 +436,8 @@
 .modal-body {
   padding: var(--space-md);
   overflow-y: auto;
-  max-height: calc(90vh - 140px);
+  flex: 1;
+  min-height: 0;
 }
 
 .modal-footer {
@@ -441,6 +445,7 @@
   gap: var(--space-sm);
   padding: var(--space-md);
   border-top: 1px solid var(--cream-dark);
+  flex-shrink: 0;
 }
 
 /* Modal Buttons */

@@ -526,28 +526,41 @@ function stopScheduler() {
  */
 async function manuallyConfirmBatch(batchId, userId, options = {}) {
   const { generateBills = true } = options;
-  const batch = await Batch.findById(batchId);
+
+  // Atomically claim the batch: only proceeds if status is 'open'.
+  // Prevents TOCTOU race where two concurrent requests both confirm the same batch.
+  const batch = await Batch.findOneAndUpdate(
+    { _id: batchId, status: 'open' },
+    {
+      $set: {
+        status: 'confirmed',
+        confirmedAt: new Date(),
+        confirmedBy: userId
+      }
+    },
+    { new: true }
+  );
 
   if (!batch) {
-    throw new Error('Batch not found');
+    // Check if batch exists at all vs already confirmed
+    const existing = await Batch.findById(batchId);
+    if (!existing) {
+      throw new Error('Batch not found');
+    }
+    throw new Error(`Batch is already ${existing.status}`);
   }
 
-  if (batch.status !== 'open') {
-    throw new Error(`Batch is already ${batch.status}`);
-  }
-
-  // Find all pending orders in this batch
+  // Find all pending orders in this batch and confirm them atomically
   const pendingOrders = await Order.find({
     batch: batch._id,
     status: 'pending'
   });
 
-  // Bulk update orders to confirmed
   let ordersConfirmed = 0;
   if (pendingOrders.length > 0) {
     const orderIds = pendingOrders.map(o => o._id);
     const updateResult = await Order.updateMany(
-      { _id: { $in: orderIds } },
+      { _id: { $in: orderIds }, status: 'pending' },
       {
         $set: {
           status: 'confirmed'
@@ -556,9 +569,6 @@ async function manuallyConfirmBatch(batchId, userId, options = {}) {
     );
     ordersConfirmed = updateResult.modifiedCount;
   }
-
-  // Confirm the batch
-  await batch.confirmBatch(userId);
 
   // Generate delivery bills if requested (with retry)
   let billResults = { billsGenerated: 0, errors: [], totalOrders: 0 };
