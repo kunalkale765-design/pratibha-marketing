@@ -89,10 +89,13 @@ batchSchema.index({ status: 1, date: -1 });
  * Format: B{YYMMDD}-{1|2}
  */
 batchSchema.statics.generateBatchNumber = function(date, batchType) {
-  const d = new Date(date);
-  const year = d.getFullYear().toString().slice(-2);
-  const month = (d.getMonth() + 1).toString().padStart(2, '0');
-  const day = d.getDate().toString().padStart(2, '0');
+  // Use IST-aware calculation: the date is midnight IST stored as UTC,
+  // so add IST offset to get the correct IST date components via UTC methods
+  const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+  const d = new Date(new Date(date).getTime() + IST_OFFSET_MS);
+  const year = d.getUTCFullYear().toString().slice(-2);
+  const month = (d.getUTCMonth() + 1).toString().padStart(2, '0');
+  const day = d.getUTCDate().toString().padStart(2, '0');
   const num = batchType === '1st' ? '1' : '2';
   return `B${year}${month}${day}-${num}`;
 };
@@ -104,46 +107,44 @@ batchSchema.statics.generateBatchNumber = function(date, batchType) {
 batchSchema.statics.findOrCreateBatch = async function(date, batchType, cutoffTime, autoConfirmTime = null) {
   const batchNumber = this.generateBatchNumber(date, batchType);
 
-  const batch = await this.findOneAndUpdate(
-    { batchNumber },
-    {
-      $setOnInsert: {
-        batchNumber,
-        date,
-        batchType,
-        cutoffTime,
-        autoConfirmTime,
-        status: 'open',
-        orderCount: 0
+  try {
+    const batch = await this.findOneAndUpdate(
+      { date, batchType },
+      {
+        $setOnInsert: {
+          batchNumber,
+          date,
+          batchType,
+          cutoffTime,
+          autoConfirmTime,
+          status: 'open',
+          orderCount: 0
+        }
+      },
+      {
+        upsert: true,
+        new: true,
+        runValidators: true
       }
-    },
-    {
-      upsert: true,
-      new: true,
-      runValidators: true
-    }
-  );
+    );
 
-  return batch;
+    return batch;
+  } catch (err) {
+    // Handle race condition: if duplicate key error, just find the existing batch
+    if (err.code === 11000) {
+      const existing = await this.findOne({ date, batchType });
+      if (existing) return existing;
+    }
+    throw err;
+  }
 };
 
 /**
  * Static method to get today's batches (IST)
  */
 batchSchema.statics.getTodayBatches = async function() {
-  // Get today's date at midnight IST (as UTC timestamp for consistent comparison)
-  const now = new Date();
-  const istOffset = 5.5 * 60 * 60 * 1000; // IST is UTC+5:30
-  const utcTime = now.getTime() + (now.getTimezoneOffset() * 60 * 1000);
-  const istNow = new Date(utcTime + istOffset);
-  // Calculate midnight IST as a UTC timestamp
-  const todayIST = new Date(Date.UTC(
-    istNow.getFullYear(),
-    istNow.getMonth(),
-    istNow.getDate(),
-    0, 0, 0, 0
-  ) - istOffset);
-
+  const { getISTTime } = require('../utils/dateTime');
+  const todayIST = getISTTime().dateOnly;
   return this.find({ date: todayIST }).sort({ batchType: 1 });
 };
 

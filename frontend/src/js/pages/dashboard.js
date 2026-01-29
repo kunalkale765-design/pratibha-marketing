@@ -1290,7 +1290,14 @@ async function init() {
     if (!user) return;
 
     const userBadge = document.getElementById('userBadge');
-    if (userBadge) userBadge.textContent = user.name || user.email || 'User';
+    if (userBadge) {
+        userBadge.textContent = user.name || user.email || 'User';
+        if (user.role === 'admin') {
+            userBadge.style.cursor = 'pointer';
+            userBadge.title = 'Manage Users';
+            userBadge.onclick = () => { window.location.href = '/pages/users/'; };
+        }
+    }
     loadDashboardStats();
     checkAPIHealth();
 }

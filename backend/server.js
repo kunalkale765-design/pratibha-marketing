@@ -266,6 +266,7 @@ app.use('/api/batches', require('./routes/batches'));
 app.use('/api/packing', require('./routes/packing'));
 app.use('/api/reconciliation', require('./routes/reconciliation'));
 app.use('/api/ledger', require('./routes/ledger'));
+app.use('/api/users', writeOperationsLimiter, require('./routes/users'));
 
 // Public health check endpoint (minimal info only)
 app.get('/api/health', (req, res) => {

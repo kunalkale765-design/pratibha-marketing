@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Users - Pratibha Marketing</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#2e3532">
+
+    <!-- Shared CSS -->
+    <link rel="stylesheet" href="/assets/css/variables.css">
+    <link rel="stylesheet" href="/assets/css/base.css">
+    <link rel="stylesheet" href="/assets/css/components.css">
+    <link rel="stylesheet" href="/assets/css/utilities.css">
+    <link rel="stylesheet" href="/assets/css/responsive.css">
+
+    <!-- Animations -->
+    <link rel="stylesheet" href="/assets/css/animations/skeleton.css">
+    <link rel="stylesheet" href="/assets/css/animations/cards.css">
+    <link rel="stylesheet" href="/assets/css/animations/inputs.css">
+    <link rel="stylesheet" href="/assets/css/animations/buttons.css">
+    <link rel="stylesheet" href="/assets/css/animations/badges.css">
+    <link rel="stylesheet" href="/assets/css/animations/page.css">
+
+    <!-- Reuse customer-management CSS (same card layout pattern) -->
+    <link rel="stylesheet" href="/assets/css/pages/customer-management.css">
+
+    <style>
+        /* Role filter pills */
+        .role-filters {
+            display: flex;
+            gap: 0.5rem;
+            padding: 0 1rem;
+            margin-bottom: 0.5rem;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+        .role-filters::-webkit-scrollbar { display: none; }
+
+        .role-pill {
+            padding: 0.5rem 1rem;
+            background: var(--cream);
+            border: 1.5px solid var(--cream-dark);
+            border-radius: 20px;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            cursor: pointer;
+            white-space: nowrap;
+            flex-shrink: 0;
+            transition: all 0.2s ease;
+        }
+        .role-pill:hover { border-color: var(--dusty-olive); }
+        .role-pill.active {
+            background: var(--dusty-olive);
+            border-color: var(--dusty-olive);
+            color: white;
+        }
+
+        /* Role badges */
+        .badge-admin {
+            background: rgba(154, 101, 101, 0.15);
+            color: #9a6565;
+            border: 1px solid rgba(154, 101, 101, 0.3);
+        }
+        .badge-staff {
+            background: rgba(106, 138, 154, 0.15);
+            color: #5a7a8a;
+            border: 1px solid rgba(106, 138, 154, 0.3);
+        }
+        .badge-customer {
+            background: rgba(93, 122, 95, 0.15);
+            color: #5d7a5f;
+            border: 1px solid rgba(93, 122, 95, 0.3);
+        }
+
+        /* Inactive user styling */
+        .customer-card.inactive {
+            opacity: 0.6;
+            border: 1px dashed rgba(154, 101, 101, 0.4);
+        }
+        .badge-inactive {
+            background: rgba(154, 101, 101, 0.1);
+            color: var(--error);
+            border: 1px solid rgba(154, 101, 101, 0.3);
+        }
+
+        /* User email subtitle */
+        .user-email {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+        }
+
+        /* Show inactive toggle */
+        .toggle-inactive {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+        .toggle-inactive input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--dusty-olive);
+            cursor: pointer;
+        }
+
+        /* Password field visibility */
+        .password-wrapper {
+            position: relative;
+        }
+        .password-wrapper input {
+            padding-right: 3rem;
+        }
+        .btn-toggle-pw {
+            position: absolute;
+            right: 0.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.8125rem;
+            padding: 0.25rem 0.5rem;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="header header-animated">
+        <div class="header-content">
+            <a href="/" class="logo">Pratibha <span>Marketing</span></a>
+            <div class="header-btns">
+                <button onclick="showAddUserForm()" class="btn-header primary btn-animated">+ Add User</button>
+                <a href="/" class="btn-header btn-animated">Home</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="search-bar">
+        <input id="searchInput" type="text" placeholder="Search users..." class="search-input input-animated"
+            oninput="searchUsers()">
+        <div style="display: flex; gap: 1.5rem;">
+            <label class="toggle-inactive">
+                <input type="checkbox" id="showInactive" onchange="toggleInactive()">
+                <span>Show inactive</span>
+            </label>
+            <label class="toggle-inactive">
+                <input type="checkbox" id="showTestUsers" onchange="toggleTestUsers()">
+                <span>Show test</span>
+            </label>
+        </div>
+    </div>
+
+    <div class="role-filters">
+        <button class="role-pill active" data-role="" onclick="filterByRole('')">All</button>
+        <button class="role-pill" data-role="admin" onclick="filterByRole('admin')">Admin</button>
+        <button class="role-pill" data-role="staff" onclick="filterByRole('staff')">Staff</button>
+        <button class="role-pill" data-role="customer" onclick="filterByRole('customer')">Customer</button>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <div id="usersList" class="customers-list">
+        <!-- Skeleton loading -->
+        <div class="skeleton-card">
+            <div class="skeleton-row" style="margin-bottom: 0.75rem;">
+                <div class="skeleton skeleton-title" style="width: 50%;"></div>
+                <div class="skeleton skeleton-text" style="width: 20%;"></div>
+            </div>
+            <div class="skeleton skeleton-text" style="width: 40%; margin-bottom: 0.5rem;"></div>
+            <div class="skeleton-row" style="gap: 0.5rem;">
+                <div class="skeleton" style="height: 36px; flex: 1; border-radius: 8px;"></div>
+                <div class="skeleton" style="height: 36px; flex: 1; border-radius: 8px;"></div>
+            </div>
+        </div>
+        <div class="skeleton-card">
+            <div class="skeleton-row" style="margin-bottom: 0.75rem;">
+                <div class="skeleton skeleton-title" style="width: 50%;"></div>
+                <div class="skeleton skeleton-text" style="width: 20%;"></div>
+            </div>
+            <div class="skeleton skeleton-text" style="width: 40%; margin-bottom: 0.5rem;"></div>
+            <div class="skeleton-row" style="gap: 0.5rem;">
+                <div class="skeleton" style="height: 36px; flex: 1; border-radius: 8px;"></div>
+                <div class="skeleton" style="height: 36px; flex: 1; border-radius: 8px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit User Modal -->
+    <div id="userModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title" id="modalTitle">Add User</div>
+                <button class="btn-close" onclick="closeModal()">×</button>
+            </div>
+            <form id="userForm">
+                <div class="modal-body">
+                    <input type="hidden" id="userId">
+                    <div class="form-group">
+                        <label class="form-label">Name *</label>
+                        <input id="userName" type="text" class="form-input input-animated" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Username *</label>
+                        <input id="userEmail" type="text" class="form-input input-animated" required minlength="3"
+                            autocomplete="off">
+                    </div>
+                    <div class="form-group" id="passwordGroup">
+                        <label class="form-label">Password *</label>
+                        <div class="password-wrapper">
+                            <input id="userPassword" type="password" class="form-input input-animated" minlength="6"
+                                autocomplete="new-password">
+                            <button type="button" class="btn-toggle-pw" onclick="togglePasswordVisibility('userPassword', this)">Show</button>
+                        </div>
+                        <p class="form-hint">Min 6 chars, 1 uppercase, 1 lowercase, 1 number</p>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Phone</label>
+                        <input id="userPhone" type="tel" class="form-input input-animated" placeholder="10 digits"
+                            pattern="[0-9]{10}" maxlength="10" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Role *</label>
+                        <select id="userRole" class="form-select input-animated">
+                            <option value="staff">Staff</option>
+                            <option value="admin">Admin</option>
+                            <option value="customer">Customer</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" onclick="closeModal()" class="btn-modal secondary btn-animated">Cancel</button>
+                    <button type="submit" class="btn-modal primary btn-animated" id="saveUserBtn">
+                        <span class="btn-text">Save</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Reset Password Modal -->
+    <div id="passwordModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <div>
+                    <div class="modal-title">Reset Password</div>
+                    <div id="passwordUserName" style="font-size: 0.875rem; color: var(--text-muted);"></div>
+                </div>
+                <button class="btn-close" onclick="closePasswordModal()">×</button>
+            </div>
+            <form id="passwordForm">
+                <div class="modal-body">
+                    <input type="hidden" id="passwordUserId">
+                    <div class="form-group">
+                        <label class="form-label">New Password *</label>
+                        <div class="password-wrapper">
+                            <input id="newPassword" type="password" class="form-input input-animated" required minlength="6"
+                                autocomplete="new-password">
+                            <button type="button" class="btn-toggle-pw" onclick="togglePasswordVisibility('newPassword', this)">Show</button>
+                        </div>
+                        <p class="form-hint">Min 6 chars, 1 uppercase, 1 lowercase, 1 number</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" onclick="closePasswordModal()" class="btn-modal secondary btn-animated">Cancel</button>
+                    <button type="submit" class="btn-modal primary btn-animated" id="savePasswordBtn">
+                        <span class="btn-text">Reset Password</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="/js/auth.js"></script>
+    <script type="module" src="/js/pages/users.js"></script>
+</body>
+
+</html>

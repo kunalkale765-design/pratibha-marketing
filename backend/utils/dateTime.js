@@ -40,9 +40,8 @@ function getISTTime(date = new Date()) {
  * @returns {Date} Next day at midnight IST
  */
 function getNextDay(istDateOnly) {
-  const nextDay = new Date(istDateOnly);
-  nextDay.setDate(nextDay.getDate() + 1);
-  return nextDay;
+  // Add exactly 24 hours — avoids local-timezone pitfalls with setDate/getDate
+  return new Date(istDateOnly.getTime() + 24 * 60 * 60 * 1000);
 }
 
 /**
