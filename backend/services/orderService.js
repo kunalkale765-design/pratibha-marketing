@@ -180,7 +180,21 @@ async function createOrder({ customerId, products, deliveryAddress, notes, idemp
     orderData.idempotencyKey = idempotencyKey;
   }
 
-  const order = await Order.create(orderData);
+  let order;
+  try {
+    order = await Order.create(orderData);
+  } catch (createError) {
+    // Handle duplicate idempotency key race condition gracefully
+    if (createError.code === 11000 && idempotencyKey) {
+      const existingOrder = await Order.findOne({ idempotencyKey })
+        .populate('customer', 'name phone')
+        .populate('products.product', 'name unit');
+      if (existingOrder) {
+        return { order: existingOrder, idempotent: true, warnings: [], newContractPrices: [] };
+      }
+    }
+    throw createError;
+  }
 
   // Populate and return
   const populatedOrder = await Order.findById(order._id)

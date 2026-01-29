@@ -91,14 +91,22 @@ self.addEventListener('install', (event) => {
   console.log('[SW] Installing service worker...');
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => {
+      .then(async (cache) => {
         console.log('[SW] Caching static assets');
-        return cache.addAll(STATIC_ASSETS);
+        // Cache assets individually so one missing file doesn't block installation.
+        // After Vite build, some paths change (e.g. hashed filenames), so we
+        // gracefully skip assets that 404 rather than failing the entire install.
+        const results = await Promise.allSettled(
+          STATIC_ASSETS.map(asset => cache.add(asset).catch(() => {
+            console.warn('[SW] Could not cache:', asset);
+          }))
+        );
+        const cached = results.filter(r => r.status === 'fulfilled').length;
+        console.log(`[SW] Cached ${cached}/${STATIC_ASSETS.length} assets`);
       })
       .then(() => self.skipWaiting())
       .catch((err) => {
-        console.error('[SW] Failed to cache static assets:', err);
-        // Propagate error to fail installation - degraded offline functionality
+        console.error('[SW] Failed during install:', err);
         throw err;
       })
   );

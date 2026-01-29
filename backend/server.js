@@ -25,7 +25,7 @@ if (preservedNodeEnv) {
 // Validate required environment variables (skip in test mode)
 const validateEnv = () => {
   const required = ['MONGODB_URI'];
-  const requiredInProd = ['JWT_SECRET'];
+  const requiredInProd = ['JWT_SECRET', 'ALLOWED_ORIGINS'];
   const missing = [];
 
   required.forEach(key => {
@@ -145,7 +145,7 @@ if (process.env.NODE_ENV === 'production') {
 
 // CORS - Enable Cross-Origin Resource Sharing
 const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',')
+  ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
   : ['http://localhost:5000'];
 
 app.use(cors({
@@ -331,15 +331,20 @@ if (process.env.NODE_ENV === 'development') {
   });
 }
 
-// Serve static frontend files from src (uses native ES modules)
-app.use(express.static(path.join(__dirname, '../frontend/src')));
+// Serve static frontend files
+// In production, serve from built dist/; in development, serve from src/ (native ES modules)
+const frontendDir = process.env.NODE_ENV === 'production'
+  ? path.join(__dirname, '../frontend/dist')
+  : path.join(__dirname, '../frontend/src');
+
+app.use(express.static(frontendDir));
 
 // Catch-all route for SPA support (serve index.html for non-API routes)
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api')) {
     return next();
   }
-  res.sendFile(path.join(__dirname, '../frontend/src/index.html'));
+  res.sendFile(path.join(frontendDir, 'index.html'));
 });
 
 // Error Handling Middleware (must be last)
@@ -366,7 +371,7 @@ const startServer = async () => {
     // Wait for database connection before starting server
     await connectDB();
 
-    server = app.listen(PORT, () => {
+    server = app.listen(PORT, '0.0.0.0', () => {
       console.log(`
 ╔═══════════════════════════════════════════════╗
 ║   Server running in ${process.env.NODE_ENV} mode   ║
@@ -433,11 +438,12 @@ const gracefulShutdown = async (signal) => {
   stopScheduler();
   stopBatchScheduler();
 
-  // Force exit after 4 seconds (PM2 kill_timeout is 5s)
+  // Force exit after timeout (should be less than PM2 kill_timeout)
+  const shutdownTimeout = parseInt(process.env.GRACEFUL_SHUTDOWN_MS, 10) || 15000;
   const forceExitTimeout = setTimeout(() => {
     console.error('Graceful shutdown timed out, forcing exit');
     process.exit(1);
-  }, 4000);
+  }, shutdownTimeout);
   forceExitTimeout.unref();
 
   // Close HTTP server first (stop accepting new connections)

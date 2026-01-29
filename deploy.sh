@@ -126,6 +126,7 @@ NODE_ENV=production
 MONGODB_URI=$MONGODB_URI
 JWT_SECRET=$JWT_SECRET
 ALLOWED_ORIGINS=https://pratibhamarketing.in,https://www.pratibhamarketing.in
+COOKIE_DOMAIN=.pratibhamarketing.in
 ADMIN_TEMP_PASSWORD=$ADMIN_PASSWORD
 ENVEOF
     echo ".env file created with secure random secrets"
@@ -146,8 +147,10 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 fi
 
 echo ""
-echo "Step 12: Setting up logs directory..."
+echo "Step 12: Setting up logs and storage directories..."
 mkdir -p logs
+mkdir -p backend/storage/delivery-bills
+mkdir -p backend/storage/invoices
 
 echo ""
 echo "Step 13: Installing PM2 log rotation..."
@@ -163,7 +166,9 @@ pm2 delete pratibha-marketing 2>/dev/null || true
 pm2 start ecosystem.config.js --env production
 pm2 save
 
-# Setup PM2 to start on boot (without piping to bash which can fail)
+# Setup PM2 to start on boot
+# Note: Using root here since deploy.sh requires root. For better security,
+# create a dedicated user (e.g., 'appuser') and run PM2 under that user.
 pm2 startup systemd -u root --hp /root
 pm2 save
 

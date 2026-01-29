@@ -35,6 +35,21 @@ const magicLinkAuthLimiter = rateLimit({
   skip: () => process.env.NODE_ENV === 'test'
 });
 
+// Shared cookie options for auth tokens
+const getAuthCookieOptions = (maxAge = 7 * 24 * 60 * 60 * 1000) => {
+  const opts = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge,
+    path: '/'
+  };
+  if (process.env.COOKIE_DOMAIN) {
+    opts.domain = process.env.COOKIE_DOMAIN;
+  }
+  return opts;
+};
+
 // Generate JWT Token with unique jti for revocation support
 const generateToken = (userId, tokenVersion = 0) => {
   const jti = crypto.randomUUID();
@@ -124,12 +139,7 @@ router.post('/register', [
     const token = generateToken(user._id);
 
     // Set cookie
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-    });
+    res.cookie('token', token, getAuthCookieOptions());
 
     res.status(201).json({
       success: true,
@@ -189,12 +199,7 @@ router.post('/login', [
     const token = generateToken(user._id, user.tokenVersion || 0);
 
     // Set cookie
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-    });
+    res.cookie('token', token, getAuthCookieOptions());
 
     res.json({
       success: true,
@@ -231,10 +236,15 @@ router.post('/logout', async (req, res) => {
     // Token may be expired/invalid, that's fine - still clear cookie
   }
 
-  res.cookie('token', '', {
+  const clearOpts = {
     httpOnly: true,
-    expires: new Date(0)
-  });
+    expires: new Date(0),
+    path: '/'
+  };
+  if (process.env.COOKIE_DOMAIN) {
+    clearOpts.domain = process.env.COOKIE_DOMAIN;
+  }
+  res.cookie('token', '', clearOpts);
 
   res.json({
     success: true,
@@ -371,12 +381,7 @@ router.get('/magic/:token', magicLinkAuthLimiter, async (req, res, next) => {
         { expiresIn: '24h' }
       );
 
-      res.cookie('token', sessionToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
-      });
+      res.cookie('token', sessionToken, getAuthCookieOptions(24 * 60 * 60 * 1000));
 
       return res.json({
         success: true,
@@ -394,12 +399,7 @@ router.get('/magic/:token', magicLinkAuthLimiter, async (req, res, next) => {
     // User exists - create full session
     const jwtToken = generateToken(user._id, user.tokenVersion || 0);
 
-    res.cookie('token', jwtToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-    });
+    res.cookie('token', jwtToken, getAuthCookieOptions());
 
     res.json({
       success: true,
@@ -516,12 +516,7 @@ router.post('/reset-password/:token', passwordResetLimiter, [
     // Generate new JWT token (auto-login after reset, uses bumped tokenVersion)
     const jwtToken = generateToken(user._id, user.tokenVersion || 0);
 
-    res.cookie('token', jwtToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-    });
+    res.cookie('token', jwtToken, getAuthCookieOptions());
 
     res.json({
       success: true,

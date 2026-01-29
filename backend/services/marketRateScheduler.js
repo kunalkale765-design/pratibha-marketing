@@ -2,6 +2,7 @@ const cron = require('node-cron');
 const MarketRate = require('../models/MarketRate');
 const Product = require('../models/Product');
 const { getISTTime, IST_TIMEZONE } = require('../utils/dateTime');
+const { withLock } = require('../utils/locks');
 
 // Import Sentry if available (optional dependency)
 let Sentry;
@@ -126,11 +127,20 @@ function startScheduler() {
   }
 
   // Schedule for midnight every day: '0 0 * * *'
+  // Uses distributed lock to prevent duplicate execution in PM2 cluster mode
   scheduledTask = cron.schedule('0 0 * * *', async () => {
     try {
-      await resetAllMarketRates();
-      schedulerHealth.lastResetSuccess = new Date();
-      schedulerHealth.lastResetError = null;
+      const lockResult = await withLock('market-rate-reset', async () => {
+        await resetAllMarketRates();
+        return { success: true };
+      }, { ttlMs: 3 * 60 * 1000, timeoutMs: 2 * 60 * 1000 });
+
+      if (lockResult && lockResult.success) {
+        schedulerHealth.lastResetSuccess = new Date();
+        schedulerHealth.lastResetError = null;
+      } else if (lockResult === null) {
+        console.log('[MarketRateScheduler] Another instance is handling rate reset, skipping');
+      }
     } catch (error) {
       console.error('[MarketRateScheduler] Scheduled job failed, retrying in 2 minutes:', error.message);
       schedulerHealth.lastResetError = { message: error.message, at: new Date() };
@@ -138,10 +148,16 @@ function startScheduler() {
       // Retry once after 2 minutes
       setTimeout(async () => {
         try {
-          await resetAllMarketRates();
-          console.log('[MarketRateScheduler] Rate reset retry succeeded');
-          schedulerHealth.lastResetSuccess = new Date();
-          schedulerHealth.lastResetError = null;
+          const retryResult = await withLock('market-rate-reset', async () => {
+            await resetAllMarketRates();
+            return { success: true };
+          }, { ttlMs: 3 * 60 * 1000, timeoutMs: 2 * 60 * 1000 });
+
+          if (retryResult && retryResult.success) {
+            console.log('[MarketRateScheduler] Rate reset retry succeeded');
+            schedulerHealth.lastResetSuccess = new Date();
+            schedulerHealth.lastResetError = null;
+          }
         } catch (retryError) {
           console.error('[MarketRateScheduler] Rate reset retry also failed:', retryError.message);
           schedulerHealth.lastResetError = { message: retryError.message, at: new Date(), retryFailed: true };

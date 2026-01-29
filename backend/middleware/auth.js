@@ -160,6 +160,15 @@ const optionalAuth = async (req, res, next) => {
 
     if (token) {
       const decoded = jwt.verify(token, JWT_SECRET);
+
+      // Check if token has been revoked
+      if (decoded.jti) {
+        const isRevoked = await RevokedToken.isRevoked(decoded.jti);
+        if (isRevoked) {
+          return next(); // Treat as unauthenticated
+        }
+      }
+
       const user = await User.findById(decoded.id).select('-password');
       if (user && user.isActive) {
         req.user = user;

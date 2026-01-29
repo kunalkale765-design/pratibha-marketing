@@ -41,7 +41,7 @@ module.exports = {
     max_memory_restart: '500M',
 
     // Graceful shutdown
-    kill_timeout: 5000,
+    kill_timeout: 20000,
     wait_ready: true,
     listen_timeout: 10000,
 

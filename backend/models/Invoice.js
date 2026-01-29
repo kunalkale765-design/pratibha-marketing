@@ -73,6 +73,8 @@ const invoiceSchema = new mongoose.Schema({
 });
 
 // Index for efficient queries
+invoiceSchema.index({ order: 1 });
+invoiceSchema.index({ generatedBy: 1 });
 invoiceSchema.index({ generatedAt: -1 });
 invoiceSchema.index({ 'firm.id': 1 });
 invoiceSchema.index({ 'customer.name': 1 });

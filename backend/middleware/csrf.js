@@ -35,13 +35,17 @@ const getOrCreateToken = (req, res) => {
 
   if (!token) {
     token = generateToken();
-    res.cookie(CSRF_COOKIE_NAME, token, {
+    const cookieOpts = {
       httpOnly: false, // Must be readable by JavaScript
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax', // Changed from 'strict' to allow navigation from external links
       maxAge: COOKIE_MAX_AGE,
       path: '/'
-    });
+    };
+    if (process.env.COOKIE_DOMAIN) {
+      cookieOpts.domain = process.env.COOKIE_DOMAIN;
+    }
+    res.cookie(CSRF_COOKIE_NAME, token, cookieOpts);
   }
 
   // Store on request object for reuse in same request cycle
