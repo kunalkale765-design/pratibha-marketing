@@ -578,7 +578,8 @@ function displayProcurementList(preserveInputs = false) {
                             productId: item.productId,
                             productName: item.productName,
                             currentRate: currentRate,
-                            quantity: item.totalQty || 0
+                            quantity: item.totalQty || 0,
+                            notProcuredToday: item.rate === undefined ? 'true' : ''
                         },
                         placeholder: '₹0',
                         value: savedValue,
@@ -666,7 +667,8 @@ window.toggleExpand = function (element) {
 window.handleRateInput = function (input) {
     const currentRate = parseFloat(input.dataset.currentRate);
     const newRate = parseFloat(input.value);
-    input.classList.toggle('changed', input.value && newRate !== currentRate);
+    const notProcuredToday = input.dataset.notProcuredToday === 'true';
+    input.classList.toggle('changed', input.value && (newRate !== currentRate || notProcuredToday));
 };
 
 window.handleRateChange = function (input) {
@@ -676,7 +678,8 @@ window.handleRateChange = function (input) {
     const quantity = parseFloat(input.dataset.quantity) || 0;
     const newRate = parseFloat(input.value);
 
-    if (input.value && newRate !== currentRate && newRate > 0) {
+    const notProcuredToday = input.dataset.notProcuredToday === 'true';
+    if (input.value && (newRate !== currentRate || notProcuredToday) && newRate > 0) {
         changedRates[productId] = { product: productId, productName, rate: newRate, previousRate: currentRate, quantity };
         input.classList.add('changed');
     } else {
