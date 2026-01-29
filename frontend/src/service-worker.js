@@ -1,7 +1,7 @@
 // Pratibha Marketing - Service Worker
 // Smart caching for PWA functionality
 
-const CACHE_NAME = 'pratibha-v40';
+const CACHE_NAME = 'pratibha-v41';
 // IMPORTANT: Increment when API response shapes change
 const API_CACHE_NAME = 'pratibha-api-v2';
 const MAX_API_CACHE_ENTRIES = 50;

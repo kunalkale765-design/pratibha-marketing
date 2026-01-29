@@ -2,38 +2,48 @@
  * Sentry Browser Integration
  * Initializes error monitoring for the frontend.
  * DSN is injected by Vite at build time via __SENTRY_DSN__.
+ *
+ * When served without a bundler (e.g., Express static), the @sentry/browser
+ * import will fail. We catch this gracefully and export no-op stubs.
  */
 
-import * as Sentry from '@sentry/browser';
-
-const DSN = import.meta.env.VITE_SENTRY_DSN || '';
-
+let Sentry = null;
 let initialized = false;
 
-if (DSN) {
-    Sentry.init({
-        dsn: DSN,
-        environment: import.meta.env.MODE || 'production',
-        sampleRate: 1.0,
-        maxBreadcrumbs: 50,
-        beforeSend(event) {
-            // Scrub PII from user context
-            if (event.user) {
-                delete event.user.ip_address;
+try {
+    // Dynamic import so the module doesn't crash when served without a bundler
+    const mod = await import('@sentry/browser');
+    Sentry = mod;
+
+    const DSN = import.meta.env?.VITE_SENTRY_DSN || '';
+
+    if (DSN) {
+        Sentry.init({
+            dsn: DSN,
+            environment: import.meta.env?.MODE || 'production',
+            sampleRate: 1.0,
+            maxBreadcrumbs: 50,
+            beforeSend(event) {
+                // Scrub PII from user context
+                if (event.user) {
+                    delete event.user.ip_address;
+                }
+                // Strip query params that might contain tokens
+                if (event.request?.url) {
+                    try {
+                        const url = new URL(event.request.url);
+                        url.searchParams.delete('token');
+                        url.searchParams.delete('magic');
+                        event.request.url = url.toString();
+                    } catch (_) { /* ignore invalid URLs */ }
+                }
+                return event;
             }
-            // Strip query params that might contain tokens
-            if (event.request?.url) {
-                try {
-                    const url = new URL(event.request.url);
-                    url.searchParams.delete('token');
-                    url.searchParams.delete('magic');
-                    event.request.url = url.toString();
-                } catch (_) { /* ignore invalid URLs */ }
-            }
-            return event;
-        }
-    });
-    initialized = true;
+        });
+        initialized = true;
+    }
+} catch (_) {
+    // @sentry/browser not available (not bundled) — run without Sentry
 }
 
 /**
