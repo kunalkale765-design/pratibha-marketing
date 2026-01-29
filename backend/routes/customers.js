@@ -288,7 +288,7 @@ router.post('/:id/magic-link',
 
     // Build the magic link URL with PLAIN token (only time it exists)
     const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
-    const magicLink = `${baseUrl}/customer-order-form.html?token=${token}`;
+    const magicLink = `${baseUrl}/pages/order-form/?token=${token}`;
 
     // Return only the magic link, not the raw token (security best practice)
     res.json({

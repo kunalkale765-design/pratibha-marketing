@@ -182,7 +182,7 @@ swaggerSpec.paths = {
                 properties: {
                   success: { type: 'boolean', example: true },
                   data: { $ref: '#/components/schemas/User' },
-                  redirect: { type: 'string', example: '/customer-order-form.html' }
+                  redirect: { type: 'string', example: '/pages/order-form/' }
                 }
               }
             }

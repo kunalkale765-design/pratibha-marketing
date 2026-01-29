@@ -31,6 +31,7 @@ describe('Magic Link Authentication', () => {
       expect(res.body.success).toBe(true);
       expect(res.body.data.link).toBeDefined();
       // Magic link points to customer order form with token param
+      expect(res.body.data.link).toContain('/pages/order-form/');
       expect(res.body.data.link).toContain('token=');
       // API returns expiresIn (duration) and createdAt
       expect(res.body.data.expiresIn).toBeDefined();

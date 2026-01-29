@@ -181,7 +181,7 @@ const seedDatabase = async () => {
       magicLinkCreatedAt: new Date()
     });
     console.log('✓ Magic link generated for Rajesh Kumar');
-    console.log(`  Test URL: /customer-order-form.html?token=${testMagicToken}\n`);
+    console.log(`  Test URL: /pages/order-form/?token=${testMagicToken}\n`);
 
     // Seed Market Rates for all products
     console.log('Seeding market rates...');
@@ -308,7 +308,7 @@ const seedDatabase = async () => {
     console.log('   Email: priya.sharma@example.com');
     console.log('   Password: Pass1234\n');
     console.log('[*] Magic Link for Testing (Rajesh Kumar):');
-    console.log(`   http://localhost:5000/customer-order-form.html?token=${testMagicToken}\n`);
+    console.log(`   http://localhost:5001/pages/order-form/?token=${testMagicToken}\n`);
     console.log('═══════════════════════════════════════\n');
 
   } catch (error) {
