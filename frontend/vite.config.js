@@ -22,6 +22,8 @@ export default defineConfig({
         orderForm: resolve(__dirname, 'src/pages/order-form/index.html'),
         packing: resolve(__dirname, 'src/pages/packing/index.html'),
         reconciliation: resolve(__dirname, 'src/pages/reconciliation/index.html'),
+        staffDashboard: resolve(__dirname, 'src/pages/staff-dashboard/index.html'),
+        users: resolve(__dirname, 'src/pages/users/index.html'),
       }
     }
   },

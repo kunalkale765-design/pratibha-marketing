@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pratibha Marketing - Staff Dashboard</title>
+
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#7e9181">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Pratibha">
+    <link rel="apple-touch-icon" href="/assets/icons/icon.svg">
+
+    <!-- Shared CSS -->
+    <link rel="stylesheet" href="/assets/css/variables.css">
+    <link rel="stylesheet" href="/assets/css/base.css">
+    <link rel="stylesheet" href="/assets/css/components.css">
+    <link rel="stylesheet" href="/assets/css/utilities.css">
+    <link rel="stylesheet" href="/assets/css/responsive.css">
+
+    <!-- Animations -->
+    <link rel="stylesheet" href="/assets/css/animations/skeleton.css">
+    <link rel="stylesheet" href="/assets/css/animations/cards.css">
+    <link rel="stylesheet" href="/assets/css/animations/page.css">
+    <link rel="stylesheet" href="/assets/css/animations/buttons.css">
+
+    <!-- Page-specific styles (reuse index.css for procurement + action card styles) -->
+    <link rel="stylesheet" href="/assets/css/pages/index.css">
+</head>
+
+<body>
+    <header class="header header-animated">
+        <div class="header-content">
+            <div>
+                <div class="logo">
+                    <div class="logo-text">Pratibha <span>Marketing</span></div>
+                </div>
+                <p class="header-subtitle">Fresh Vegetables Supply & Distribution</p>
+            </div>
+            <div class="header-actions">
+                <div class="user-badge" id="userBadge">Loading...</div>
+                <button class="btn-header btn-animated" id="logoutBtn">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="main">
+        <!-- Quick Actions (Staff: only 3 cards) -->
+        <div class="actions-grid">
+            <a href="/pages/order-form/" class="action-card card-animated primary">
+                <div class="action-icon">+</div>
+                <div class="action-content">
+                    <h3 class="action-title">Create Order</h3>
+                    <p class="action-desc">New customer order</p>
+                </div>
+            </a>
+
+            <a href="/pages/orders/" class="action-card card-animated">
+                <div class="action-icon">&#8803;</div>
+                <div class="action-content">
+                    <h3 class="action-title">View Orders</h3>
+                    <p class="action-desc">Track orders</p>
+                </div>
+            </a>
+
+            <a href="/pages/packing/" class="action-card card-animated packing">
+                <div class="action-icon">&#128230;</div>
+                <div class="action-content">
+                    <h3 class="action-title">Packing Station</h3>
+                    <p class="action-desc">Pack orders</p>
+                </div>
+            </a>
+        </div>
+
+        <!-- Purchase List -->
+        <div class="procurement-container">
+            <div class="procurement-header">
+                <h2>Purchase List</h2>
+                <div class="header-actions">
+                    <input type="text" class="purchase-search" id="purchaseSearch" placeholder="Search products...">
+                    <button class="btn-icon" id="printBtn" title="Print">⎙</button>
+                    <button class="btn-icon" id="exportBtn" title="Export CSV">↓</button>
+                    <button class="btn-save-rates" id="saveRatesBtn">Save</button>
+                </div>
+            </div>
+
+            <!-- Category Filter Pills (dynamically populated) -->
+            <div class="category-pills" id="categoryPills">
+                <button class="category-pill active" data-category="">All</button>
+                <!-- Categories loaded dynamically from API -->
+            </div>
+
+            <!-- TO PROCURE Section -->
+            <div class="section-header to-procure-header" id="toProcureHeader">
+                <span class="section-title">TO PROCURE</span>
+                <span class="new-order-badge hidden" id="newOrderBadge">0 new</span>
+            </div>
+            <div class="procurement-list" id="toProcureList">
+                <!-- Skeleton loading -->
+                <div class="skeleton-card" style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem;">
+                    <div class="skeleton skeleton-title" style="width: 35%;"></div>
+                    <div class="skeleton skeleton-text" style="width: 20%;"></div>
+                    <div class="skeleton" style="width: 80px; height: 32px; border-radius: 6px; margin-left: auto;"></div>
+                </div>
+                <div class="skeleton-card" style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem;">
+                    <div class="skeleton skeleton-title" style="width: 35%;"></div>
+                    <div class="skeleton skeleton-text" style="width: 20%;"></div>
+                    <div class="skeleton" style="width: 80px; height: 32px; border-radius: 6px; margin-left: auto;"></div>
+                </div>
+            </div>
+
+            <!-- PROCURED Section (Collapsible) -->
+            <div class="section-header procured-header" id="procuredHeader">
+                <span class="section-title"><span class="collapse-icon">▾</span> PROCURED (<span id="procuredCount">0</span> items)</span>
+            </div>
+            <div class="procurement-list procured-section" id="procuredList">
+                <!-- Procured items rendered here -->
+            </div>
+
+            <!-- Empty State -->
+            <div class="procurement-empty hidden" id="procurementEmpty">
+                <div class="empty-icon">🎉</div>
+                <div class="empty-text">All items procured!</div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>Pratibha Marketing &copy; 2026 | Fresh vegetables, delivered with trust</p>
+    </footer>
+
+    <!-- Shared JS (loaded as modules) -->
+    <script type="module" src="/js/auth.js"></script>
+    <script type="module" src="/js/api.js"></script>
+    <script type="module" src="/js/pages/staff-dashboard.js"></script>
+</body>
+
+</html>

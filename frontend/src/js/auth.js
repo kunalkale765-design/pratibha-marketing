@@ -228,8 +228,9 @@ const Auth = {
             // Redirect based on role
             if (user.role === 'customer') {
                 window.location.href = '/pages/order-form/';
+            } else if (user.role === 'staff') {
+                window.location.href = '/pages/staff-dashboard/';
             } else {
-                // Staff/admin go to dashboard
                 window.location.href = '/';
             }
             return null;
@@ -247,8 +248,9 @@ const Auth = {
         if (user) {
             if (user.role === 'customer') {
                 window.location.href = '/pages/order-form/';
+            } else if (user.role === 'staff') {
+                window.location.href = '/pages/staff-dashboard/';
             } else {
-                // Staff/admin go to dashboard
                 window.location.href = '/';
             }
             return true;

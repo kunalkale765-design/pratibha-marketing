@@ -56,7 +56,14 @@ async function checkAuth() {
     try {
         const response = await fetch('/api/auth/me', { credentials: 'include' });
         if (response.ok) {
-            window.location.href = '/';
+            const data = await response.json();
+            if (data.user.role === 'customer') {
+                window.location.href = '/pages/order-form/';
+            } else if (data.user.role === 'staff') {
+                window.location.href = '/pages/staff-dashboard/';
+            } else {
+                window.location.href = '/';
+            }
         }
     } catch (_error) {
         // Not logged in - stay on signup page
@@ -153,6 +160,8 @@ if (signupForm) {
                         setTimeout(() => {
                             if (retryData.user.role === 'customer') {
                                 window.location.href = '/pages/order-form/';
+                            } else if (retryData.user.role === 'staff') {
+                                window.location.href = '/pages/staff-dashboard/';
                             } else {
                                 window.location.href = '/';
                             }
@@ -174,6 +183,8 @@ if (signupForm) {
                 setTimeout(() => {
                     if (data.user.role === 'customer') {
                         window.location.href = '/pages/order-form/';
+                    } else if (data.user.role === 'staff') {
+                        window.location.href = '/pages/staff-dashboard/';
                     } else {
                         window.location.href = '/';
                     }

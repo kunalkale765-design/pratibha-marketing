@@ -42,6 +42,8 @@ async function checkAuth() {
             const data = await response.json();
             if (data.user.role === 'customer') {
                 window.location.href = '/pages/order-form/';
+            } else if (data.user.role === 'staff') {
+                window.location.href = '/pages/staff-dashboard/';
             } else {
                 window.location.href = '/';
             }
@@ -108,6 +110,8 @@ if (loginForm) {
                         Auth.setUser(retryData.user);  // Use Auth.setUser to filter sensitive data
                         if (retryData.user.role === 'customer') {
                             window.location.href = '/pages/order-form/';
+                        } else if (retryData.user.role === 'staff') {
+                            window.location.href = '/pages/staff-dashboard/';
                         } else {
                             window.location.href = '/';
                         }
@@ -122,6 +126,8 @@ if (loginForm) {
                 Auth.setUser(data.user);  // Use Auth.setUser to filter sensitive data
                 if (data.user.role === 'customer') {
                     window.location.href = '/pages/order-form/';
+                } else if (data.user.role === 'staff') {
+                    window.location.href = '/pages/staff-dashboard/';
                 } else {
                     window.location.href = '/';
                 }

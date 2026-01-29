@@ -7,7 +7,6 @@ const waitForAuth = (attempts = 0) => new Promise((resolve, reject) => {
     if (window.Auth) {
         resolve(window.Auth);
     } else if (attempts > 500) {
-        // 5 second timeout (500 * 10ms)
         reject(new Error('Auth module failed to load'));
     } else {
         setTimeout(() => waitForAuth(attempts + 1).then(resolve).catch(reject), 10);
@@ -31,15 +30,15 @@ let procurementData = { toProcure: [], procured: [], categories: [] };
 let searchQuery = '';
 let selectedCategory = '';
 const changedRates = {};
-let lastQuantities = {}; // Track quantities to detect new orders
+let lastQuantities = {};
 let pollingInterval = null;
-let badgeHideTimeout = null; // Track badge hide timeout to prevent overlap
+let badgeHideTimeout = null;
 
 // Sound for new order notifications
 let audioContext = null;
 let notificationAudio = null;
 let soundEnabled = false;
-let isPolling = false; // Mutex to prevent concurrent polling
+let isPolling = false;
 
 // Preload notification sound file
 function preloadNotificationSound() {
@@ -48,7 +47,7 @@ function preloadNotificationSound() {
     notificationAudio.volume = 0.5;
 }
 
-// Cleanup resources on page unload to prevent memory leaks
+// Cleanup resources on page unload
 window.addEventListener('beforeunload', () => {
     if (pollingInterval) {
         clearInterval(pollingInterval);
@@ -71,7 +70,6 @@ document.addEventListener('visibilitychange', () => {
             pollingInterval = null;
         }
     } else {
-        // Resume polling when page becomes visible again
         if (!pollingInterval) {
             startPolling();
         }
@@ -82,17 +80,14 @@ document.addEventListener('visibilitychange', () => {
 function playNotificationSound() {
     if (!soundEnabled) return;
 
-    // Try playing the preloaded audio file first
     if (notificationAudio) {
         notificationAudio.currentTime = 0;
         notificationAudio.play().catch(() => {
-            // Fall back to Web Audio API if file playback fails
             playWebAudioNotification();
         });
         return;
     }
 
-    // Fall back to Web Audio API
     playWebAudioNotification();
 }
 
@@ -103,12 +98,10 @@ function playWebAudioNotification() {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
         }
 
-        // Resume context if suspended (browser autoplay policy)
         if (audioContext.state === 'suspended') {
             audioContext.resume();
         }
 
-        // Create a pleasant notification sound (two-tone beep)
         const osc1 = audioContext.createOscillator();
         const osc2 = audioContext.createOscillator();
         const gainNode = audioContext.createGain();
@@ -117,15 +110,11 @@ function playWebAudioNotification() {
         osc2.connect(gainNode);
         gainNode.connect(audioContext.destination);
 
-        // First tone
-        osc1.frequency.value = 880; // A5
+        osc1.frequency.value = 880;
         osc1.type = 'sine';
-
-        // Second tone (harmony)
-        osc2.frequency.value = 1108.73; // C#6
+        osc2.frequency.value = 1108.73;
         osc2.type = 'sine';
 
-        // Volume envelope
         const now = audioContext.currentTime;
         gainNode.gain.setValueAtTime(0, now);
         gainNode.gain.linearRampToValueAtTime(0.3, now + 0.05);
@@ -155,11 +144,13 @@ if (printBtn) printBtn.addEventListener('click', printList);
 if (exportBtn) exportBtn.addEventListener('click', exportCSV);
 if (saveRatesBtn) saveRatesBtn.addEventListener('click', saveAllRates);
 
-// Search input
+// Search input (debounced)
+let searchDebounceTimer = null;
 if (purchaseSearch) {
     purchaseSearch.addEventListener('input', (e) => {
         searchQuery = e.target.value.trim().toLowerCase();
-        displayProcurementList();
+        clearTimeout(searchDebounceTimer);
+        searchDebounceTimer = setTimeout(() => displayProcurementList(), 200);
     });
 }
 
@@ -182,10 +173,8 @@ function populateCategoryPills(categories) {
     const container = document.getElementById('categoryPills');
     if (!container) return;
 
-    // Keep "All" button, remove others
     container.innerHTML = '<button class="category-pill active" data-category="">All</button>';
 
-    // Short display names for categories
     const displayNames = {
         'Indian Vegetables': 'Vegetables',
         'Exotic Vegetables': 'Exotic',
@@ -202,14 +191,12 @@ function populateCategoryPills(categories) {
         container.appendChild(pill);
     });
 
-    // Re-select current category if it exists
     if (selectedCategory) {
         const currentPill = container.querySelector(`[data-category="${selectedCategory}"]`);
         if (currentPill) {
             container.querySelector('.active')?.classList.remove('active');
             currentPill.classList.add('active');
         } else {
-            // Category no longer exists, reset to All
             selectedCategory = '';
         }
     }
@@ -225,11 +212,8 @@ if (procuredHeader) {
 // Initialize sound on first user interaction
 function initSound() {
     if (soundEnabled) return;
-
     try {
-        // Initialize AudioContext (requires user interaction on mobile)
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        // Preload the notification audio file
         preloadNotificationSound();
         soundEnabled = true;
     } catch (e) {
@@ -237,32 +221,21 @@ function initSound() {
     }
 }
 
-// Enable sound on first click anywhere
 document.addEventListener('click', initSound, { once: true });
 document.addEventListener('touchstart', initSound, { once: true });
 
-async function loadDashboardStats() {
+async function loadData() {
     try {
-        const [ordersRes, productsRes, ratesRes, procurementRes] = await Promise.all([
-            fetch('/api/orders', { credentials: 'include' }),
-            fetch('/api/products', { credentials: 'include' }),
+        const [ratesRes, procurementRes] = await Promise.all([
             fetch('/api/market-rates', { credentials: 'include' }),
             fetch('/api/supplier/procurement-summary', { credentials: 'include' })
         ]);
 
-        // Validate responses before parsing
-        if (!ordersRes.ok || !productsRes.ok || !ratesRes.ok || !procurementRes.ok) {
-            const failedEndpoint = !ordersRes.ok ? 'orders' :
-                                   !productsRes.ok ? 'products' :
-                                   !ratesRes.ok ? 'rates' : 'procurement';
-            throw new Error(`Failed to load ${failedEndpoint} data (status: ${
-                !ordersRes.ok ? ordersRes.status :
-                !productsRes.ok ? productsRes.status :
-                !ratesRes.ok ? ratesRes.status : procurementRes.status
-            })`);
+        if (!ratesRes.ok || !procurementRes.ok) {
+            const failedEndpoint = !ratesRes.ok ? 'rates' : 'procurement';
+            throw new Error(`Failed to load ${failedEndpoint} data`);
         }
 
-        const orders = await ordersRes.json();
         const ratesData = await ratesRes.json();
         const procurementResponse = await procurementRes.json();
 
@@ -273,42 +246,14 @@ async function loadDashboardStats() {
             categories: procurementResponse.categories || []
         };
 
-        // Populate category filter pills
         populateCategoryPills(procurementData.categories);
-
-        // Check for new orders
         detectNewOrders(procurementData);
-
-        // Store current quantities for future comparison
         storeQuantities(procurementData);
-
-        // Calculate Total Sale (from delivered/completed orders)
-        const ordersList = orders.data || [];
-        const totalSale = ordersList
-            .filter(o => o.status === 'delivered' || o.paymentStatus === 'paid')
-            .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-
-        // Calculate Profit (estimate based on 15% margin)
-        const profitMargin = 0.15;
-        const totalProfit = totalSale * profitMargin;
-
-        const saleEl = document.getElementById('totalSale');
-        const profitEl = document.getElementById('totalProfit');
-        if (saleEl) saleEl.textContent = formatCurrency(totalSale);
-        if (profitEl) profitEl.textContent = formatCurrency(totalProfit);
-
         displayProcurementList();
-        loadAnalytics(ordersList);
-
-        // Start polling for new orders
         startPolling();
     } catch (error) {
-        console.error('Error loading dashboard stats:', error);
-        const saleEl = document.getElementById('totalSale');
-        const profitEl = document.getElementById('totalProfit');
+        console.error('Error loading data:', error);
         const toProcureEl = document.getElementById('toProcureList');
-        if (saleEl) saleEl.textContent = '—';
-        if (profitEl) profitEl.textContent = '—';
         if (toProcureEl) {
             toProcureEl.innerHTML = '';
             toProcureEl.appendChild(createElement('div', { className: 'empty-state' }, [
@@ -317,7 +262,7 @@ async function loadDashboardStats() {
                     id: 'retryBtn',
                     className: 'btn-retry',
                     style: { marginTop: '1rem', padding: '0.5rem 1rem', background: 'var(--dusty-olive)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' },
-                    onclick: loadDashboardStats
+                    onclick: loadData
                 }, 'Try Again')
             ]));
         }
@@ -332,7 +277,7 @@ function storeQuantities(data) {
 }
 
 function detectNewOrders(newData) {
-    if (Object.keys(lastQuantities).length === 0) return; // First load
+    if (Object.keys(lastQuantities).length === 0) return;
 
     let newOrderCount = 0;
     const allItems = [...newData.toProcure, ...newData.procured];
@@ -345,20 +290,16 @@ function detectNewOrders(newData) {
     });
 
     if (newOrderCount > 0) {
-        // Play notification sound
         playNotificationSound();
 
-        // Show badge
         if (newOrderBadge) {
             newOrderBadge.textContent = `${newOrderCount} new`;
             newOrderBadge.classList.remove('hidden');
 
-            // Clear any existing timeout before setting a new one
             if (badgeHideTimeout) {
                 clearTimeout(badgeHideTimeout);
             }
 
-            // Auto-hide badge after 30 seconds
             badgeHideTimeout = setTimeout(() => {
                 if (newOrderBadge) newOrderBadge.classList.add('hidden');
                 badgeHideTimeout = null;
@@ -372,14 +313,11 @@ function detectNewOrders(newData) {
 function startPolling() {
     if (pollingInterval) clearInterval(pollingInterval);
 
-    // Poll every 30 seconds for new orders
     pollingInterval = setInterval(async () => {
-        // Mutex to prevent concurrent polling requests
         if (isPolling) return;
         isPolling = true;
 
         try {
-            // Guard: stop polling if page containers no longer exist (user navigated away)
             if (!document.getElementById('toProcureList')) {
                 clearInterval(pollingInterval);
                 pollingInterval = null;
@@ -399,23 +337,16 @@ function startPolling() {
             }
             const data = await res.json();
 
-            if (res.ok) {
-                const newProcurementData = {
-                    toProcure: data.toProcure || [],
-                    procured: data.procured || [],
-                    categories: data.categories || []
-                };
+            const newProcurementData = {
+                toProcure: data.toProcure || [],
+                procured: data.procured || [],
+                categories: data.categories || []
+            };
 
-                // Detect new orders before updating
-                detectNewOrders(newProcurementData);
-
-                // Update data
-                procurementData = newProcurementData;
-                storeQuantities(procurementData);
-
-                // Re-render (preserving unsaved rate inputs)
-                displayProcurementList(true);
-            }
+            detectNewOrders(newProcurementData);
+            procurementData = newProcurementData;
+            storeQuantities(procurementData);
+            displayProcurementList(true);
         } catch (error) {
             console.error('Polling error:', error);
         } finally {
@@ -430,9 +361,8 @@ function displayProcurementList(preserveInputs = false) {
     const emptyState = document.getElementById('procurementEmpty');
     const procuredCountEl = document.getElementById('procuredCount');
 
-    // Guard: abort early if required containers are missing from the DOM
     if (!toProcureContainer || !procuredContainer) {
-        console.error('Purchase List: Required DOM elements missing (toProcureList or procuredList). Check index.html structure.');
+        console.error('Purchase List: Required DOM elements missing.');
         const fallback = document.querySelector('.procurement-container');
         if (fallback) {
             const existing = fallback.querySelector('.procurement-error');
@@ -447,7 +377,6 @@ function displayProcurementList(preserveInputs = false) {
         return;
     }
 
-    // Preserve current input values before re-rendering
     const inputValues = {};
     if (preserveInputs) {
         document.querySelectorAll('.item-rate-input').forEach(input => {
@@ -457,11 +386,9 @@ function displayProcurementList(preserveInputs = false) {
         });
     }
 
-    // Clear containers
     toProcureContainer.innerHTML = '';
     procuredContainer.innerHTML = '';
 
-    // Filter items based on search and category
     const filterItems = (items) => {
         return items.filter(item => {
             const matchesSearch = !searchQuery || item.productName.toLowerCase().includes(searchQuery);
@@ -473,12 +400,10 @@ function displayProcurementList(preserveInputs = false) {
     const filteredToProcure = filterItems(procurementData.toProcure);
     const filteredProcured = filterItems(procurementData.procured);
 
-    // Update procured count
     if (procuredCountEl) {
         procuredCountEl.textContent = filteredProcured.length;
     }
 
-    // Show empty state if nothing to procure
     if (filteredToProcure.length === 0 && procurementData.toProcure.length === 0) {
         if (emptyState) emptyState.classList.remove('hidden');
         toProcureContainer.innerHTML = '<div class="empty-list-msg">No items to procure</div>';
@@ -486,7 +411,6 @@ function displayProcurementList(preserveInputs = false) {
         if (emptyState) emptyState.classList.add('hidden');
     }
 
-    // Build rate map for current rates
     const rateMap = {};
     rates.forEach(rate => { rateMap[rate.product] = rate; });
 
@@ -494,7 +418,6 @@ function displayProcurementList(preserveInputs = false) {
     if (filteredToProcure.length > 0) {
         const fragment = document.createDocumentFragment();
 
-        // Add column header
         fragment.appendChild(createElement('div', { className: 'procurement-column-header' }, [
             createElement('span', { className: 'col-expand' }),
             createElement('span', { className: 'col-name' }, 'Product'),
@@ -502,10 +425,8 @@ function displayProcurementList(preserveInputs = false) {
             createElement('span', { className: 'col-input' }, 'Rate')
         ]));
 
-        // Group by category
         let currentCategory = '';
         filteredToProcure.forEach(item => {
-            // Category divider
             if (item.category !== currentCategory) {
                 currentCategory = item.category;
                 fragment.appendChild(createElement('div', { className: 'category-divider' }, currentCategory));
@@ -516,21 +437,17 @@ function displayProcurementList(preserveInputs = false) {
             const savedValue = inputValues[item.productId] || '';
             const unsavedClass = currentRate === 0 ? ' unsaved' : '';
 
-            // Build quantity display based on procurement status
             let qtyDisplay;
             if (item.wasProcured) {
-                // Show "procuredQty + newQty" format
                 qtyDisplay = createElement('span', { className: 'qty-breakdown' }, [
                     createElement('span', { className: 'procured-qty' }, String(item.procuredQty || 0)),
                     createElement('span', { className: 'separator' }, '+'),
                     createElement('span', { className: 'new-qty highlight-new' }, String(item.newQty || 0))
                 ]);
             } else {
-                // Show just totalQty
                 qtyDisplay = createElement('span', { className: 'qty-simple' }, String(item.totalQty || 0));
             }
 
-            // Build details section
             const detailRows = [
                 createElement('div', { className: 'detail-row' }, [
                     createElement('span', { className: 'detail-label' }, 'Total Orders'),
@@ -538,7 +455,6 @@ function displayProcurementList(preserveInputs = false) {
                 ])
             ];
 
-            // Show last rate if previously procured
             if (item.wasProcured && item.lastRate) {
                 detailRows.unshift(createElement('div', { className: 'detail-row highlight-info' }, [
                     createElement('span', { className: 'detail-label' }, 'Last Rate'),
@@ -565,7 +481,7 @@ function displayProcurementList(preserveInputs = false) {
             }, [
                 createElement('div', {
                     className: 'item-main',
-                    onclick: (e) => window.toggleExpand(e.currentTarget)
+                    onclick: (e) => toggleExpand(e.currentTarget)
                 }, [
                     createElement('span', { className: 'item-expand' }, '▶'),
                     createElement('span', { className: 'item-name' }, item.productName),
@@ -586,8 +502,8 @@ function displayProcurementList(preserveInputs = false) {
                         step: '0.01',
                         min: '0',
                         onclick: (e) => e.stopPropagation(),
-                        onchange: (e) => window.handleRateChange(e.target),
-                        oninput: (e) => window.handleRateInput(e.target)
+                        onchange: (e) => handleRateChange(e.target),
+                        oninput: (e) => handleRateInput(e.target)
                     })
                 ]),
                 createElement('div', { className: 'item-details' }, detailRows)
@@ -604,10 +520,8 @@ function displayProcurementList(preserveInputs = false) {
     if (filteredProcured.length > 0) {
         const fragment = document.createDocumentFragment();
 
-        // Group by category
         let currentCategory = '';
         filteredProcured.forEach(item => {
-            // Category divider
             if (item.category !== currentCategory) {
                 currentCategory = item.category;
                 fragment.appendChild(createElement('div', { className: 'category-divider' }, currentCategory));
@@ -619,7 +533,7 @@ function displayProcurementList(preserveInputs = false) {
             }, [
                 createElement('div', {
                     className: 'item-main',
-                    onclick: (e) => window.toggleExpand(e.currentTarget)
+                    onclick: (e) => toggleExpand(e.currentTarget)
                 }, [
                     createElement('span', { className: 'item-expand' }, '▶'),
                     createElement('span', { className: 'item-name' }, '✓ ' + item.productName),
@@ -646,7 +560,7 @@ function displayProcurementList(preserveInputs = false) {
                             className: 'btn-undo',
                             onclick: (e) => {
                                 e.stopPropagation();
-                                window.undoProcurement(item.productId, item.productName);
+                                undoProcurement(item.productId, item.productName);
                             }
                         }, 'Undo')
                     ])
@@ -659,19 +573,18 @@ function displayProcurementList(preserveInputs = false) {
     }
 }
 
-// Global functions for inline event handlers
-window.toggleExpand = function (element) {
+function toggleExpand(element) {
     element.closest('.procurement-item').classList.toggle('expanded');
-};
+}
 
-window.handleRateInput = function (input) {
+function handleRateInput(input) {
     const currentRate = parseFloat(input.dataset.currentRate);
     const newRate = parseFloat(input.value);
     const notProcuredToday = input.dataset.notProcuredToday === 'true';
     input.classList.toggle('changed', input.value && (newRate !== currentRate || notProcuredToday));
-};
+}
 
-window.handleRateChange = function (input) {
+function handleRateChange(input) {
     const productId = input.dataset.productId;
     const productName = input.dataset.productName;
     const currentRate = parseFloat(input.dataset.currentRate);
@@ -688,15 +601,13 @@ window.handleRateChange = function (input) {
     }
 
     if (saveRatesBtn) saveRatesBtn.classList.toggle('show', Object.keys(changedRates).length > 0);
-};
+}
 
-// Undo procurement - move item back to TO PROCURE
-window.undoProcurement = async function (productId, productName) {
+async function undoProcurement(productId, productName) {
     if (!confirm(`Remove ${productName} from procured list?`)) return;
 
-    // Disable undo button to prevent double-click
-    const undoBtn = document.querySelector(`[onclick*="undoProcurement('${productId}'"]`) ||
-                    document.querySelector(`[data-product-id="${productId}"] .undo-btn`);
+    const item = document.querySelector(`[data-product-id="${CSS.escape(productId)}"]`);
+    const undoBtn = item?.querySelector('.btn-undo');
     if (undoBtn) { undoBtn.disabled = true; undoBtn.classList.add('btn-loading'); }
 
     try {
@@ -704,7 +615,7 @@ window.undoProcurement = async function (productId, productName) {
         const headers = { 'Content-Type': 'application/json' };
         if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
 
-        const res = await fetch(`/api/supplier/procure/${productId}`, {
+        const res = await fetch(`/api/supplier/procure/${encodeURIComponent(productId)}`, {
             method: 'DELETE',
             credentials: 'include',
             headers
@@ -717,16 +628,15 @@ window.undoProcurement = async function (productId, productName) {
         }
 
         showToast(`${productName} moved back to TO PROCURE`, 'success');
-        loadDashboardStats();
+        loadData();
     } catch (error) {
         console.error('Error undoing procurement:', error);
         showToast('Could not undo', 'error');
         if (undoBtn) { undoBtn.disabled = false; undoBtn.classList.remove('btn-loading'); }
     }
-};
+}
 
 function printList() {
-    // Build print content from data model (not DOM innerHTML) to prevent XSS
     const escapeHtml = (str) => {
         if (typeof str !== 'string') return String(str);
         return str
@@ -737,7 +647,6 @@ function printList() {
             .replace(/'/g, '&#039;');
     };
 
-    // Filter items based on current search and category
     const filterItems = (items) => {
         return items.filter(item => {
             const matchesSearch = !searchQuery || item.productName.toLowerCase().includes(searchQuery);
@@ -749,7 +658,6 @@ function printList() {
     const filteredToProcure = filterItems(procurementData.toProcure);
     const filteredProcured = filterItems(procurementData.procured);
 
-    // Build TO PROCURE rows from data
     let toProcureRows = '';
     let currentCategory = '';
     filteredToProcure.forEach(item => {
@@ -757,7 +665,6 @@ function printList() {
             currentCategory = item.category;
             toProcureRows += `<div class="category-header">${escapeHtml(currentCategory)}</div>`;
         }
-        // Show procuredQty + newQty if previously procured, else just totalQty
         const qtyDisplay = item.wasProcured
             ? `${item.procuredQty || 0} + ${item.newQty || 0}`
             : `${item.totalQty || 0}`;
@@ -770,7 +677,6 @@ function printList() {
             </div>`;
     });
 
-    // Build PROCURED rows from data
     let procuredRows = '';
     currentCategory = '';
     filteredProcured.forEach(item => {
@@ -829,6 +735,7 @@ function printList() {
 
 function exportCSV() {
     const allItems = [...procurementData.toProcure, ...procurementData.procured];
+    const csvEscape = (val) => `"${String(val).replace(/"/g, '""')}"`;
 
     const headers = ['Category', 'Product', 'Unit', 'Procured Qty', 'New Qty', 'Total Qty', 'Rate', 'Status'];
     const rows = allItems.map(item => {
@@ -836,9 +743,9 @@ function exportCSV() {
         const rate = item.rate || item.currentRate || 0;
 
         return [
-            `"${item.category}"`,
-            `"${item.productName}"`,
-            item.unit,
+            csvEscape(item.category),
+            csvEscape(item.productName),
+            csvEscape(item.unit),
             item.procuredQty || 0,
             item.newQty || 0,
             item.totalQty || item.procuredQty || 0,
@@ -879,7 +786,6 @@ async function saveAllRates() {
 
         const results = await Promise.all(batch.map(async ([productId, rateData]) => {
             try {
-                // Use the new /api/supplier/procure endpoint which marks as procured AND updates market rate
                 let response = await fetch('/api/supplier/procure', {
                     method: 'POST',
                     headers,
@@ -891,7 +797,6 @@ async function saveAllRates() {
                     })
                 });
 
-                // Handle CSRF error with retry
                 if (response.status === 403) {
                     const errorData = await response.json().catch(() => ({}));
                     if (errorData.message?.toLowerCase().includes('csrf')) {
@@ -935,7 +840,6 @@ async function saveAllRates() {
         });
     }
 
-    // Only clear successful rates from changedRates
     for (const productId of successfulProducts) {
         delete changedRates[productId];
     }
@@ -959,353 +863,18 @@ async function saveAllRates() {
         showToast('Items marked as procured!', 'success');
     }
 
-    loadDashboardStats();
+    loadData();
 }
-
-async function checkAPIHealth() {
-    const apiDot = document.getElementById('apiDot');
-    const apiStatus = document.getElementById('apiStatus');
-    if (!apiDot || !apiStatus) return;
-
-    try {
-        const response = await fetch('/api/health');
-        const data = await response.json();
-
-        if (data.status === 'ok') {
-            apiDot.classList.remove('offline');
-            apiStatus.textContent = 'API Online';
-        } else {
-            apiDot.classList.add('offline');
-            apiStatus.textContent = 'API Offline';
-        }
-    } catch (_error) {
-        apiDot.classList.add('offline');
-        apiStatus.textContent = 'API Offline';
-    }
-}
-
-// Analytics Charts
-let orderStatusChart = null;
-let revenueChart = null;
-let topProductsChart = null;
-
-const chartColors = {
-    olive: 'rgb(126, 145, 129)',
-    oliveLight: 'rgba(126, 145, 129, 0.2)',
-    gunmetal: 'rgb(46, 53, 50)',
-    terracotta: 'rgb(196, 167, 125)',
-    success: 'rgb(93, 122, 95)',
-    warning: 'rgb(184, 154, 90)',
-    error: 'rgb(154, 101, 101)',
-    slate: 'rgb(199, 206, 219)'
-};
-
-async function loadAnalytics(ordersList) {
-    if (!window.Chart) {
-        // Charts library unavailable - show fallback message in chart containers
-        const chartIds = ['orderStatusChart', 'revenueChart', 'topProductsChart'];
-        chartIds.forEach(id => {
-            const canvas = document.getElementById(id);
-            if (canvas && canvas.parentElement) {
-                const msg = document.createElement('div');
-                msg.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;color:var(--dusty-olive);font-size:0.85rem;';
-                msg.textContent = 'Charts unavailable';
-                canvas.parentElement.replaceChild(msg, canvas);
-            }
-        });
-        return;
-    }
-
-    try {
-        // Order Status Distribution (simplified: pending, confirmed, delivered, cancelled)
-        const statusCounts = {
-            pending: 0, confirmed: 0, delivered: 0, cancelled: 0
-        };
-
-        ordersList.forEach(order => {
-            if (Object.hasOwn(statusCounts, order.status)) {
-                statusCounts[order.status]++;
-            }
-        });
-
-        // Update summary counts
-        document.getElementById('pendingCount').textContent = statusCounts.pending;
-        document.getElementById('processingCount').textContent = statusCounts.confirmed;
-        document.getElementById('deliveredCount').textContent = statusCounts.delivered;
-
-        // Order Status Doughnut Chart
-        const statusCtx = document.getElementById('orderStatusChart');
-        if (!statusCtx) {
-            console.warn('Order status chart canvas not found');
-        } else {
-            if (orderStatusChart) orderStatusChart.destroy();
-
-            orderStatusChart = new Chart(statusCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Pending', 'Confirmed', 'Delivered', 'Cancelled'],
-                    datasets: [{
-                        data: [
-                            statusCounts.pending, statusCounts.confirmed,
-                            statusCounts.delivered, statusCounts.cancelled
-                        ],
-                        backgroundColor: [
-                            chartColors.warning, chartColors.olive,
-                            chartColors.success, chartColors.error
-                        ],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '60%',
-                    plugins: { legend: { display: false } }
-                }
-            });
-        }
-
-        // Revenue Trend (Last 7 Days)
-        const last7Days = [];
-        const revenueByDay = {};
-
-        for (let i = 6; i >= 0; i--) {
-            const date = new Date();
-            date.setDate(date.getDate() - i);
-            const dateStr = date.toISOString().split('T')[0];
-            last7Days.push(dateStr);
-            revenueByDay[dateStr] = 0;
-        }
-
-        ordersList.forEach(order => {
-            if (order.status !== 'cancelled') {
-                const orderDate = new Date(order.createdAt).toISOString().split('T')[0];
-                if (Object.hasOwn(revenueByDay, orderDate)) {
-                    revenueByDay[orderDate] += order.totalAmount || 0;
-                }
-            }
-        });
-
-        const revenueData = last7Days.map(date => revenueByDay[date]);
-        const weekTotal = revenueData.reduce((sum, val) => sum + val, 0);
-        const avgDaily = weekTotal / 7;
-
-        document.getElementById('weekTotal').textContent = formatCurrency(weekTotal);
-        document.getElementById('avgDaily').textContent = formatCurrency(Math.round(avgDaily));
-
-        const revenueCtx = document.getElementById('revenueChart');
-        if (!revenueCtx) {
-            console.warn('Revenue chart canvas not found');
-        } else {
-            if (revenueChart) revenueChart.destroy();
-
-            revenueChart = new Chart(revenueCtx, {
-                type: 'line',
-                data: {
-                    labels: last7Days.map(d => {
-                        const date = new Date(d);
-                        return date.toLocaleDateString('en-IN', { weekday: 'short' });
-                    }),
-                    datasets: [{
-                        label: 'Revenue',
-                        data: revenueData,
-                        borderColor: chartColors.olive,
-                        backgroundColor: chartColors.oliveLight,
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: 4,
-                        pointBackgroundColor: chartColors.olive
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: { callback: value => '₹' + value.toLocaleString('en-IN') }
-                        }
-                    }
-                }
-            });
-        }
-
-        // Top Products by Quantity
-        const productQuantities = {};
-        ordersList.forEach(order => {
-            if (order.status !== 'cancelled' && order.products) {
-                order.products.forEach(item => {
-                    const name = item.productName || 'Unknown';
-                    productQuantities[name] = (productQuantities[name] || 0) + (item.quantity || 0);
-                });
-            }
-        });
-
-        const sortedProducts = Object.entries(productQuantities)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 5);
-
-        const topProductsCtx = document.getElementById('topProductsChart');
-        if (!topProductsCtx) {
-            console.warn('Top products chart canvas not found');
-        } else {
-            if (topProductsChart) topProductsChart.destroy();
-
-            topProductsChart = new Chart(topProductsCtx, {
-                type: 'bar',
-                data: {
-                    labels: sortedProducts.map(([name]) => name.length > 12 ? name.slice(0, 12) + '...' : name),
-                    datasets: [{
-                        label: 'Quantity',
-                        data: sortedProducts.map(([, qty]) => qty),
-                        backgroundColor: [
-                            chartColors.olive, chartColors.terracotta, chartColors.gunmetal,
-                            chartColors.success, chartColors.warning
-                        ],
-                        borderRadius: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    indexAxis: 'y',
-                    plugins: { legend: { display: false } },
-                    scales: { x: { beginAtZero: true } }
-                }
-            });
-        }
-
-    } catch (error) {
-        console.error('Error loading analytics:', error);
-    }
-}
-
-// ====================
-// LEDGER REPORT
-// ====================
-let ledgerCustomers = [];
-
-async function loadLedgerCustomers() {
-    try {
-        const res = await fetch('/api/customers', { credentials: 'include' });
-        const data = await res.json();
-        if (res.ok) {
-            ledgerCustomers = data.data || [];
-            const select = document.getElementById('ledgerCustomer');
-            select.innerHTML = '';
-            select.appendChild(createElement('option', { value: '' }, 'All Customers'));
-            ledgerCustomers.forEach(c => {
-                select.appendChild(createElement('option', { value: c._id }, c.name));
-            });
-        }
-    } catch (e) {
-        console.error('Error loading customers:', e);
-    }
-}
-
-window.openLedgerModal = function () {
-    // Load customers if not loaded
-    if (ledgerCustomers.length === 0) {
-        loadLedgerCustomers();
-    }
-    // Set default dates (current month)
-    const now = new Date();
-    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-    document.getElementById('ledgerFromDate').value = firstDay.toISOString().split('T')[0];
-    document.getElementById('ledgerToDate').value = now.toISOString().split('T')[0];
-
-    document.getElementById('ledgerModal').classList.add('show');
-    document.body.style.overflow = 'hidden';
-};
-
-window.closeLedgerModal = function () {
-    document.getElementById('ledgerModal').classList.remove('show');
-    document.body.style.overflow = '';
-};
-
-window.downloadLedger = async function () {
-    const customerId = document.getElementById('ledgerCustomer').value;
-    const fromDate = document.getElementById('ledgerFromDate').value;
-    const toDate = document.getElementById('ledgerToDate').value;
-
-    // Build query params
-    const params = new URLSearchParams();
-    if (customerId) params.append('customerId', customerId);
-    if (fromDate) params.append('fromDate', fromDate);
-    if (toDate) params.append('toDate', toDate);
-
-    // Find and disable the download button during the operation
-    const downloadBtn = document.querySelector('#ledgerModal .btn-download, #ledgerModal button[onclick*="downloadLedger"]');
-    if (downloadBtn) {
-        downloadBtn.disabled = true;
-        downloadBtn.classList.add('btn-loading');
-    }
-
-    try {
-        showToast('Downloading ledger...', 'info');
-
-        const res = await fetch(`/api/reports/ledger?${params}`, {
-            credentials: 'include'
-        });
-
-        if (!res.ok) {
-            const error = await res.json();
-            throw new Error(error.message || 'Ledger temporarily unavailable');
-        }
-
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-
-        // Get filename from header or generate
-        const disposition = res.headers.get('Content-Disposition');
-        let filename = 'ledger.xlsx';
-        if (disposition && disposition.includes('filename=')) {
-            filename = disposition.split('filename=')[1].replace(/"/g, '');
-        }
-
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-
-        showToast('Ledger downloaded!', 'success');
-        window.closeLedgerModal();
-    } catch (e) {
-        console.error('Download ledger error:', e);
-        showToast(e.message || 'Could not download', 'info');
-    } finally {
-        if (downloadBtn) {
-            downloadBtn.disabled = false;
-            downloadBtn.classList.remove('btn-loading');
-        }
-    }
-};
 
 async function init() {
-    const user = await Auth.requireAuth(['admin', 'staff']);
+    const user = await Auth.requireAuth(['staff']);
     if (!user) return;
-
-    // Staff users have their own dashboard
-    if (user.role === 'staff') {
-        window.location.href = '/pages/staff-dashboard/';
-        return;
-    }
 
     const userBadge = document.getElementById('userBadge');
     if (userBadge) {
         userBadge.textContent = user.name || user.email || 'User';
-        if (user.role === 'admin') {
-            userBadge.style.cursor = 'pointer';
-            userBadge.title = 'Manage Users';
-            userBadge.onclick = () => { window.location.href = '/pages/users/'; };
-        }
     }
-    loadDashboardStats();
-    checkAPIHealth();
+    loadData();
 }
 
 init();
