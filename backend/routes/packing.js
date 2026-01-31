@@ -431,7 +431,13 @@ router.post('/:orderId/reprint-bill',
 
       res.set({
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${billNumber}.pdf"`,
+        'Content-Disposition': (() => {
+          const custName = (order.customer?.name || '').replace(/[^a-zA-Z0-9 ]/g, '').trim() || 'Customer';
+          const now = new Date();
+          const day = now.toLocaleDateString('en-IN', { day: 'numeric', timeZone: 'Asia/Kolkata' });
+          const month = now.toLocaleDateString('en-IN', { month: 'short', timeZone: 'Asia/Kolkata' });
+          return `attachment; filename="${encodeURIComponent(`${custName} ${day} ${month}.pdf`)}"`;
+        })(),
         'Content-Length': pdfBuffer.length
       });
 

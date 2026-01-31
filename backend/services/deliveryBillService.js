@@ -409,9 +409,15 @@ async function generateBillForOrder(order, batch) {
     // Generate combined PDF with both ORIGINAL and DUPLICATE copies
     const billPdf = await generateBillPDF(billData);
 
-    // Save PDF
-    const filename = `${billNumber}.pdf`;
-    await fs.writeFile(path.join(BILL_STORAGE_DIR, filename), billPdf);
+    // Build descriptive filename: "Customer Name 29 Jan.pdf"
+    const customerName = (updatedOrder.customer?.name || 'Unknown').replace(/[^a-zA-Z0-9 ]/g, '').trim();
+    const billDate = new Date();
+    const day = billDate.toLocaleDateString('en-IN', { day: 'numeric', timeZone: 'Asia/Kolkata' });
+    const month = billDate.toLocaleDateString('en-IN', { month: 'short', timeZone: 'Asia/Kolkata' });
+    const displayFilename = `${customerName} ${day} ${month}.pdf`;
+    // Safe filename for disk storage (no spaces)
+    const storageFilename = `${billNumber}.pdf`;
+    await fs.writeFile(path.join(BILL_STORAGE_DIR, storageFilename), billPdf);
 
     orderBills.push({
       billNumber: billNumber,
@@ -419,7 +425,8 @@ async function generateBillForOrder(order, batch) {
       firmId: firmId,
       firmName: firmData.firm.name,
       total: firmData.subtotal,
-      pdfPath: filename
+      pdfPath: storageFilename,
+      displayFilename: displayFilename
     });
   }
 
