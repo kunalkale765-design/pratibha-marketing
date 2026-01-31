@@ -250,16 +250,21 @@ async function loadDashboardStats() {
             fetch('/api/supplier/procurement-summary', { credentials: 'include' })
         ]);
 
+        // Check for auth failures first - redirect to login
+        const allResponses = [ordersRes, productsRes, ratesRes, procurementRes];
+        if (allResponses.some(r => r.status === 401)) {
+            window.location.href = '/pages/auth/login.html';
+            return;
+        }
+
         // Validate responses before parsing
         if (!ordersRes.ok || !productsRes.ok || !ratesRes.ok || !procurementRes.ok) {
+            const statuses = { orders: ordersRes.status, products: productsRes.status, rates: ratesRes.status, procurement: procurementRes.status };
+            console.error('Dashboard API failures:', statuses);
             const failedEndpoint = !ordersRes.ok ? 'orders' :
                                    !productsRes.ok ? 'products' :
                                    !ratesRes.ok ? 'rates' : 'procurement';
-            throw new Error(`Failed to load ${failedEndpoint} data (status: ${
-                !ordersRes.ok ? ordersRes.status :
-                !productsRes.ok ? productsRes.status :
-                !ratesRes.ok ? ratesRes.status : procurementRes.status
-            })`);
+            throw new Error(`Failed to load ${failedEndpoint} data (status: ${statuses[failedEndpoint]})`);
         }
 
         const orders = await ordersRes.json();

@@ -214,6 +214,7 @@ function initGlobalListeners() {
 async function loadMarketRates() {
     try {
         const res = await fetch('/api/market-rates', { credentials: 'include' });
+        if (res.status === 401) { window.location.href = '/pages/auth/login.html'; return; }
         if (!res.ok) {
             throw new Error(`Server returned ${res.status}`);
         }
@@ -287,6 +288,7 @@ function showDataLoadWarning(type, message) {
 async function loadOrders() {
     try {
         const res = await fetch('/api/orders?limit=100', { credentials: 'include' });
+        if (res.status === 401) { window.location.href = '/pages/auth/login.html'; return; }
         if (!res.ok) {
             throw new Error(`Server returned ${res.status}`);
         }

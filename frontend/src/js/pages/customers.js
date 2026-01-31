@@ -32,6 +32,10 @@ async function init() {
 async function loadProducts() {
     try {
         const res = await fetch('/api/products', { credentials: 'include' });
+        if (res.status === 401) {
+            window.location.href = '/pages/auth/login.html';
+            return;
+        }
         if (!res.ok) {
             throw new Error(`Server returned ${res.status}`);
         }
@@ -47,6 +51,10 @@ async function loadCustomers() {
     try {
         const url = showTestCustomers ? '/api/customers?includeTest=true' : '/api/customers';
         const res = await fetch(url, { credentials: 'include' });
+        if (res.status === 401) {
+            window.location.href = '/pages/auth/login.html';
+            return;
+        }
         if (!res.ok) {
             throw new Error(`Server returned ${res.status}`);
         }

@@ -128,13 +128,12 @@ const Auth = {
             }
         } catch (error) {
             console.error('Auth verification failed:', error);
-            // Check if this is a network error vs other errors
-            if (!navigator.onLine || error.name === 'TypeError' || error.message.includes('network') || error.message.includes('fetch') || error.message.includes('Failed to fetch')) {
-                // Network issue - don't clear auth, return cached user if available
-                console.warn('Network issue during auth verification - using cached user');
+            // Only use cached user if truly offline
+            if (!navigator.onLine) {
+                console.warn('Offline - using cached user');
                 return this.getUser();
             }
-            // Other errors - clear auth to be safe
+            // Any other error (network timeout, server down, etc.) - clear auth
             this.clearAuth();
             return null;
         }
