@@ -100,11 +100,14 @@ const API = {
 
             // Handle specific error codes
             if (response.status === 401) {
-                // Unauthorized - clear auth and redirect
-                if (typeof Auth !== 'undefined') {
-                    Auth.clearAuth();
+                // Unauthorized - clear auth and redirect (singleton guard prevents flicker)
+                if (!API._redirecting401) {
+                    API._redirecting401 = true;
+                    if (typeof Auth !== 'undefined') {
+                        Auth.clearAuth();
+                    }
+                    window.location.href = '/pages/auth/login.html';
                 }
-                window.location.href = '/pages/auth/login.html';
                 return { success: false, error: 'Session expired. Please login again.', status: 401 };
             }
 
@@ -343,7 +346,10 @@ export async function fetchWithAuth(url, options = {}) {
             signal: controller.signal
         });
         if (res.status === 401) {
-            window.location.href = '/pages/auth/login.html';
+            if (!API._redirecting401) {
+                API._redirecting401 = true;
+                window.location.href = '/pages/auth/login.html';
+            }
             return null;
         }
         return res;

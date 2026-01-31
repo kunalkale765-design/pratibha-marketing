@@ -344,7 +344,7 @@ router.get('/magic/:token', magicLinkAuthLimiter, async (req, res, next) => {
     if (!customer) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid magic link'
+        message: 'This magic link has already been used or is invalid. Please request a new one.'
       });
     }
 

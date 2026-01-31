@@ -73,7 +73,7 @@ if (loginForm) {
         try {
             const headers = { 'Content-Type': 'application/json' };
             // Ensure CSRF token is available (fetches from server if missing)
-            const csrfToken = await Auth.ensureCsrfToken();
+            let csrfToken = await Auth.ensureCsrfToken();
             if (csrfToken) {
                 headers['X-CSRF-Token'] = csrfToken;
             }
@@ -93,8 +93,8 @@ if (loginForm) {
 
             const data = await response.json();
 
-            // Handle CSRF error with automatic retry
-            if (response.status === 403 && data?.message?.toLowerCase().includes('csrf')) {
+            // Handle CSRF error (or missing token) with automatic retry
+            if (response.status === 403 && (data?.message?.toLowerCase().includes('csrf') || !csrfToken)) {
                 console.log('CSRF error, refreshing token and retrying...');
                 const newToken = await Auth.refreshCsrfToken();
                 if (newToken) {
@@ -107,7 +107,7 @@ if (loginForm) {
                     });
                     const retryData = await retryResponse.json();
                     if (retryResponse.ok) {
-                        Auth.setUser(retryData.user);  // Use Auth.setUser to filter sensitive data
+                        Auth.setUser(retryData.user);
                         if (retryData.user.role === 'customer') {
                             window.location.href = '/pages/order-form/';
                         } else if (retryData.user.role === 'staff') {

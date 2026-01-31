@@ -75,6 +75,11 @@ const Auth = {
         if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
             navigator.serviceWorker.controller.postMessage('logout');
         }
+        // Also clear caches directly as a fallback (SW message may not be processed before redirect)
+        if ('caches' in window) {
+            caches.keys().then(names => names.forEach(name => caches.delete(name)))
+                .catch(() => {});
+        }
     },
 
     /**
