@@ -266,6 +266,25 @@ const Auth = {
 // Make Auth globally available for browser use
 if (typeof window !== 'undefined') {
     window.Auth = Auth;
+
+    // Global fetch interceptor: catch 401 responses from ANY fetch call
+    // This is the safety net — even if a page script forgets to handle 401,
+    // the user will be redirected to login instead of seeing "data not available"
+    const _originalFetch = window.fetch;
+    let _redirecting = false;
+    window.fetch = async function (...args) {
+        const response = await _originalFetch.apply(this, args);
+        if (response.status === 401 && !_redirecting) {
+            const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
+            // Only intercept API calls (not external fetches)
+            if (url.startsWith('/api/') || url.startsWith(window.location.origin + '/api/')) {
+                _redirecting = true;
+                Auth.clearAuth();
+                window.location.href = '/pages/auth/login.html';
+            }
+        }
+        return response;
+    };
 }
 
 // Export for use in other modules

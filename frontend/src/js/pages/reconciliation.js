@@ -47,11 +47,6 @@ async function loadPendingOrders() {
 
         if (!response.ok) throw new Error('Failed to load pending orders');
 
-        if (response.status === 401) {
-            window.location.href = '/pages/auth/login.html';
-            return;
-        }
-
         const data = await response.json();
         pendingOrders = data.data || [];
         todayCompletedCount = data.todayCompleted || 0;
