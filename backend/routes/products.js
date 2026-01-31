@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { body, param, validationResult } = require('express-validator');
 const Product = require('../models/Product');
+const Customer = require('../models/Customer');
 const { protect, authorize } = require('../middleware/auth');
 
 // Validation middleware
@@ -36,6 +37,14 @@ router.get('/', protect, async (req, res, next) => {
       filter.isActive = false;
     } else {
       filter.isActive = true;
+    }
+
+    // For contract customers, only return their contracted products
+    if (req.user.role === 'customer' && req.user.customer) {
+      const customer = await Customer.findById(req.user.customer).select('pricingType contractPrices');
+      if (customer && customer.pricingType === 'contract' && customer.contractPrices && customer.contractPrices.size > 0) {
+        filter._id = { $in: [...customer.contractPrices.keys()] };
+      }
     }
 
     const products = await Product.find(filter)

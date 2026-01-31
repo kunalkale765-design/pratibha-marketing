@@ -56,9 +56,9 @@ const Auth = {
                 _id: user.customer._id,
                 name: user.customer.name,
                 pricingType: user.customer.pricingType,
-                // Store only product IDs for filtering, not actual prices
-                ...(user.customer.pricingType === 'contract' && user.customer.contractPrices
-                    ? { allowedProducts: Object.keys(user.customer.contractPrices) }
+                // Use allowedProducts from backend (IDs only, no prices)
+                ...(user.customer.allowedProducts
+                    ? { allowedProducts: user.customer.allowedProducts }
                     : {})
             } : null,
             isMagicLink: user.isMagicLink || false

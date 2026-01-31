@@ -130,11 +130,12 @@ function buildSafeCustomerResponse(customer) {
     pricingType: customer.pricingType
   };
 
-  // Include contract prices for contract customers (needed for product filtering)
+  // Include only product IDs for contract customers (prices stay server-side)
   if (customer.pricingType === 'contract' && customer.contractPrices) {
-    safeCustomer.contractPrices = customer.contractPrices instanceof Map
-      ? Object.fromEntries(customer.contractPrices)
-      : customer.contractPrices;
+    const keys = customer.contractPrices instanceof Map
+      ? [...customer.contractPrices.keys()]
+      : Object.keys(customer.contractPrices);
+    safeCustomer.allowedProducts = keys;
   }
 
   // Include markup percentage for markup customers
