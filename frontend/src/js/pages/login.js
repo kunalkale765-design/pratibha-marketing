@@ -73,7 +73,7 @@ if (loginForm) {
         try {
             const headers = { 'Content-Type': 'application/json' };
             // Ensure CSRF token is available (fetches from server if missing)
-            let csrfToken = await Auth.ensureCsrfToken();
+            const csrfToken = await Auth.ensureCsrfToken();
             if (csrfToken) {
                 headers['X-CSRF-Token'] = csrfToken;
             }
