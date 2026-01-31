@@ -674,7 +674,8 @@ router.get('/:id/bills/:orderId/download',
           const now = new Date();
           const day = now.toLocaleDateString('en-IN', { day: 'numeric', timeZone: 'Asia/Kolkata' });
           const month = now.toLocaleDateString('en-IN', { month: 'short', timeZone: 'Asia/Kolkata' });
-          return `attachment; filename="${encodeURIComponent(`${custName} ${day} ${month}.pdf`)}"`;
+          const safeName = `${custName} ${day} ${month}.pdf`;
+          return `attachment; filename="${safeName}"; filename*=UTF-8''${encodeURIComponent(safeName)}`;
         })(),
         'Content-Length': pdfBuffer.length
       });
