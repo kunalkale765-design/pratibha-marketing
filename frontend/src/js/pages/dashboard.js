@@ -1,4 +1,4 @@
-import { formatCurrency, escapeHtml } from '/js/utils.js';
+import { formatCurrency } from '/js/utils.js';
 import { initPage } from '/js/init.js';
 import { showToast, createElement } from '/js/ui.js';
 import { waitForAuth } from '/js/helpers/auth-wait.js';

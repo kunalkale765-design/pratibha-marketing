@@ -5,7 +5,7 @@ import { waitForAuth } from '/js/helpers/auth-wait.js';
 
 // Import helpers
 import {
-    setAuth as setHistoryAuth, setOnSave, isFormDirty,
+    setAuth as setHistoryAuth, setOnSave,
     openOrderDetail, closeOrderModal, downloadInvoice
 } from '/js/helpers/order-form-history.js';
 import { renderOrdersList } from '/js/helpers/order-form-orders-list.js';

@@ -1,5 +1,4 @@
 import { showToast, createElement } from '/js/ui.js';
-import { escapeHtml } from '/js/utils.js';
 import { waitForAuth } from '/js/helpers/auth-wait.js';
 
 // Import helpers
