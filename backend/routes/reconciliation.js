@@ -112,8 +112,12 @@ async function autoGenerateInvoices(order, userId) {
         invoice.pdfPath = filename;
         await invoice.save();
       } catch (pdfError) {
-        // PDF generation failed but invoice record exists - can be regenerated later
+        // PDF generation failed but invoice record exists with pdfPath=null
+        // Mark the invoice so it can be identified and regenerated
         console.error(`[Reconciliation] PDF generation failed for ${invoiceNumber}:`, pdfError.message);
+        invoice.pdfGenerationError = pdfError.message;
+        invoice.pdfFailedAt = new Date();
+        try { await invoice.save(); } catch (_) { /* best effort */ }
       }
     }
   } catch (error) {
@@ -485,22 +489,33 @@ router.post('/:orderId/complete',
         }
       }
 
-      // Auto-generate invoices in background (non-blocking)
-      autoGenerateInvoices(order, req.user._id).catch(err => {
-        console.error(`[Reconciliation] Background invoice generation error:`, err.message);
-      });
+      // Auto-generate invoices — await to detect failures and inform the user
+      let invoiceWarning = null;
+      try {
+        await autoGenerateInvoices(order, req.user._id);
+      } catch (err) {
+        console.error(`[Reconciliation] Invoice generation failed for order ${order.orderNumber}:`, err.message);
+        invoiceWarning = 'Reconciliation succeeded but invoice generation failed. Invoices can be generated manually from the order page.';
+      }
+
+      const responseData = {
+        orderNumber: order.orderNumber,
+        status: order.status,
+        originalTotal: originalTotal,
+        finalTotal: order.totalAmount,
+        adjustments: changes.length,
+        changes: changes
+      };
+      if (invoiceWarning) {
+        responseData.invoiceWarning = invoiceWarning;
+      }
 
       res.json({
         success: true,
-        message: 'Reconciliation completed successfully',
-        data: {
-          orderNumber: order.orderNumber,
-          status: order.status,
-          originalTotal: originalTotal,
-          finalTotal: order.totalAmount,
-          adjustments: changes.length,
-          changes: changes
-        }
+        message: invoiceWarning
+          ? 'Reconciliation completed with warnings'
+          : 'Reconciliation completed successfully',
+        data: responseData
       });
     } catch (error) {
       next(error);

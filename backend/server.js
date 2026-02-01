@@ -165,7 +165,9 @@ app.use(cors({
         if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
           return callback(null, true);
         }
-      } catch (_e) { /* invalid origin */ }
+      } catch (_e) {
+        if (process.env.NODE_ENV !== 'test') console.warn('[CORS] Malformed origin header:', origin);
+      }
     }
 
     callback(new Error('Not allowed by CORS'));

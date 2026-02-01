@@ -191,13 +191,13 @@ const API = {
             // All retries exhausted
             captureException(error, { endpoint, method: options.method, type: 'network', retries: MAX_RETRIES });
 
-            // Return error silently for GET requests
-            // For state-changing requests, we need to inform the user
+            // For GET requests, don't show a toast but still return a meaningful error
+            // so callers can display inline feedback if needed
             const isGet = !options.method || options.method.toUpperCase() === 'GET';
             if (isGet) {
                 return {
                     success: false,
-                    error: '',
+                    error: 'Unable to load data. Please check your connection and try again.',
                     networkError: true,
                     silent: true
                 };

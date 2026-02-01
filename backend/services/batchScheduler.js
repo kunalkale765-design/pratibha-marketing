@@ -213,9 +213,27 @@ async function autoConfirmFirstBatch() {
         await batch.save();
         console.error('[BatchScheduler] Orders reverted to pending, batch reopened.');
       } catch (revertError) {
-        console.error('[BatchScheduler] CRITICAL: Failed to revert orders after bill failure!', revertError.message);
+        console.error('[BatchScheduler] CRITICAL: Failed to revert orders after bill failure!', revertError.message, revertError.stack);
+        // This is a double-failure: bills failed AND revert failed. Orders are in an inconsistent state.
+        // Report to Sentry with maximum severity context.
+        if (sentryAvailable && Sentry && process.env.SENTRY_DSN) {
+          Sentry.captureException(revertError, {
+            tags: { service: 'batchScheduler', operation: 'revertAfterBillFailure', severity: 'critical' },
+            extra: {
+              batchNumber: batch.batchNumber,
+              batchId: batch._id.toString(),
+              orderIds: orderIds.map(id => id.toString()),
+              originalError: billGenerationError
+            }
+          });
+        }
+        schedulerHealth.lastAutoConfirmError = {
+          message: `CRITICAL: Revert failed after bill failure: ${revertError.message}`,
+          at: new Date(),
+          revertFailed: true
+        };
       }
-      // Report to Sentry if available
+      // Report the bill generation failure to Sentry
       if (sentryAvailable && Sentry && process.env.SENTRY_DSN) {
         Sentry.captureException(new Error(`Bill generation failed after ${MAX_BILL_RETRIES} retries: ${billGenerationError}`), {
           tags: { service: 'batchScheduler', operation: 'billGeneration' },
@@ -610,7 +628,13 @@ async function manuallyConfirmBatch(batchId, userId, options = {}) {
         batch.confirmedAt = undefined;
         await batch.save();
       } catch (revertError) {
-        console.error('[BatchScheduler] Failed to revert after manual bill failure:', revertError.message);
+        console.error('[BatchScheduler] CRITICAL: Failed to revert after manual bill failure:', revertError.message, revertError.stack);
+        if (sentryAvailable && Sentry && process.env.SENTRY_DSN) {
+          Sentry.captureException(revertError, {
+            tags: { service: 'batchScheduler', operation: 'manualRevertAfterBillFailure', severity: 'critical' },
+            extra: { batchNumber: batch.batchNumber, billError: billGenerationError }
+          });
+        }
       }
       billResults.errors.push({ error: billGenerationError });
     }

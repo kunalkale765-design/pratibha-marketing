@@ -59,6 +59,14 @@ const invoiceSchema = new mongoose.Schema({
     type: String,
     default: null  // Set after PDF is generated (for transaction safety)
   },
+  pdfGenerationError: {
+    type: String,
+    default: null  // Set when PDF generation fails, for identifying invoices needing regeneration
+  },
+  pdfFailedAt: {
+    type: Date,
+    default: null
+  },
   generatedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

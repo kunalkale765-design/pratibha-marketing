@@ -42,8 +42,12 @@ try {
         });
         initialized = true;
     }
-} catch (_) {
+} catch (loadError) {
     // @sentry/browser not available (not bundled) — run without Sentry
+    // Log so build/deployment issues are visible in browser console
+    if (typeof console !== 'undefined') {
+        console.warn('[Sentry] Failed to load @sentry/browser — error monitoring disabled:', loadError.message || loadError);
+    }
 }
 
 /**

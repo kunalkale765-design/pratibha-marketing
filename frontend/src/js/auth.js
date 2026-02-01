@@ -78,7 +78,9 @@ const Auth = {
         // Also clear caches directly as a fallback (SW message may not be processed before redirect)
         if ('caches' in window) {
             caches.keys().then(names => names.forEach(name => caches.delete(name)))
-                .catch(() => {});
+                .catch(err => {
+                    console.warn('Failed to clear caches during logout — stale data may persist:', err.message || err);
+                });
         }
     },
 
@@ -273,6 +275,9 @@ if (typeof window !== 'undefined') {
     const _originalFetch = window.fetch;
     let _redirecting = false;
     window.fetch = async function (...args) {
+        // Note: _originalFetch may reject on network errors. We intentionally
+        // do NOT catch here — rejections must propagate to callers unchanged.
+        // Only successful responses are intercepted for 401 handling below.
         const response = await _originalFetch.apply(this, args);
         if (response.status === 401 && !_redirecting) {
             const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';

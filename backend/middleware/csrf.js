@@ -77,7 +77,9 @@ const validateOrigin = (req) => {
       if (originUrl.host === host) return true;
       // Also match hostname-only (when port is default 443/80 and omitted from Host)
       if (originUrl.hostname === host) return true;
-    } catch (_e) { /* invalid origin */ }
+    } catch (_e) {
+      if (process.env.NODE_ENV !== 'test') console.warn('[CSRF] Malformed Origin header:', origin);
+    }
   }
 
   // In development, allow localhost origins
@@ -87,13 +89,17 @@ const validateOrigin = (req) => {
       try {
         const url = new URL(origin);
         if (devHosts.includes(url.hostname)) return true;
-      } catch (_e) { /* invalid origin */ }
+      } catch (_e) {
+        console.warn('[CSRF] Malformed Origin header in dev:', origin);
+      }
     }
     if (referer) {
       try {
         const url = new URL(referer);
         if (devHosts.includes(url.hostname)) return true;
-      } catch (_e) { /* invalid referer */ }
+      } catch (_e) {
+        console.warn('[CSRF] Malformed Referer header in dev:', referer);
+      }
     }
     return false;
   }
@@ -108,7 +114,9 @@ const validateOrigin = (req) => {
     try {
       const refOrigin = new URL(referer).origin;
       if (allowedOrigins.some(allowed => refOrigin === allowed)) return true;
-    } catch (_e) { /* invalid referer */ }
+    } catch (_e) {
+      if (process.env.NODE_ENV !== 'test') console.warn('[CSRF] Malformed Referer header:', referer);
+    }
   }
 
   return false;

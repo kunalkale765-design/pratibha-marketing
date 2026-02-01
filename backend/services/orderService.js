@@ -152,10 +152,18 @@ async function createOrder({ customerId, products, deliveryAddress, notes, idemp
         newContractPrices.length = 0;
       }
     } catch (contractError) {
-      console.error(`[OrderService] Failed to save contract prices for customer ${customerId}:`, contractError.message);
+      console.error(`[OrderService] Failed to save contract prices for customer ${customerId}:`, contractError.message, contractError.stack);
       const failedPrices = [...newContractPrices];
       newContractPrices.length = 0;
       contractPriceSaveError = `Failed to save contract prices for: ${failedPrices.map(cp => cp.productName).join(', ')}. Please add them manually in customer management.`;
+      // Report to Sentry if available (contract prices are business-critical)
+      try {
+        const Sentry = require('@sentry/node');
+        Sentry.captureException(contractError, {
+          tags: { service: 'orderService', operation: 'saveContractPrices' },
+          extra: { customerId, failedPrices: failedPrices.map(cp => cp.productName) }
+        });
+      } catch (_) { /* Sentry not available */ }
     }
   }
 

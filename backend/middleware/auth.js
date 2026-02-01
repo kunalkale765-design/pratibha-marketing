@@ -182,9 +182,14 @@ const optionalAuth = async (req, res, next) => {
       // Token invalid or expired, continue without user
       next();
     } else {
-      // Unexpected error (DB failure, programming error) - log but continue
+      // Unexpected error (DB failure, programming error) - return 503
+      // Do NOT silently continue as unauthenticated; this masks DB outages
+      // and could serve wrong data to logged-in users
       console.error('Unexpected error in optional auth middleware:', error.message, error.stack);
-      next();
+      return res.status(503).json({
+        success: false,
+        message: 'Service temporarily unavailable. Please try again.'
+      });
     }
   }
 };
