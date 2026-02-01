@@ -14,26 +14,21 @@
     <meta name="apple-mobile-web-app-title" content="Pratibha">
     <link rel="apple-touch-icon" href="/assets/icon-7JSXJ-zO.svg">
 
-    <!-- Chart.js for analytics -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"
-        integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4"
-        crossorigin="anonymous"></script>
-
     <!-- Shared CSS -->
 
     <!-- Animations -->
 
     <!-- Page-specific styles -->
-  <script type="module" crossorigin src="/assets/main-6TX3rZk6.js"></script>
+  <script type="module" crossorigin src="/assets/main-DtKk3XG0.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/responsive-C3eqjYrO.js">
-  <link rel="modulepreload" crossorigin href="/assets/utils-DKdRYW2s.js">
-  <link rel="modulepreload" crossorigin href="/assets/ui-C7t5s6-T.js">
-  <link rel="modulepreload" crossorigin href="/assets/api-BDW4zv3H.js">
-  <link rel="modulepreload" crossorigin href="/assets/init-CaZe2BNf.js">
+  <link rel="modulepreload" crossorigin href="/assets/auth-wait-DKP7Gt_D.js">
+  <link rel="modulepreload" crossorigin href="/assets/api-DgCME_BS.js">
+  <link rel="modulepreload" crossorigin href="/assets/utils-DMnfmhTK.js">
+  <link rel="modulepreload" crossorigin href="/assets/init-3HhKyW9c.js">
   <link rel="stylesheet" crossorigin href="/assets/responsive-tLcp_LdO.css">
-  <link rel="stylesheet" crossorigin href="/assets/utils-B7c2sS9c.css">
   <link rel="stylesheet" crossorigin href="/assets/page-BklDA2cI.css">
   <link rel="stylesheet" crossorigin href="/assets/buttons-CLMBJEwY.css">
+  <link rel="stylesheet" crossorigin href="/assets/index-B7c2sS9c.css">
 </head>
 
 <body>
@@ -128,9 +123,9 @@
             <div class="procurement-header">
                 <h2>Purchase List</h2>
                 <div class="header-actions">
-                    <input type="text" class="purchase-search" id="purchaseSearch" placeholder="Search products...">
-                    <button class="btn-icon" id="printBtn" title="Print">⎙</button>
-                    <button class="btn-icon" id="exportBtn" title="Export CSV">↓</button>
+                    <input type="text" class="purchase-search" id="purchaseSearch" placeholder="Search products..." aria-label="Search products">
+                    <button class="btn-icon" id="printBtn" title="Print" aria-label="Print purchase list">⎙</button>
+                    <button class="btn-icon" id="exportBtn" title="Export CSV" aria-label="Export as CSV">↓</button>
                     <button class="btn-save-rates" id="saveRatesBtn">Save</button>
                 </div>
             </div>
@@ -193,11 +188,11 @@
         </div>
 
         <!-- Ledger Report Modal -->
-        <div id="ledgerModal" class="modal-overlay">
+        <div id="ledgerModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="ledgerModalTitle">
             <div class="modal" style="max-width: 400px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">Download Ledger</h2>
-                    <button class="modal-close" onclick="closeLedgerModal()">×</button>
+                    <h2 class="modal-title" id="ledgerModalTitle">Download Ledger</h2>
+                    <button class="modal-close" onclick="closeLedgerModal()" aria-label="Close dialog">×</button>
                 </div>
                 <div class="modal-body">
                     <div class="form-group">

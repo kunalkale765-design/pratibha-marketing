@@ -13,9 +13,9 @@
     <!-- Animations -->
 
     <!-- Page-specific styles -->
-  <script type="module" crossorigin src="/assets/customers-BV44S6E8.js"></script>
+  <script type="module" crossorigin src="/assets/customers-BXODIwCE.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/responsive-C3eqjYrO.js">
-  <link rel="modulepreload" crossorigin href="/assets/ui-C7t5s6-T.js">
+  <link rel="modulepreload" crossorigin href="/assets/auth-wait-DKP7Gt_D.js">
   <link rel="stylesheet" crossorigin href="/assets/responsive-tLcp_LdO.css">
   <link rel="stylesheet" crossorigin href="/assets/page-BklDA2cI.css">
   <link rel="stylesheet" crossorigin href="/assets/inputs-Djo_6IW1.css">
@@ -37,7 +37,7 @@
 
     <div class="search-bar">
         <input id="searchInput" type="text" placeholder="Search customers..." class="search-input input-animated"
-            oninput="searchCustomers()">
+            oninput="searchCustomers()" aria-label="Search customers">
         <label class="toggle-test-customers">
             <input type="checkbox" id="showTestCustomers" onchange="toggleTestCustomers()">
             <span>Show test</span>
@@ -90,11 +90,11 @@
     </div>
 
     <!-- Add/Edit Customer Modal -->
-    <div id="customerModal" class="modal-overlay">
+    <div id="customerModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
         <div class="modal">
             <div class="modal-header">
                 <div class="modal-title" id="modalTitle">Add Customer</div>
-                <button class="btn-close" onclick="closeModal()">×</button>
+                <button class="btn-close" onclick="closeModal()" aria-label="Close dialog">×</button>
             </div>
             <form id="customerForm">
                 <div class="modal-body">
@@ -159,14 +159,14 @@
     </div>
 
     <!-- Contract Prices Modal -->
-    <div id="contractModal" class="modal-overlay">
+    <div id="contractModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="contractModalTitle">
         <div class="modal">
             <div class="modal-header">
                 <div>
-                    <div class="modal-title">Contract Prices</div>
+                    <div class="modal-title" id="contractModalTitle">Contract Prices</div>
                     <div id="contractCustomerName" style="font-size: 0.875rem; color: var(--text-muted);"></div>
                 </div>
-                <button class="btn-close" onclick="closeContractModal()">×</button>
+                <button class="btn-close" onclick="closeContractModal()" aria-label="Close dialog">×</button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="contractCustomerId">

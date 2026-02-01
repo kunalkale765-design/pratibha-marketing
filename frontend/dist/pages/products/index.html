@@ -13,9 +13,9 @@
     <!-- Animations -->
 
     <!-- Page-specific styles -->
-  <script type="module" crossorigin src="/assets/products-DypjaqST.js"></script>
+  <script type="module" crossorigin src="/assets/products-Dl1C6Xxq.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/responsive-C3eqjYrO.js">
-  <link rel="modulepreload" crossorigin href="/assets/ui-C7t5s6-T.js">
+  <link rel="modulepreload" crossorigin href="/assets/auth-wait-DKP7Gt_D.js">
   <link rel="stylesheet" crossorigin href="/assets/responsive-tLcp_LdO.css">
   <link rel="stylesheet" crossorigin href="/assets/products-D6jAI1tT.css">
   <link rel="stylesheet" crossorigin href="/assets/page-BklDA2cI.css">
@@ -37,7 +37,7 @@
     <div class="search-filter">
         <div class="search-row">
             <input id="searchInput" type="text" placeholder="Search products..." class="search-input input-animated"
-                oninput="searchProducts()">
+                oninput="searchProducts()" aria-label="Search products">
             <button onclick="showCategoryModal()" class="btn-manage-cat">Categories</button>
         </div>
         <div id="categoryPills" class="category-pills">
@@ -73,11 +73,11 @@
     </div>
 
     <!-- Product Modal -->
-    <div id="productModal" class="modal-overlay">
+    <div id="productModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
         <div class="modal">
             <div class="modal-header">
                 <div class="modal-title" id="modalTitle">Add Product</div>
-                <button class="btn-close" onclick="closeModal()">×</button>
+                <button class="btn-close" onclick="closeModal()" aria-label="Close dialog">×</button>
             </div>
             <form id="productForm">
                 <div class="modal-body">
@@ -118,15 +118,15 @@
     </div>
 
     <!-- Category Management Modal -->
-    <div id="categoryModal" class="modal-overlay">
+    <div id="categoryModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="categoryModalTitle">
         <div class="modal">
             <div class="modal-header">
-                <div class="modal-title">Manage Categories</div>
-                <button class="btn-close" onclick="closeCategoryModal()">×</button>
+                <div class="modal-title" id="categoryModalTitle">Manage Categories</div>
+                <button class="btn-close" onclick="closeCategoryModal()" aria-label="Close dialog">×</button>
             </div>
             <div class="modal-body">
                 <div class="add-category-row">
-                    <input id="newCategoryInput" type="text" placeholder="New category name..." class="form-input">
+                    <input id="newCategoryInput" type="text" placeholder="New category name..." class="form-input" aria-label="New category name">
                     <button onclick="addCategory()" class="btn-add-inline">Add</button>
                 </div>
                 <div id="categoryList" class="category-list"></div>

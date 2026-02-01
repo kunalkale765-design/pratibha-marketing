@@ -11,11 +11,11 @@
     <!-- Shared CSS -->
 
     <!-- Page-specific styles -->
-  <script type="module" crossorigin src="/assets/orderForm-DL8dy3uN.js"></script>
+  <script type="module" crossorigin src="/assets/orderForm-C1appsOM.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/responsive-C3eqjYrO.js">
-  <link rel="modulepreload" crossorigin href="/assets/ui-C7t5s6-T.js">
-  <link rel="modulepreload" crossorigin href="/assets/api-BDW4zv3H.js">
-  <link rel="modulepreload" crossorigin href="/assets/init-CaZe2BNf.js">
+  <link rel="modulepreload" crossorigin href="/assets/auth-wait-DKP7Gt_D.js">
+  <link rel="modulepreload" crossorigin href="/assets/api-DgCME_BS.js">
+  <link rel="modulepreload" crossorigin href="/assets/init-3HhKyW9c.js">
   <link rel="stylesheet" crossorigin href="/assets/responsive-tLcp_LdO.css">
   <link rel="stylesheet" crossorigin href="/assets/orderForm-C8O6VO4u.css">
 </head>
@@ -29,21 +29,21 @@
     </header>
 
     <!-- Tab Navigation -->
-    <div class="order-tabs">
-        <button class="order-tab active" data-tab="new" id="newOrderTab">New Order</button>
-        <button class="order-tab" data-tab="list" id="myOrdersTab">My Orders</button>
+    <div class="order-tabs" role="tablist" aria-label="Order sections">
+        <button class="order-tab active" data-tab="new" id="newOrderTab" role="tab" aria-selected="true">New Order</button>
+        <button class="order-tab" data-tab="list" id="myOrdersTab" role="tab" aria-selected="false">My Orders</button>
     </div>
 
     <!-- New Order View (existing content wrapped) -->
     <div id="newOrderView" class="order-view active">
         <div class="customer-bar" id="customerBar">
-            <select id="customerSelect" class="customer-select">
+            <select id="customerSelect" class="customer-select" aria-label="Select customer">
                 <option value="">Select Customer</option>
             </select>
         </div>
 
         <div class="search-bar">
-            <input type="text" class="search-input" placeholder="Search products..." id="searchInput">
+            <input type="text" class="search-input" placeholder="Search products..." id="searchInput" aria-label="Search products">
         </div>
 
         <div class="category-pills" id="categoryPills">
@@ -85,11 +85,11 @@
     </div>
 
     <!-- Order Detail/Edit Modal -->
-    <div id="orderModal" class="modal-overlay">
+    <div id="orderModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="orderModalTitle">
         <div class="modal">
             <div class="modal-header">
                 <h2 class="modal-title" id="orderModalTitle"></h2>
-                <button class="modal-close" onclick="closeOrderModal()">×</button>
+                <button class="modal-close" onclick="closeOrderModal()" aria-label="Close dialog">×</button>
             </div>
             <div class="modal-body" id="orderModalBody">
                 <!-- Content rendered dynamically -->

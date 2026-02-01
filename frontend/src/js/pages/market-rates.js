@@ -1,16 +1,9 @@
 
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 import { showToast, createElement } from '/js/ui.js';
 
-// Wait for Auth to be available (with timeout to prevent infinite recursion)
-const waitForAuth = (maxWait = 10000) => new Promise((resolve, reject) => {
-    const startTime = Date.now();
-    const check = () => {
-        if (window.Auth) return resolve(window.Auth);
-        if (Date.now() - startTime > maxWait) return reject(new Error('Auth not available'));
-        setTimeout(check, 50);
-    };
-    check();
-});
+import { waitForAuth } from '/js/helpers/auth-wait.js';
 const Auth = await waitForAuth();
 
 let products = [];
@@ -402,18 +395,12 @@ function renderHistory(data) {
 }
 
 function exportToPDF() {
-    if (!window.jspdf) {
-        showToast('PDF export not available (library not loaded)', 'info');
-        return;
-    }
-
     if (!historyData || !historyData.data || historyData.data.length === 0 || !historyData.data[0]?.rates?.length) {
         showToast('No data available to export', 'info');
         return;
     }
 
     try {
-        const { jsPDF } = window.jspdf;
         const doc = new jsPDF({
             orientation: 'landscape',
             unit: 'mm',

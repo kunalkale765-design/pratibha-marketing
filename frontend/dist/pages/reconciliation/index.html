@@ -13,10 +13,11 @@
     <!-- Animations -->
 
     <!-- Page-specific styles -->
-  <script type="module" crossorigin src="/assets/reconciliation-BLaKysTK.js"></script>
+  <script type="module" crossorigin src="/assets/reconciliation-yBu4oHij.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/responsive-C3eqjYrO.js">
-  <link rel="modulepreload" crossorigin href="/assets/ui-C7t5s6-T.js">
-  <link rel="modulepreload" crossorigin href="/assets/api-BDW4zv3H.js">
+  <link rel="modulepreload" crossorigin href="/assets/auth-wait-DKP7Gt_D.js">
+  <link rel="modulepreload" crossorigin href="/assets/api-DgCME_BS.js">
+  <link rel="modulepreload" crossorigin href="/assets/utils-DMnfmhTK.js">
   <link rel="stylesheet" crossorigin href="/assets/responsive-tLcp_LdO.css">
   <link rel="stylesheet" crossorigin href="/assets/reconciliation-DPHVKFx3.css">
   <link rel="stylesheet" crossorigin href="/assets/page-BklDA2cI.css">
@@ -54,7 +55,7 @@
     <div class="reconciliation-help-banner" id="helpBanner">
         <span class="help-icon">&#128161;</span>
         <span class="help-text">Review delivered quantities and complete reconciliation to update ledger</span>
-        <button class="help-dismiss" onclick="dismissHelp()">&#10005;</button>
+        <button class="help-dismiss" onclick="dismissHelp()" aria-label="Dismiss help">&#10005;</button>
     </div>
 
     <div id="toast" class="toast"></div>
@@ -76,14 +77,14 @@
     </main>
 
     <!-- Reconciliation Modal -->
-    <div id="reconcileModal" class="modal-overlay">
+    <div id="reconcileModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
         <div class="modal reconciliation-modal">
             <div class="modal-header">
                 <div>
                     <div class="modal-title" id="modalTitle">Reconcile Order</div>
                     <div class="modal-subtitle" id="modalSubtitle">-</div>
                 </div>
-                <button class="btn-close" onclick="closeModal()">&times;</button>
+                <button class="btn-close" onclick="closeModal()" aria-label="Close dialog">&times;</button>
             </div>
 
             <!-- Order Info -->
