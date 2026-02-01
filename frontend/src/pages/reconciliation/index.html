@@ -56,7 +56,7 @@
     <div class="reconciliation-help-banner" id="helpBanner">
         <span class="help-icon">&#128161;</span>
         <span class="help-text">Review delivered quantities and complete reconciliation to update ledger</span>
-        <button class="help-dismiss" onclick="dismissHelp()">&#10005;</button>
+        <button class="help-dismiss" onclick="dismissHelp()" aria-label="Dismiss help">&#10005;</button>
     </div>
 
     <div id="toast" class="toast"></div>
@@ -78,14 +78,14 @@
     </main>
 
     <!-- Reconciliation Modal -->
-    <div id="reconcileModal" class="modal-overlay">
+    <div id="reconcileModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
         <div class="modal reconciliation-modal">
             <div class="modal-header">
                 <div>
                     <div class="modal-title" id="modalTitle">Reconcile Order</div>
                     <div class="modal-subtitle" id="modalSubtitle">-</div>
                 </div>
-                <button class="btn-close" onclick="closeModal()">&times;</button>
+                <button class="btn-close" onclick="closeModal()" aria-label="Close dialog">&times;</button>
             </div>
 
             <!-- Order Info -->

@@ -6,6 +6,9 @@
 
 set -e  # Exit on any error
 
+# Configurable domain - change this for different deployments
+DEPLOY_DOMAIN="${DEPLOY_DOMAIN:-pratibhamarketing.in}"
+
 echo "╔═══════════════════════════════════════════════╗"
 echo "║   Pratibha Marketing - Deployment Script      ║"
 echo "║   Digital Ocean Ubuntu 22.04/24.04 LTS        ║"

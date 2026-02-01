@@ -7,6 +7,7 @@ const Product = require('../models/Product');
 const MarketRate = require('../models/MarketRate');
 const { protect, authorize } = require('../middleware/auth');
 const { calculatePriceWithRate } = require('../services/pricingService');
+const { logAudit } = require('../utils/auditLog');
 const { createOrder } = require('../services/orderService');
 const {
   roundTo2Decimals,
@@ -262,6 +263,14 @@ router.put('/:id',
         throw new Error('Order not found');
       }
 
+      // Prevent modifications to reconciled/delivered orders
+      if (order.reconciliation && order.reconciliation.completedAt) {
+        return res.status(403).json({
+          success: false,
+          message: 'Cannot modify a reconciled order. Ledger entries have already been created.'
+        });
+      }
+
       // Update products - staff can add, remove, and modify prices/quantities
       if (req.body.products && Array.isArray(req.body.products)) {
         // Get customer for pricing calculation (needed for new products)
@@ -501,6 +510,12 @@ router.put('/:id',
 
       await order.save();
 
+      if (req.body.products && Array.isArray(req.body.products)) {
+        logAudit(req, 'ORDER_PRICE_UPDATED', 'Order', order._id, {
+          orderNumber: order.orderNumber
+        });
+      }
+
       const populatedOrder = await Order.findById(order._id)
         .populate('customer', 'name phone')
         .populate('products.product', 'name unit');
@@ -630,6 +645,9 @@ router.put('/:id/customer-edit',
 
         if (!item.quantity || item.quantity < 0.01) {
           throw new Error(`Minimum quantity for "${product.name}" is 0.01 ${product.unit}`);
+        }
+        if (item.quantity > 1000000) {
+          throw new Error(`Quantity for "${product.name}" exceeds maximum allowed (1,000,000)`);
         }
 
         // Recalculate rate using pre-fetched market rate (avoids N+1)
@@ -922,6 +940,10 @@ router.delete('/:id',
       order.cancelledBy = req.user._id;
       order.cancelledAt = new Date();
       await order.save();
+
+      logAudit(req, 'ORDER_CANCELLED', 'Order', order._id, {
+        orderNumber: order.orderNumber, customer: order.customer
+      });
 
       res.json({
         success: true,

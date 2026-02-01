@@ -1,26 +1,7 @@
 import { showToast } from '/js/ui.js';
+import { escapeHtml } from '/js/utils.js';
 
-// SECURITY: HTML escape function to prevent XSS
-function escapeHtml(str) {
-    if (str == null) return '';
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-}
-
-// Wait for Auth to be available
-const waitForAuth = (maxWait = 10000) => new Promise((resolve, reject) => {
-    const startTime = Date.now();
-    const check = () => {
-        if (window.Auth) return resolve(window.Auth);
-        if (Date.now() - startTime > maxWait) return reject(new Error('Auth not available'));
-        setTimeout(check, 50);
-    };
-    check();
-});
+import { waitForAuth } from '/js/helpers/auth-wait.js';
 const Auth = await waitForAuth();
 
 // State
@@ -335,7 +316,8 @@ async function completeReconciliation() {
 
         const result = await response.json();
 
-        showToast(`Order ${result.data.orderNumber} reconciled successfully`, 'success');
+        const orderNum = result?.data?.orderNumber;
+        showToast(orderNum ? `Order ${orderNum} reconciled successfully` : 'Order reconciled successfully', 'success');
 
         // Update stats
         todayCompletedCount++;

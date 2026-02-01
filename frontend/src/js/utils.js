@@ -218,3 +218,16 @@ export function deepClone(obj) {
 export function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+/**
+ * Escape HTML special characters to prevent XSS
+ *
+ * @param {string} str - String to escape
+ * @returns {string} - Escaped string safe for innerHTML
+ */
+export function escapeHtml(str) {
+  if (str == null) return '';
+  const div = document.createElement('div');
+  div.textContent = String(str);
+  return div.innerHTML;
+}

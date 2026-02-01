@@ -3,16 +3,7 @@ import { registerServiceWorker } from '/js/init.js';
 // Initialize
 registerServiceWorker();
 
-// Wait for Auth to be available (loaded from auth.js module)
-const waitForAuth = (maxWait = 10000) => new Promise((resolve, reject) => {
-    const startTime = Date.now();
-    const check = () => {
-        if (window.Auth) return resolve(window.Auth);
-        if (Date.now() - startTime > maxWait) return reject(new Error('Auth not available'));
-        setTimeout(check, 50);
-    };
-    check();
-});
+import { waitForAuth } from '/js/helpers/auth-wait.js';
 const Auth = await waitForAuth();
 
 // Pre-fetch CSRF token to ensure it's ready before form submission
@@ -57,11 +48,12 @@ async function checkAuth() {
         const response = await fetch('/api/auth/me', { credentials: 'include' });
         if (response.ok) {
             const data = await response.json();
-            if (data.user.role === 'customer') {
+            const role = data?.user?.role;
+            if (role === 'customer') {
                 window.location.href = '/pages/order-form/';
-            } else if (data.user.role === 'staff') {
+            } else if (role === 'staff') {
                 window.location.href = '/pages/staff-dashboard/';
-            } else {
+            } else if (role) {
                 window.location.href = '/';
             }
         }
@@ -154,13 +146,14 @@ if (signupForm) {
                         body: JSON.stringify(userData)
                     });
                     const retryData = await retryResponse.json();
-                    if (retryResponse.ok) {
+                    if (retryResponse.ok && retryData?.user) {
                         Auth.setUser(retryData.user);
                         showSuccess('Account created successfully! Redirecting...');
+                        const role = retryData.user.role;
                         setTimeout(() => {
-                            if (retryData.user.role === 'customer') {
+                            if (role === 'customer') {
                                 window.location.href = '/pages/order-form/';
-                            } else if (retryData.user.role === 'staff') {
+                            } else if (role === 'staff') {
                                 window.location.href = '/pages/staff-dashboard/';
                             } else {
                                 window.location.href = '/';
@@ -177,23 +170,24 @@ if (signupForm) {
                 }
             }
 
-            if (response.ok) {
+            if (response.ok && data?.user) {
                 Auth.setUser(data.user);
                 showSuccess('Account created successfully! Redirecting...');
+                const role = data.user.role;
                 setTimeout(() => {
-                    if (data.user.role === 'customer') {
+                    if (role === 'customer') {
                         window.location.href = '/pages/order-form/';
-                    } else if (data.user.role === 'staff') {
+                    } else if (role === 'staff') {
                         window.location.href = '/pages/staff-dashboard/';
                     } else {
                         window.location.href = '/';
                     }
                 }, 1500);
             } else {
-                if (data.errors && data.errors.length > 0) {
+                if (data?.errors && data.errors.length > 0) {
                     showNotice(data.errors.map(e => e.msg).join(', '));
                 } else {
-                    showNotice(data.message || 'Could not create account. Try again.');
+                    showNotice(data?.message || 'Could not create account. Try again.');
                 }
             }
         } catch (error) {

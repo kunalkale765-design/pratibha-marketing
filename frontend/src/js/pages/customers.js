@@ -1,16 +1,7 @@
 
 import { showToast, createElement } from '/js/ui.js';
 
-// Wait for Auth to be available
-const waitForAuth = (maxWait = 10000) => new Promise((resolve, reject) => {
-    const startTime = Date.now();
-    const check = () => {
-        if (window.Auth) return resolve(window.Auth);
-        if (Date.now() - startTime > maxWait) return reject(new Error('Auth not available'));
-        setTimeout(check, 50);
-    };
-    check();
-});
+import { waitForAuth } from '/js/helpers/auth-wait.js';
 const Auth = await waitForAuth();
 
 let allCustomers = [];

@@ -171,8 +171,8 @@ router.post('/login', [
 
     const { email, password } = req.body;
 
-    // Find user and include password, populate customer for pricing data
-    const user = await User.findOne({ email }).select('+password').populate('customer');
+    // Find user and include password + lockout fields, populate customer for pricing data
+    const user = await User.findOne({ email }).select('+password +failedLoginAttempts +lockoutUntil').populate('customer');
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -188,13 +188,39 @@ router.post('/login', [
       });
     }
 
+    // Check account lockout
+    if (user.lockoutUntil && user.lockoutUntil > Date.now()) {
+      const minutesLeft = Math.ceil((user.lockoutUntil - Date.now()) / 60000);
+      return res.status(429).json({
+        success: false,
+        message: `Account is locked. Try again in ${minutesLeft} minute${minutesLeft !== 1 ? 's' : ''}.`
+      });
+    }
+
     // Check password
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
+      // Increment failed attempts
+      user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
+      if (user.failedLoginAttempts >= 5) {
+        user.lockoutUntil = new Date(Date.now() + 30 * 60 * 1000); // 30 min lockout
+        logAudit(req, 'ACCOUNT_LOCKED', 'User', user._id, { attempts: user.failedLoginAttempts });
+      } else {
+        logAudit(req, 'LOGIN_FAILED', 'User', user._id, { attempts: user.failedLoginAttempts });
+      }
+      await user.save({ validateModifiedOnly: true });
+
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
       });
+    }
+
+    // Successful login - reset lockout fields
+    if (user.failedLoginAttempts > 0 || user.lockoutUntil) {
+      user.failedLoginAttempts = 0;
+      user.lockoutUntil = null;
+      await user.save({ validateModifiedOnly: true });
     }
 
     // Generate token with tokenVersion for revocation support

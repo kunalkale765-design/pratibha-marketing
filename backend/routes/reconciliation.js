@@ -11,6 +11,7 @@ const Invoice = require('../models/Invoice');
 const Product = require('../models/Product');
 const { protect, authorize } = require('../middleware/auth');
 const { roundTo2Decimals, handleValidationErrors } = require('../utils/helpers');
+const { logAudit } = require('../utils/auditLog');
 const invoiceService = require('../services/invoiceService');
 
 const INVOICE_STORAGE_DIR = path.join(__dirname, '..', 'storage', 'invoices');
@@ -121,8 +122,9 @@ async function autoGenerateInvoices(order, userId) {
       }
     }
   } catch (error) {
-    // Non-critical: log and continue
+    // Log for debugging but rethrow so caller can set invoiceWarning
     console.error(`[Reconciliation] Auto-invoice generation failed for order ${order.orderNumber}:`, error.message);
+    throw error;
   }
 }
 
@@ -132,6 +134,9 @@ async function autoGenerateInvoices(order, userId) {
 router.get('/pending', protect, authorize('admin', 'staff'), async (req, res, next) => {
   try {
     const { batch, limit = 50 } = req.query;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const perPage = Math.min(200, Math.max(1, parseInt(limit) || 50));
+    const skip = (page - 1) * perPage;
 
     // Build query for orders ready for reconciliation
     const query = {
@@ -145,12 +150,16 @@ router.get('/pending', protect, authorize('admin', 'staff'), async (req, res, ne
       query.batch = batch;
     }
 
-    const orders = await Order.find(query)
-      .select('orderNumber customer batch products totalAmount status packingDone notes deliveryAddress createdAt')
-      .populate('customer', 'name phone address')
-      .populate('batch', 'batchNumber batchType status')
-      .sort({ createdAt: 1 })
-      .limit(parseInt(limit));
+    const [orders, total] = await Promise.all([
+      Order.find(query)
+        .select('orderNumber customer batch products totalAmount status packingDone notes deliveryAddress createdAt')
+        .populate('customer', 'name phone address')
+        .populate('batch', 'batchNumber batchType status')
+        .sort({ createdAt: 1 })
+        .skip(skip)
+        .limit(perPage),
+      Order.countDocuments(query)
+    ]);
 
     // Transform for reconciliation view
     const pendingItems = orders.map(order => ({
@@ -188,6 +197,9 @@ router.get('/pending', protect, authorize('admin', 'staff'), async (req, res, ne
     res.json({
       success: true,
       count: pendingItems.length,
+      total,
+      page,
+      pages: Math.ceil(total / perPage),
       todayCompleted,
       data: pendingItems
     });
@@ -321,6 +333,17 @@ router.post('/:orderId/complete',
           reason: item.reason || ''
         });
       });
+
+      // Validate all submitted product IDs exist in the order
+      const orderProductIds = new Set(order.products.map(p => (p.product?._id || p.product).toString()));
+      for (const [submittedId] of submittedItems) {
+        if (!orderProductIds.has(submittedId)) {
+          return res.status(400).json({
+            success: false,
+            message: `Product ${submittedId} is not part of this order`
+          });
+        }
+      }
 
       // Update each product in the order
       const updatedProducts = [];
@@ -497,6 +520,10 @@ router.post('/:orderId/complete',
         console.error(`[Reconciliation] Invoice generation failed for order ${order.orderNumber}:`, err.message);
         invoiceWarning = 'Reconciliation succeeded but invoice generation failed. Invoices can be generated manually from the order page.';
       }
+
+      logAudit(req, 'RECONCILIATION_COMPLETED', 'Order', order._id, {
+        orderNumber: order.orderNumber, originalTotal, finalTotal: order.totalAmount, adjustments: changes.length
+      });
 
       const responseData = {
         orderNumber: order.orderNumber,

@@ -4,16 +4,7 @@ import { registerServiceWorker } from '/js/init.js';
 // Initialize
 registerServiceWorker();
 
-// Wait for Auth to be available (loaded from auth.js module)
-const waitForAuth = (maxWait = 10000) => new Promise((resolve, reject) => {
-    const startTime = Date.now();
-    const check = () => {
-        if (window.Auth) return resolve(window.Auth);
-        if (Date.now() - startTime > maxWait) return reject(new Error('Auth not available'));
-        setTimeout(check, 50);
-    };
-    check();
-});
+import { waitForAuth } from '/js/helpers/auth-wait.js';
 const Auth = await waitForAuth();
 
 // Pre-fetch CSRF token to ensure it's ready before form submission
@@ -40,11 +31,12 @@ async function checkAuth() {
         const response = await fetch('/api/auth/me', { credentials: 'include' });
         if (response.ok) {
             const data = await response.json();
-            if (data.user.role === 'customer') {
+            const role = data?.user?.role;
+            if (role === 'customer') {
                 window.location.href = '/pages/order-form/';
-            } else if (data.user.role === 'staff') {
+            } else if (role === 'staff') {
                 window.location.href = '/pages/staff-dashboard/';
-            } else {
+            } else if (role) {
                 window.location.href = '/';
             }
         }
@@ -106,7 +98,7 @@ if (loginForm) {
                         body: JSON.stringify({ email, password })
                     });
                     const retryData = await retryResponse.json();
-                    if (retryResponse.ok) {
+                    if (retryResponse.ok && retryData?.user) {
                         Auth.setUser(retryData.user);
                         if (retryData.user.role === 'customer') {
                             window.location.href = '/pages/order-form/';
@@ -122,17 +114,18 @@ if (loginForm) {
                 }
             }
 
-            if (response.ok) {
-                Auth.setUser(data.user);  // Use Auth.setUser to filter sensitive data
-                if (data.user.role === 'customer') {
+            if (response.ok && data?.user) {
+                Auth.setUser(data.user);
+                const role = data.user.role;
+                if (role === 'customer') {
                     window.location.href = '/pages/order-form/';
-                } else if (data.user.role === 'staff') {
+                } else if (role === 'staff') {
                     window.location.href = '/pages/staff-dashboard/';
                 } else {
                     window.location.href = '/';
                 }
             } else {
-                showNotice(data.message || 'Please check your credentials');
+                showNotice(data?.message || 'Please check your credentials');
             }
         } catch (error) {
             console.error('Login error:', error);

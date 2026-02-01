@@ -7,6 +7,7 @@ const Customer = require('../models/Customer');
 const User = require('../models/User');
 const { protect, authorize } = require('../middleware/auth');
 const { handleValidationErrors, parsePagination } = require('../utils/helpers');
+const { logAudit } = require('../utils/auditLog');
 
 // Rate limiter for magic link generation - 5 per hour per IP to prevent abuse
 const magicLinkLimiter = rateLimit({
@@ -180,7 +181,16 @@ router.put('/:id',
 
     // Handle contractPrices Map update properly
     if (req.body.contractPrices) {
-      customer.contractPrices = new Map(Object.entries(req.body.contractPrices));
+      const entries = Object.entries(req.body.contractPrices);
+      for (const [productId, price] of entries) {
+        if (typeof price !== 'number' || price <= 0) {
+          return res.status(400).json({
+            success: false,
+            message: `Contract price for product ${productId} must be a positive number`
+          });
+        }
+      }
+      customer.contractPrices = new Map(entries);
       customer.markModified('contractPrices'); // Required for Mongoose to detect Map replacement
     }
 
@@ -202,6 +212,10 @@ router.put('/:id',
         nameSyncWarning = `Customer updated but login name sync failed: ${syncError.message}. The customer may still see their old name when logged in.`;
       }
     }
+
+    logAudit(req, 'CUSTOMER_UPDATED', 'Customer', customer._id, {
+      fields: Object.keys(req.body)
+    });
 
     res.json({
       success: true,
@@ -242,6 +256,10 @@ router.delete('/:id',
       res.status(404);
       throw new Error('Customer not found');
     }
+
+    logAudit(req, 'CUSTOMER_DELETED', 'Customer', customer._id, {
+      name: customer.name
+    });
 
     res.json({
       success: true,

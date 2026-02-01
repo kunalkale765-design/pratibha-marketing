@@ -10,6 +10,7 @@ const {
   handleValidationErrors,
   buildDateRangeFilter
 } = require('../utils/helpers');
+const { logAudit } = require('../utils/auditLog');
 
 // @route   GET /api/ledger/balances
 // @desc    Get all customers with their current balances
@@ -108,16 +109,27 @@ router.get('/customer/:customerId',
         entryQuery.type = type;
       }
 
-      const entries = await LedgerEntry.find(entryQuery)
-        .populate('order', 'orderNumber')
-        .populate('createdBy', 'name')
-        .sort({ date: -1, createdAt: -1 })
-        .limit(parseInt(limit));
+      const page = Math.max(1, parseInt(req.query.page) || 1);
+      const perPage = Math.min(500, Math.max(1, parseInt(limit) || 100));
+      const skip = (page - 1) * perPage;
+
+      const [entries, total] = await Promise.all([
+        LedgerEntry.find(entryQuery)
+          .populate('order', 'orderNumber')
+          .populate('createdBy', 'name')
+          .sort({ date: -1, createdAt: -1 })
+          .skip(skip)
+          .limit(perPage),
+        LedgerEntry.countDocuments(entryQuery)
+      ]);
 
       res.json({
         success: true,
         customer: customer,
         count: entries.length,
+        total,
+        page,
+        pages: Math.ceil(total / perPage),
         data: entries
       });
     } catch (error) {
@@ -219,6 +231,10 @@ router.post('/payment',
           await session.endSession();
         }
       }
+
+      logAudit(req, 'PAYMENT_RECORDED', 'LedgerEntry', entry._id, {
+        customerId, amount: paymentAmount, previousBalance, newBalance
+      });
 
       res.status(201).json({
         success: true,
@@ -330,6 +346,10 @@ router.post('/adjustment',
           await session.endSession();
         }
       }
+
+      logAudit(req, 'ADJUSTMENT_RECORDED', 'LedgerEntry', entry._id, {
+        customerId, amount: adjustmentAmount, description, previousBalance, newBalance
+      });
 
       res.status(201).json({
         success: true,
@@ -461,17 +481,28 @@ router.get('/', protect, authorize('admin', 'staff'), async (req, res, next) => 
       entryQuery.date = dateFilter;
     }
 
-    const entries = await LedgerEntry.find(entryQuery)
-      .populate('customer', 'name phone')
-      .populate('order', 'orderNumber')
-      .populate('createdBy', 'name')
-      .sort({ date: -1, createdAt: -1 })
-      .limit(parseInt(limit))
-      .lean();
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const perPage = Math.min(500, Math.max(1, parseInt(limit) || 100));
+    const skip = (page - 1) * perPage;
+
+    const [entries, total] = await Promise.all([
+      LedgerEntry.find(entryQuery)
+        .populate('customer', 'name phone')
+        .populate('order', 'orderNumber')
+        .populate('createdBy', 'name')
+        .sort({ date: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(perPage)
+        .lean(),
+      LedgerEntry.countDocuments(entryQuery)
+    ]);
 
     res.json({
       success: true,
       count: entries.length,
+      total,
+      page,
+      pages: Math.ceil(total / perPage),
       data: entries
     });
   } catch (error) {

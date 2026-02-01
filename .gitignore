@@ -44,3 +44,9 @@ logs/security/
 
 # Credential files
 *credentials*.txt
+
+# Build output
+frontend/dist/
+
+# Generated storage (PDFs, bills)
+backend/storage/

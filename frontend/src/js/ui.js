@@ -129,7 +129,7 @@ export function showSuccess(message, duration = 3000) {
  * Show an info toast for issues (soft notification instead of error)
  */
 export function showError(message, duration = 4000) {
-  showToast(message, 'info', duration);
+  showToast(message, 'error', duration);
 }
 
 /**

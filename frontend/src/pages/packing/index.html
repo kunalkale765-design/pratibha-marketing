@@ -57,11 +57,11 @@
     </div>
 
     <!-- View Toggle -->
-    <div class="view-toggle">
-        <button class="view-btn active" data-view="queue" id="queueViewBtn">
+    <div class="view-toggle" role="tablist" aria-label="Packing view">
+        <button class="view-btn active" data-view="queue" id="queueViewBtn" role="tab" aria-selected="true">
             <span class="view-icon">&#9776;</span> Queue
         </button>
-        <button class="view-btn" data-view="batch" id="batchViewBtn">
+        <button class="view-btn" data-view="batch" id="batchViewBtn" role="tab" aria-selected="false">
             <span class="view-icon">&#128230;</span> By Batch
         </button>
     </div>
@@ -70,7 +70,7 @@
     <div class="packing-help-banner" id="packingHelpBanner">
         <span class="help-icon">&#128161;</span>
         <span class="help-text">Tap any order to pack it in the Orders page</span>
-        <button class="help-dismiss" onclick="dismissPackingHelp()">&#10005;</button>
+        <button class="help-dismiss" onclick="dismissPackingHelp()" aria-label="Dismiss help">&#10005;</button>
     </div>
 
     <div id="toast" class="toast"></div>

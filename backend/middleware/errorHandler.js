@@ -70,6 +70,12 @@ const errorHandler = (err, req, res, _next) => {
     statusCode = 400;
   }
 
+  // Handle request body too large (express.json limit)
+  if (err.status === 413 || err.type === 'entity.too.large') {
+    errorResponse.message = 'Request body too large. Please try a smaller payload.';
+    statusCode = 413;
+  }
+
   // Handle file system errors
   if (err.code === 'ENOENT') {
     errorResponse.message = 'Requested item not found';

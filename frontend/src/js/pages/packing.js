@@ -1,21 +1,6 @@
-// HTML escape function to prevent XSS
-function escapeHtml(text) {
-    if (text === null || text === undefined) return '';
-    const div = document.createElement('div');
-    div.textContent = String(text);
-    return div.innerHTML;
-}
+import { escapeHtml } from '/js/utils.js';
 
-// Wait for Auth to be available
-const waitForAuth = (maxWait = 10000) => new Promise((resolve, reject) => {
-    const startTime = Date.now();
-    const check = () => {
-        if (window.Auth) return resolve(window.Auth);
-        if (Date.now() - startTime > maxWait) return reject(new Error('Auth not available'));
-        setTimeout(check, 50);
-    };
-    check();
-});
+import { waitForAuth } from '/js/helpers/auth-wait.js';
 const Auth = await waitForAuth();
 
 // State
@@ -95,7 +80,10 @@ async function loadStats() {
             credentials: 'include'
         });
 
-        if (!response.ok) return;
+        if (!response.ok) {
+            console.error('Failed to load packing stats:', response.status);
+            return;
+        }
 
         const data = await response.json();
         const stats = data.data;
@@ -106,6 +94,10 @@ async function loadStats() {
         document.getElementById('statCompleted').textContent = stats.completed || 0;
     } catch (error) {
         console.error('Error loading stats:', error);
+        document.getElementById('statTotal').textContent = '—';
+        document.getElementById('statPending').textContent = '—';
+        document.getElementById('statInProgress').textContent = '—';
+        document.getElementById('statCompleted').textContent = '—';
     }
 }
 
