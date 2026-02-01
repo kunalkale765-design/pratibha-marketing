@@ -1,9 +1,17 @@
 
 import { showToast, createElement } from '/js/ui.js';
 import { logout } from '/js/init.js';
-
 import { waitForAuth } from '/js/helpers/auth-wait.js';
+
+// Import helpers
+import {
+    setAuth as setHistoryAuth, setOnSave, isFormDirty,
+    openOrderDetail, closeOrderModal, downloadInvoice
+} from '/js/helpers/order-form-history.js';
+import { renderOrdersList } from '/js/helpers/order-form-orders-list.js';
+
 const Auth = await waitForAuth();
+setHistoryAuth(Auth);
 
 // Logout button
 const logoutBtn = document.getElementById('logoutBtn');
@@ -19,25 +27,19 @@ let products = [];
 const marketRates = {};
 let customers = [];
 let isStaff = false;
-let _orderFormDirty = false;
 
 async function init() {
-    // Check for magic link token in URL
     const urlParams = new URLSearchParams(window.location.search);
     const magicToken = urlParams.get('token');
 
     if (magicToken) {
-        // Authenticate via magic link
         try {
-            const res = await fetch(`/api/auth/magic/${magicToken}`, {
-                credentials: 'include'
-            });
+            const res = await fetch(`/api/auth/magic/${magicToken}`, { credentials: 'include' });
             const data = await res.json();
 
             if (res.ok && data.user) {
                 currentUser = data.user;
                 Auth.setUser(data.user);
-                // Remove token from URL for cleaner bookmarking
                 window.history.replaceState({}, '', window.location.pathname);
             } else {
                 showToast(data.message || 'Link expired. Please request a new one.', 'info');
@@ -50,7 +52,6 @@ async function init() {
             return;
         }
     } else {
-        // Normal authentication
         currentUser = await Auth.verify();
         if (!currentUser) {
             window.location.href = '/pages/auth/login.html';
@@ -86,7 +87,6 @@ async function loadData() {
         const fetches = [
             fetch('/api/products', { credentials: 'include' }),
             fetch('/api/market-rates', { credentials: 'include' }),
-            // Only staff/admin can access /api/customers - skip for customers to avoid 401
             isStaff ? fetch('/api/customers', { credentials: 'include' }).catch(() => ({ ok: false })) : Promise.resolve({ ok: false })
         ];
         const [productsRes, ratesRes, customersRes] = await Promise.all(fetches);
@@ -110,7 +110,6 @@ async function loadData() {
         }
     } catch (e) {
         console.error('Failed to load data:', e);
-        // Show retry UI instead of just a toast
         const productList = document.getElementById('productList');
         if (productList) {
             productList.innerHTML = '';
@@ -129,17 +128,14 @@ async function loadData() {
 function populateCustomers() {
     const select = document.getElementById('customerSelect');
 
-    // Show loading placeholder while customers load
     if (customers.length === 0) {
         const loadingOption = createElement('option', { value: '', disabled: true, selected: true }, 'Loading customers...');
         select.appendChild(loadingOption);
         return;
     }
 
-    // Clear loading placeholder and add actual customers
     select.innerHTML = '';
     select.appendChild(createElement('option', { value: '' }, 'Select customer'));
-
     customers.forEach(c => {
         select.appendChild(createElement('option', { value: c._id }, c.name));
     });
@@ -158,17 +154,10 @@ function onCustomerChange() {
     updateSummary();
 }
 
-// Helper to safely get contract price (handles Map serialization edge cases)
 function getContractPrice(contractPrices, productId) {
     if (!contractPrices) return null;
-    // Try direct property access (normal object)
-    if (contractPrices[productId] !== undefined) {
-        return contractPrices[productId];
-    }
-    // Try .get() in case it's still a Map-like structure
-    if (typeof contractPrices.get === 'function') {
-        return contractPrices.get(productId);
-    }
+    if (contractPrices[productId] !== undefined) return contractPrices[productId];
+    if (typeof contractPrices.get === 'function') return contractPrices.get(productId);
     return null;
 }
 
@@ -185,29 +174,14 @@ function getPrice(product) {
     return marketRates[product._id] || 0;
 }
 
-// Filter products for contract customers (only show products with contract prices)
 function getFilteredProducts() {
-    // Staff/admin always see all products
-    if (isStaff) {
-        return products;
-    }
+    if (isStaff) return products;
+    if (!selectedCustomer || selectedCustomer.pricingType !== 'contract') return products;
 
-    // Non-contract customers see all products
-    if (!selectedCustomer || selectedCustomer.pricingType !== 'contract') {
-        return products;
-    }
-
-    // Contract customers: filter to only products they have access to
-    // For customers (non-staff), use allowedProducts array (doesn't expose prices)
-    // For staff selecting a customer, use contractPrices keys
     const allowedProductIds = selectedCustomer.allowedProducts
         || (selectedCustomer.contractPrices ? Object.keys(selectedCustomer.contractPrices) : []);
 
-    // If no contract products configured, return empty array
-    if (allowedProductIds.length === 0) {
-        return [];
-    }
-
+    if (allowedProductIds.length === 0) return [];
     return products.filter(p => allowedProductIds.includes(p._id));
 }
 
@@ -216,14 +190,12 @@ function buildCategoryPills(displayProducts = products) {
     const container = document.getElementById('categoryPills');
     container.innerHTML = '';
 
-    // Hide pills if no products or only one category
     if (displayProducts.length === 0 || categories.length <= 1) {
         container.style.display = 'none';
         return;
     }
 
     container.style.display = 'flex';
-
     container.appendChild(createElement('button', {
         className: 'cat-pill active',
         dataset: { cat: 'all' },
@@ -257,11 +229,9 @@ function renderProducts() {
     const container = document.getElementById('productList');
     container.innerHTML = '';
 
-    // Get filtered products based on customer type
     const displayProducts = getFilteredProducts();
 
     if (!displayProducts.length) {
-        // Different message for contract customers with no products configured
         const isContractWithNoProducts = selectedCustomer &&
             selectedCustomer.pricingType === 'contract' &&
             products.length > 0;
@@ -292,21 +262,11 @@ function renderProducts() {
         }, cat));
 
         prods.forEach(p => {
-            // Only calculate price for staff - customers should never see prices
             const price = isStaff ? getPrice(p) : 0;
-            // Use step="1" for piece items to enforce whole numbers
             const step = p.unit === 'piece' ? '1' : '0.01';
 
-            // Build dataset - only include price for staff (customers should never see prices)
-            const itemDataset = {
-                id: p._id,
-                category: cat,
-                unit: p.unit
-            };
-            // SECURITY: Only expose price to staff in DOM - customers get server-calculated prices
-            if (isStaff) {
-                itemDataset.price = price;
-            }
+            const itemDataset = { id: p._id, category: cat, unit: p.unit };
+            if (isStaff) itemDataset.price = price;
 
             const productItem = createElement('div', {
                 className: 'product-item',
@@ -317,26 +277,15 @@ function renderProducts() {
                     createElement('div', { className: 'product-meta' }, p.unit)
                 ]),
                 createElement('div', { className: 'qty-controls' }, [
-                    createElement('button', {
-                        className: 'qty-btn',
-                        onclick: () => window.changeQty(p._id, -1)
-                    }, '−'),
+                    createElement('button', { className: 'qty-btn', onclick: () => window.changeQty(p._id, -1) }, '−'),
                     createElement('input', {
-                        type: 'number',
-                        className: 'qty-input',
-                        id: `qty-${p._id}`,
-                        value: '0',
-                        min: '0',
-                        step: step,
-                        inputmode: 'numeric',
+                        type: 'number', className: 'qty-input', id: `qty-${p._id}`,
+                        value: '0', min: '0', step: step, inputmode: 'numeric',
                         onfocus: (e) => window.clearZero(e.target),
                         onblur: (e) => window.restoreZero(e.target),
                         onchange: () => window.updateFromInput(p._id)
                     }),
-                    createElement('button', {
-                        className: 'qty-btn',
-                        onclick: () => window.changeQty(p._id, 1)
-                    }, '+')
+                    createElement('button', { className: 'qty-btn', onclick: () => window.changeQty(p._id, 1) }, '+')
                 ])
             ]);
             fragment.appendChild(productItem);
@@ -346,7 +295,6 @@ function renderProducts() {
     container.appendChild(fragment);
 }
 
-// Expose qty functions to window for inline handlers
 function clearZero(input) {
     if (input.value === '0') input.value = '';
     input.select();
@@ -377,21 +325,14 @@ function updateItem(id, qty) {
     const input = document.getElementById('qty-' + id);
 
     if (item && input) {
-        if (qty > 0) {
-            item.classList.add('has-qty');
-            input.classList.add('has-value');
-        } else {
-            item.classList.remove('has-qty');
-            input.classList.remove('has-value');
-        }
+        if (qty > 0) { item.classList.add('has-qty'); input.classList.add('has-value'); }
+        else { item.classList.remove('has-qty'); input.classList.remove('has-value'); }
     }
-
     updateSummary();
 }
 
 function updateSummary() {
     let items = 0;
-
     document.querySelectorAll('.product-item').forEach(item => {
         const id = item.dataset.id;
         const input = document.getElementById('qty-' + id);
@@ -410,12 +351,10 @@ const searchInput = document.getElementById('searchInput');
 if (searchInput) {
     searchInput.addEventListener('input', (e) => {
         const q = e.target.value.toLowerCase();
-
         document.querySelectorAll('.product-item').forEach(item => {
             const name = item.querySelector('.product-name').textContent.toLowerCase();
             item.style.display = name.includes(q) ? '' : 'none';
         });
-
         document.querySelectorAll('.category-header').forEach(header => {
             const cat = header.dataset.category;
             const hasVisible = [...document.querySelectorAll(`.product-item[data-category="${cat}"]`)]
@@ -425,7 +364,6 @@ if (searchInput) {
     });
 }
 
-// Expose placeOrder to window for inline handler
 async function placeOrder() {
     if (!selectedCustomer) return;
 
@@ -435,28 +373,19 @@ async function placeOrder() {
     document.querySelectorAll('.product-item').forEach(item => {
         const id = item.dataset.id;
         const input = document.getElementById('qty-' + id);
-        const rawValue = parseFloat(input?.value) || 0;
-        const qty = rawValue;
-        // Only staff have price in dataset - customers get server-calculated prices
+        const qty = parseFloat(input?.value) || 0;
         const price = isStaff ? (parseFloat(item.dataset.price) || 0) : 0;
         const unit = item.dataset.unit;
         const name = item.querySelector('.product-name')?.textContent || 'Unknown';
 
         if (qty > 0) {
-            // Validate piece quantities are whole numbers
-            if (unit === 'piece' && !Number.isInteger(qty)) {
-                pieceErrors.push(name);
-            }
-            // Only include rate for staff if > 0; customers always get backend-calculated prices
+            if (unit === 'piece' && !Number.isInteger(qty)) pieceErrors.push(name);
             const orderProduct = { product: id, quantity: qty };
-            if (isStaff && price > 0) {
-                orderProduct.rate = price;
-            }
+            if (isStaff && price > 0) orderProduct.rate = price;
             orderProducts.push(orderProduct);
         }
     });
 
-    // Show info if piece items have decimal quantities
     if (pieceErrors.length > 0) {
         showToast(`${pieceErrors.join(', ')}: use whole numbers`, 'info');
         return;
@@ -471,9 +400,7 @@ async function placeOrder() {
     try {
         const headers = { 'Content-Type': 'application/json' };
         const csrfToken = await Auth.ensureCsrfToken();
-        if (csrfToken) {
-            headers['X-CSRF-Token'] = csrfToken;
-        }
+        if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
 
         const notesInput = document.getElementById('orderNotes');
         const notes = notesInput?.value?.trim() || '';
@@ -483,29 +410,20 @@ async function placeOrder() {
             products: orderProducts,
             idempotencyKey: crypto.randomUUID()
         };
-
-        if (notes) {
-            orderPayload.notes = notes;
-        }
+        if (notes) orderPayload.notes = notes;
 
         let res = await fetch('/api/orders', {
-            method: 'POST',
-            headers,
-            credentials: 'include',
+            method: 'POST', headers, credentials: 'include',
             body: JSON.stringify(orderPayload)
         });
-
         let data = await res.json();
 
-        // Handle CSRF error with retry
         if (res.status === 403 && data?.message?.toLowerCase().includes('csrf')) {
             const newToken = await Auth.refreshCsrfToken();
             if (newToken) {
                 headers['X-CSRF-Token'] = newToken;
                 res = await fetch('/api/orders', {
-                    method: 'POST',
-                    headers,
-                    credentials: 'include',
+                    method: 'POST', headers, credentials: 'include',
                     body: JSON.stringify(orderPayload)
                 });
                 data = await res.json();
@@ -516,28 +434,18 @@ async function placeOrder() {
             const orderNum = data?.data?.orderNumber || 'New';
             showToast(`Order placed! #${orderNum}`, 'success');
 
-            // Show warning if contract pricing fallback was used
             if (data.warning) {
-                setTimeout(() => {
-                    showToast(data.warning, 'info');
-                }, 1500);
+                setTimeout(() => showToast(data.warning, 'info'), 1500);
             }
-
-            // Show confirmation if new contract prices were saved
             if (data.message && data.newContractPrices && data.newContractPrices.length > 0) {
-                setTimeout(() => {
-                    showToast(data.message, 'info');
-                }, data.warning ? 3000 : 1500); // Delay if warning shown first
+                setTimeout(() => showToast(data.message, 'info'), data.warning ? 3000 : 1500);
             }
 
             document.querySelectorAll('.qty-input').forEach(input => {
                 input.value = '0';
                 input.classList.remove('has-value');
             });
-            document.querySelectorAll('.product-item').forEach(item => {
-                item.classList.remove('has-qty');
-            });
-            // Clear notes field
+            document.querySelectorAll('.product-item').forEach(item => item.classList.remove('has-qty'));
             if (notesInput) notesInput.value = '';
             updateSummary();
         } else {
@@ -545,16 +453,10 @@ async function placeOrder() {
         }
     } catch (e) {
         console.error('Order placement error:', e);
-        if (!navigator.onLine) {
-            showToast('No internet connection', 'info');
-        } else {
-            showToast('Could not place order. Try again.', 'info');
-        }
+        if (!navigator.onLine) showToast('No internet connection', 'info');
+        else showToast('Could not place order. Try again.', 'info');
     } finally {
-        if (btn) {
-            btn.disabled = false;
-            btn.textContent = 'Place Order';
-        }
+        if (btn) { btn.disabled = false; btn.textContent = 'Place Order'; }
         updateSummary();
     }
 }
@@ -566,16 +468,10 @@ let _activeTab = 'new';
 
 function switchTab(tabName) {
     _activeTab = tabName;
-
-    // Update tab buttons
     document.querySelectorAll('.order-tab').forEach(tab => {
         tab.classList.toggle('active', tab.dataset.tab === tabName);
     });
-
-    // Update views
-    document.querySelectorAll('.order-view').forEach(view => {
-        view.classList.remove('active');
-    });
+    document.querySelectorAll('.order-view').forEach(view => view.classList.remove('active'));
 
     if (tabName === 'new') {
         const newOrderView = document.getElementById('newOrderView');
@@ -598,6 +494,9 @@ if (myOrdersTab) myOrdersTab.addEventListener('click', () => switchTab('list'));
 let myOrders = [];
 let currentStatusFilter = 'all';
 
+// Wire up helper callback for after-save refresh
+setOnSave(() => loadMyOrders());
+
 async function loadMyOrders() {
     const container = document.getElementById('ordersContainer');
     container.innerHTML = '';
@@ -609,7 +508,7 @@ async function loadMyOrders() {
 
         if (res.ok) {
             myOrders = data.data || [];
-            renderOrdersList();
+            _renderOrdersList();
         } else {
             container.innerHTML = '';
             container.appendChild(createElement('div', { className: 'empty-state' }, data.message || 'Orders not available'));
@@ -628,454 +527,38 @@ async function loadMyOrders() {
     }
 }
 
-function renderOrdersList() {
+function _renderOrdersList() {
     const container = document.getElementById('ordersContainer');
-
-    let filtered = myOrders;
-    if (currentStatusFilter !== 'all') {
-        filtered = myOrders.filter(o => o.status === currentStatusFilter);
-    }
-
-    container.innerHTML = '';
-
-    if (!filtered.length) {
-        container.appendChild(createElement('div', { className: 'empty-state' }, 'No orders found'));
-        return;
-    }
-
-    const fragment = document.createDocumentFragment();
-
-    filtered.forEach(order => {
-        const date = new Date(order.createdAt).toLocaleDateString('en-IN', {
-            month: 'short', day: 'numeric', year: 'numeric'
-        });
-
-        const badges = [];
-        if (order.batch?.batchType) {
-            const batchText = `${order.batch.batchType} Batch`;
-            // Note: Not modifying text logic here, just structure
-            badges.push(createElement('span', { className: 'badge badge-batch' }, batchText));
-        }
-        badges.push(createElement('span', { className: `badge badge-${order.status}` }, order.status));
-
-        const orderCard = createElement('div', {
-            className: 'order-card',
-            onclick: () => window.openOrderDetail(order._id)
-        }, [
-            createElement('div', { className: 'order-top' }, [
-                createElement('div', { className: 'order-number' }, order.orderNumber),
-                createElement('div', { className: 'order-products-summary' }, `${order.products.length} item${order.products.length !== 1 ? 's' : ''}`)
-            ]),
-            createElement('div', { className: 'order-bottom' }, [
-                createElement('div', { className: 'order-date' }, date),
-                createElement('div', { className: 'order-badges' }, badges)
-            ])
-        ]);
-        fragment.appendChild(orderCard);
-    });
-
-    container.appendChild(fragment);
+    renderOrdersList(myOrders, currentStatusFilter, container, (orderId) => openOrderDetail(orderId));
 }
 
 function filterOrdersByStatus(status) {
     currentStatusFilter = status;
-
     document.querySelectorAll('.status-pill').forEach(pill => {
         pill.classList.toggle('active', pill.dataset.status === status);
     });
-
-    renderOrdersList();
+    _renderOrdersList();
 }
 
-// Setup filter event listeners
 document.querySelectorAll('.status-pill').forEach(pill => {
     pill.addEventListener('click', () => filterOrdersByStatus(pill.dataset.status));
 });
-
-// ====================
-// ORDER DETAIL/EDIT MODAL
-// ====================
-let currentOrder = null;
-let editedProducts = [];
-let orderInvoices = [];
-
-async function openOrderDetail(orderId) {
-    try {
-        // Fetch order and invoices in parallel
-        const [orderRes, invoicesRes] = await Promise.all([
-            fetch(`/api/orders/${orderId}`, { credentials: 'include' }),
-            fetch(`/api/invoices/my-order/${orderId}`, { credentials: 'include' })
-        ]);
-
-        const orderData = await orderRes.json();
-
-        if (orderRes.ok && orderData.data) {
-            currentOrder = orderData.data;
-            editedProducts = JSON.parse(JSON.stringify(currentOrder.products || []));
-
-            // Load invoices (don't fail if invoice endpoint errors)
-            try {
-                const invoicesData = await invoicesRes.json();
-                orderInvoices = invoicesRes.ok ? (invoicesData.data || []) : [];
-            } catch (invoiceParseError) {
-                console.warn('Failed to load invoices:', invoiceParseError.message);
-                orderInvoices = [];
-            }
-
-            renderOrderModal();
-            document.getElementById('orderModal').classList.add('show');
-            document.body.style.overflow = 'hidden';
-        } else {
-            showToast(orderData.message || 'Could not load order', 'info');
-        }
-    } catch (e) {
-        console.error('Load order detail error:', e);
-        showToast('Could not load details', 'info');
-    }
-}
-
-function closeOrderModal() {
-    if (_orderFormDirty) {
-        if (!confirm('You have unsaved changes. Discard them?')) {
-            return;
-        }
-    }
-    document.getElementById('orderModal').classList.remove('show');
-    document.body.style.overflow = '';
-    currentOrder = null;
-    editedProducts = [];
-    orderInvoices = [];
-    _orderFormDirty = false;
-}
-
-function renderOrderModal() {
-    const isPending = currentOrder.status === 'pending';
-    const titleEl = document.getElementById('orderModalTitle');
-    const bodyEl = document.getElementById('orderModalBody');
-    const footerEl = document.getElementById('orderModalFooter');
-
-    titleEl.textContent = currentOrder.orderNumber;
-    bodyEl.innerHTML = '';
-
-    const contentFragment = document.createDocumentFragment();
-
-    // Info Grid
-    const infoGrid = createElement('div', { className: 'order-info-grid' }, [
-        createElement('div', {}, [
-            createElement('div', { className: 'info-label' }, 'Status'),
-            createElement('span', { className: `badge badge-${currentOrder.status}` }, currentOrder.status)
-        ]),
-        createElement('div', {}, [
-            createElement('div', { className: 'info-label' }, 'Date'),
-            createElement('div', { className: 'info-value' }, new Date(currentOrder.createdAt).toLocaleDateString('en-IN', {
-                month: 'short', day: 'numeric', year: 'numeric'
-            }))
-        ])
-    ]);
-
-    if (currentOrder.batch?.batchType) {
-        const batchLocked = currentOrder.batch?.status === 'confirmed';
-        infoGrid.appendChild(createElement('div', {}, [
-            createElement('div', { className: 'info-label' }, 'Batch'),
-            createElement('span', { className: 'badge badge-batch' }, [
-                `${currentOrder.batch.batchType} Batch`,
-                batchLocked ? ' 🔒' : ''
-            ])
-        ]));
-    }
-
-    const orderInfoSection = createElement('div', { className: 'order-info-section' }, [
-        infoGrid,
-        currentOrder.deliveryAddress ? createElement('div', { style: { marginTop: '1rem' } }, [
-            createElement('div', { className: 'info-label' }, 'Delivery Address'),
-            createElement('div', { className: 'info-value' }, currentOrder.deliveryAddress)
-        ]) : null,
-        currentOrder.notes ? createElement('div', { style: { marginTop: '1rem' } }, [
-            createElement('div', { className: 'info-label' }, 'Notes'),
-            createElement('div', { className: 'info-value' }, currentOrder.notes)
-        ]) : null
-    ].filter(Boolean));
-
-    contentFragment.appendChild(orderInfoSection);
-    contentFragment.appendChild(createElement('div', { className: 'divider' }));
-    contentFragment.appendChild(createElement('div', { className: 'info-label', style: { marginBottom: '0.5rem' } }, 'Products'));
-
-    // Products List
-    const productsList = createElement('div', { id: 'orderProductsList' });
-    renderOrderProducts(isPending, productsList);
-    contentFragment.appendChild(productsList);
-
-    // Invoices
-    if (orderInvoices.length > 0) {
-        contentFragment.appendChild(createElement('div', { className: 'divider' }));
-        contentFragment.appendChild(createElement('div', { className: 'info-label', style: { marginBottom: '0.5rem' } }, 'Invoices'));
-
-        const invoicesList = createElement('div', { className: 'invoices-list' });
-        orderInvoices.forEach(inv => {
-            const date = new Date(inv.generatedAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' });
-            const item = createElement('div', {
-                className: 'invoice-item',
-                onclick: () => window.downloadInvoice(inv.invoiceNumber)
-            }, [
-                createElement('div', { className: 'invoice-info' }, [
-                    createElement('div', { className: 'invoice-number' }, inv.invoiceNumber),
-                    createElement('div', { className: 'invoice-meta' }, `${inv.firm?.name || 'Unknown Firm'} • ${date}`)
-                ]),
-                createElement('div', { className: 'invoice-download' }, [
-                    // Simple SVG icon using innerHTML for simplicity as it is static SVG
-                    // Alternatively could create SVG elements programmatically but that's verbose
-                    // Given it's a static icon, we can use a helper or just innerHTML on a small wrapper if known safe.
-                    // But to be consistent let's use innerHTML for the icon content only or create element.
-                    // Let's rely on a small helper for SVG or just innerHTML for the icon part since it's hardcoded.
-                ])
-            ]);
-            // Manually set SVG innerHTML which is safe here as it's hardcoded
-            item.querySelector('.invoice-download').innerHTML = `
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                    <polyline points="7 10 12 15 17 10"/>
-                    <line x1="12" y1="15" x2="12" y2="3"/>
-                </svg>`;
-
-            invoicesList.appendChild(item);
-        });
-        contentFragment.appendChild(invoicesList);
-    }
-
-    bodyEl.appendChild(contentFragment);
-
-    // Render footer
-    footerEl.innerHTML = '';
-    if (isPending) {
-        footerEl.appendChild(createElement('button', {
-            className: 'btn btn-secondary',
-            onclick: () => window.closeOrderModal()
-        }, 'Cancel'));
-
-        footerEl.appendChild(createElement('button', {
-            className: 'btn btn-primary',
-            style: { flex: '1' },
-            onclick: () => window.saveOrderEdit()
-        }, 'Save Changes'));
-    } else {
-        footerEl.appendChild(createElement('button', {
-            className: 'btn btn-primary btn-block',
-            onclick: () => window.closeOrderModal()
-        }, 'Close'));
-    }
-}
-
-function renderOrderProducts(editable, container) {
-    // If container is not provided, we might be calling from elsewhere, but here we expect it.
-    // To support returning HTML string as before (if used elsewhere), we'd need to check.
-    // The previous implementation returned a string. 
-    // BUT we are changing it to append to container.
-    // Let's check usages. It's only used in renderOrderModal above.
-
-    if (!container) return; // Should be passed
-    container.innerHTML = '';
-
-    editedProducts.forEach((item, index) => {
-        if (editable) {
-            container.appendChild(createElement('div', {
-                className: 'product-item-edit',
-                dataset: { index: index }
-            }, [
-                createElement('div', { className: 'product-info' }, [
-                    createElement('div', { className: 'product-name' }, item.productName),
-                    createElement('div', { className: 'product-meta' }, item.unit)
-                ]),
-                createElement('div', { className: 'qty-controls' }, [
-                    createElement('button', {
-                        className: 'qty-btn',
-                        onclick: () => window.changeOrderQty(index, -1)
-                    }, '−'),
-                    createElement('input', {
-                        type: 'number',
-                        className: 'qty-input',
-                        id: `order-qty-${index}`,
-                        value: item.quantity,
-                        min: '0',
-                        inputmode: 'numeric',
-                        onchange: () => window.updateOrderQtyFromInput(index)
-                    }),
-                    createElement('button', {
-                        className: 'qty-btn',
-                        onclick: () => window.changeOrderQty(index, 1)
-                    }, '+')
-                ])
-            ]));
-        } else {
-            container.appendChild(createElement('div', {
-                className: 'product-item-edit readonly'
-            }, [
-                createElement('div', { className: 'product-info' }, [
-                    createElement('div', { className: 'product-name' }, item.productName),
-                    createElement('div', { className: 'product-meta' }, `${item.quantity} ${item.unit}`)
-                ])
-            ]));
-        }
-    });
-}
-
-function changeOrderQty(index, delta) {
-    const input = document.getElementById(`order-qty-${index}`);
-    let val = parseFloat(input.value) || 0;
-    val = Math.max(0, val + delta);
-    input.value = val;
-    editedProducts[index].quantity = val;
-    _orderFormDirty = true;
-}
-
-function updateOrderQtyFromInput(index) {
-    const input = document.getElementById(`order-qty-${index}`);
-    const val = Math.max(0, parseFloat(input.value) || 0);
-    input.value = val;
-    editedProducts[index].quantity = val;
-    _orderFormDirty = true;
-}
-
-async function downloadInvoice(invoiceNumber) {
-    try {
-        showToast('Downloading invoice...', 'info');
-
-        const res = await fetch(`/api/invoices/my/${invoiceNumber}/download`, {
-            credentials: 'include'
-        });
-
-        if (!res.ok) {
-            // Try to parse error message from JSON, fallback to status text
-            let errorMessage = 'Invoice not ready yet';
-            try {
-                const error = await res.json();
-                errorMessage = error.message || errorMessage;
-            } catch (parseError) {
-                console.warn('Failed to parse invoice download error:', parseError.message);
-                // Response might not be JSON - use status-based fallback
-                errorMessage = res.status === 404 ? 'Invoice not ready yet' :
-                    res.status === 403 ? 'Invoice access pending' :
-                        'Invoice temporarily unavailable';
-            }
-            throw new Error(errorMessage);
-        }
-
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${invoiceNumber}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-
-        showToast('Invoice downloaded!', 'success');
-    } catch (e) {
-        console.error('Download invoice error:', e);
-        showToast(e.message || 'Could not download', 'info');
-    }
-}
-
-async function saveOrderEdit() {
-    try {
-        // Filter out zero-quantity items
-        const products = editedProducts
-            .filter(p => p.quantity > 0)
-            .map(p => ({
-                product: typeof p.product === 'object' ? p.product._id : p.product,
-                quantity: p.quantity
-            }));
-
-        if (!products.length) {
-            showToast('Add at least one product', 'info');
-            return;
-        }
-
-        const saveBtn = document.querySelector('#orderModalFooter .btn-primary');
-        if (saveBtn) {
-            saveBtn.disabled = true;
-            saveBtn.textContent = 'Saving...';
-        }
-
-        const headers = { 'Content-Type': 'application/json' };
-        const csrfToken = await Auth.ensureCsrfToken();
-        if (csrfToken) {
-            headers['X-CSRF-Token'] = csrfToken;
-        }
-
-        const payload = { products };
-
-        let res = await fetch(`/api/orders/${currentOrder._id}/customer-edit`, {
-            method: 'PUT',
-            headers,
-            credentials: 'include',
-            body: JSON.stringify(payload)
-        });
-
-        let data = await res.json();
-
-        // Handle CSRF retry
-        if (res.status === 403 && data?.message?.toLowerCase().includes('csrf')) {
-            const newToken = await Auth.refreshCsrfToken();
-            if (newToken) {
-                headers['X-CSRF-Token'] = newToken;
-                res = await fetch(`/api/orders/${currentOrder._id}/customer-edit`, {
-                    method: 'PUT',
-                    headers,
-                    credentials: 'include',
-                    body: JSON.stringify(payload)
-                });
-                data = await res.json();
-            }
-        }
-
-        if (res.ok) {
-            showToast('Order updated successfully', 'success');
-            _orderFormDirty = false;
-            closeOrderModal();
-            loadMyOrders(); // Refresh list
-        } else {
-            showToast(data.message || 'Could not update', 'info');
-        }
-    } catch (e) {
-        console.error('Order edit error:', e);
-        if (!navigator.onLine) {
-            showToast('No internet connection', 'info');
-        } else {
-            showToast('Could not update. Try again.', 'info');
-        }
-    } finally {
-        const saveBtn = document.querySelector('#orderModalFooter .btn-primary');
-        if (saveBtn) {
-            saveBtn.disabled = false;
-            saveBtn.textContent = 'Save Changes';
-        }
-    }
-}
 
 // Close modal on overlay click
 const orderModal = document.getElementById('orderModal');
 if (orderModal) {
     orderModal.addEventListener('click', (e) => {
-        if (e.target.id === 'orderModal') {
-            closeOrderModal();
-        }
+        if (e.target.id === 'orderModal') closeOrderModal();
     });
 }
 
-// Close modal on Escape key
 document.addEventListener('keydown', (e) => {
     const modal = document.getElementById('orderModal');
-    if (e.key === 'Escape' && modal && modal.classList.contains('show')) {
-        closeOrderModal();
-    }
+    if (e.key === 'Escape' && modal && modal.classList.contains('show')) closeOrderModal();
 });
 
-// Refresh orders list when page becomes visible again
 document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && _activeTab === 'list') {
-        loadMyOrders();
-    }
+    if (document.visibilityState === 'visible' && _activeTab === 'list') loadMyOrders();
 });
 
 // Expose functions to window
@@ -1086,10 +569,6 @@ window.updateFromInput = updateFromInput;
 window.placeOrder = placeOrder;
 window.openOrderDetail = openOrderDetail;
 window.closeOrderModal = closeOrderModal;
-window.saveOrderEdit = saveOrderEdit;
-window.renderOrderProducts = renderOrderProducts;
-window.changeOrderQty = changeOrderQty;
-window.updateOrderQtyFromInput = updateOrderQtyFromInput;
 window.downloadInvoice = downloadInvoice;
 
 init();

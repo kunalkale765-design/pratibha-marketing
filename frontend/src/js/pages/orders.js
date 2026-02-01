@@ -1,86 +1,71 @@
 import { showToast, createElement } from '/js/ui.js';
+import { escapeHtml } from '/js/utils.js';
+import { waitForAuth } from '/js/helpers/auth-wait.js';
 
-function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
+// Import helpers
+import {
+    setAuth as setInvoiceAuth, printOrder as _printOrder, selectFirm, toggleInvoiceItem as _toggleInvoiceItem,
+    generateInvoice, closeInvoiceModal, downloadDeliveryBill as _downloadDeliveryBill, checkInvoicesExist
+} from '/js/helpers/orders-invoice.js';
+import {
+    setAuth as setPackingAuth, openPackingPanel, togglePackedItem, handlePackingQtyChange,
+    completePackingSession as _completePackingSession, closePackingPanel
+} from '/js/helpers/orders-packing.js';
+import {
+    getAddedProducts, resetAddedProducts, addProductToOrder as _addProductToOrder,
+    renderAddedProducts, changeAddedQty as _changeAddedQty,
+    handleAddedQtyChange as _handleAddedQtyChange, handleAddedQtyInput as _handleAddedQtyInput,
+    handleAddedPriceChange as _handleAddedPriceChange, removeAddedProduct as _removeAddedProduct
+} from '/js/helpers/orders-added-products.js';
 
-// Wait for Auth to be available
-const waitForAuth = (maxWait = 10000) => new Promise((resolve, reject) => {
-    const startTime = Date.now();
-    const check = () => {
-        if (window.Auth) return resolve(window.Auth);
-        if (Date.now() - startTime > maxWait) return reject(new Error('Auth not available'));
-        setTimeout(check, 50);
-    };
-    check();
-});
 const Auth = await waitForAuth();
+setInvoiceAuth(Auth);
+setPackingAuth(Auth);
 
 let orders = [];
 const marketRates = {};
-let allProducts = []; // All available products for adding to orders
-let addedProducts = []; // Newly added products (not yet saved)
+let allProducts = [];
 let currentFilter = 'all';
 let currentOrderId = null;
 let currentOrder = null;
 let currentUser = null;
 let priceChanges = {};
 let quantityChanges = {};
-let isSaving = false; // Prevent concurrent saves
-let isDeleting = false; // Prevent concurrent deletes
-
-// Track if global listeners have been initialized (prevents memory leak)
+let isSaving = false;
+let isDeleting = false;
 let globalListenersInitialized = false;
-
-// Packing panel state
-let packingOrder = null;
-let packingItems = [];
 
 async function init() {
     currentUser = await Auth.requireAuth();
     if (!currentUser) return;
 
-    // Hide status controls for customers
     if (currentUser.role === 'customer') {
         const footer = document.getElementById('modalFooter');
         if (footer) footer.style.display = 'none';
     }
 
-    // Initialize global event listeners ONCE
     initGlobalListeners();
-
     await Promise.all([loadOrders(), loadMarketRates(), loadProducts()]);
     setupFilters();
     setupSearch();
-
-    // Handle deep links: /pages/orders/?order=<id>&action=pack
     handleDeepLink();
 }
 
-// Handle deep links from Packing Station or other pages
 function handleDeepLink() {
     const params = new URLSearchParams(window.location.search);
     const orderId = params.get('order');
     const action = params.get('action');
 
     if (orderId) {
-        // Clear URL params without reload
         window.history.replaceState({}, '', window.location.pathname);
-
         if (action === 'pack') {
-            // Open packing panel directly
             openPackingPanel(orderId);
         } else {
-            // Open order detail modal
             viewOrder(orderId);
         }
     }
 }
 
-// Initialize listeners that should only be added once (not per render)
 function initGlobalListeners() {
     if (globalListenersInitialized) return;
     globalListenersInitialized = true;
@@ -88,7 +73,6 @@ function initGlobalListeners() {
     const container = document.getElementById('ordersList');
     if (!container) return;
 
-    // Close swipe items when tapping elsewhere (ONCE, not per render)
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.swipe-item')) {
             document.querySelectorAll('.swipe-item.swiped, .swipe-item.swiped-single').forEach(item => {
@@ -97,41 +81,24 @@ function initGlobalListeners() {
         }
     });
 
-    // Delegated touch handling for swipe gestures
     let touchState = { startX: 0, isDragging: false, currentItem: null };
 
     container.addEventListener('touchstart', (e) => {
         const swipeItem = e.target.closest('.swipe-item');
         if (!swipeItem) return;
-
-        touchState = {
-            startX: e.touches[0].clientX,
-            isDragging: true,
-            currentItem: swipeItem
-        };
-
-        // Close other open swipe items
+        touchState = { startX: e.touches[0].clientX, isDragging: true, currentItem: swipeItem };
         document.querySelectorAll('.swipe-item.swiped, .swipe-item.swiped-single').forEach(item => {
-            if (item !== swipeItem) {
-                item.classList.remove('swiped', 'swiped-single');
-            }
+            if (item !== swipeItem) item.classList.remove('swiped', 'swiped-single');
         });
     }, { passive: true });
 
     container.addEventListener('touchmove', (e) => {
         if (!touchState.isDragging || !touchState.currentItem) return;
-
         const diff = touchState.startX - e.touches[0].clientX;
         const actionCount = touchState.currentItem.querySelectorAll('.swipe-action').length;
-
         if (diff > 50) {
             touchState.currentItem.classList.remove('swiped-single', 'swiped');
-            // Use appropriate class based on action count
-            if (actionCount === 1) {
-                touchState.currentItem.classList.add('swiped-single');
-            } else {
-                touchState.currentItem.classList.add('swiped');
-            }
+            touchState.currentItem.classList.add(actionCount === 1 ? 'swiped-single' : 'swiped');
         } else if (diff < -20) {
             touchState.currentItem.classList.remove('swiped', 'swiped-single');
         }
@@ -142,72 +109,41 @@ function initGlobalListeners() {
         touchState.currentItem = null;
     }, { passive: true });
 
-    // Mouse drag support for desktop (click and drag to swipe)
     let mouseState = { startX: 0, isDragging: false, currentItem: null };
 
     container.addEventListener('mousedown', (e) => {
         const swipeItem = e.target.closest('.swipe-item');
         if (!swipeItem) return;
-        // Don't start drag if clicking on a button
         if (e.target.closest('button')) return;
-
-        mouseState = {
-            startX: e.clientX,
-            isDragging: true,
-            currentItem: swipeItem
-        };
-
-        // Close other open swipe items
+        mouseState = { startX: e.clientX, isDragging: true, currentItem: swipeItem };
         document.querySelectorAll('.swipe-item.swiped, .swipe-item.swiped-single').forEach(item => {
-            if (item !== swipeItem) {
-                item.classList.remove('swiped', 'swiped-single');
-            }
+            if (item !== swipeItem) item.classList.remove('swiped', 'swiped-single');
         });
     });
 
     container.addEventListener('mousemove', (e) => {
         if (!mouseState.isDragging || !mouseState.currentItem) return;
-
         const diff = mouseState.startX - e.clientX;
         const actionCount = mouseState.currentItem.querySelectorAll('.swipe-action').length;
-
         if (diff > 50) {
             mouseState.currentItem.classList.remove('swiped-single', 'swiped');
-            // Use appropriate class based on action count
-            if (actionCount === 1) {
-                mouseState.currentItem.classList.add('swiped-single');
-            } else {
-                mouseState.currentItem.classList.add('swiped');
-            }
+            mouseState.currentItem.classList.add(actionCount === 1 ? 'swiped-single' : 'swiped');
         } else if (diff < -20) {
             mouseState.currentItem.classList.remove('swiped', 'swiped-single');
         }
     });
 
-    container.addEventListener('mouseup', () => {
-        mouseState.isDragging = false;
-        mouseState.currentItem = null;
-    });
+    container.addEventListener('mouseup', () => { mouseState.isDragging = false; mouseState.currentItem = null; });
+    container.addEventListener('mouseleave', () => { mouseState.isDragging = false; mouseState.currentItem = null; });
 
-    container.addEventListener('mouseleave', () => {
-        mouseState.isDragging = false;
-        mouseState.currentItem = null;
-    });
-
-    // Close modal on overlay click
     const orderModal = document.getElementById('orderModal');
     if (orderModal) {
-        orderModal.onclick = (e) => {
-            if (e.target.id === 'orderModal') closeModal();
-        };
+        orderModal.onclick = (e) => { if (e.target.id === 'orderModal') closeModal(); };
     }
 
-    // Close invoice modal on overlay click
     const invoiceModal = document.getElementById('invoiceModal');
     if (invoiceModal) {
-        invoiceModal.onclick = (e) => {
-            if (e.target.id === 'invoiceModal') closeInvoiceModal();
-        };
+        invoiceModal.onclick = (e) => { if (e.target.id === 'invoiceModal') closeInvoiceModal(); };
     }
 }
 
@@ -215,9 +151,7 @@ async function loadMarketRates() {
     try {
         const res = await fetch('/api/market-rates', { credentials: 'include' });
         if (res.status === 401) { window.location.href = '/pages/auth/login.html'; return; }
-        if (!res.ok) {
-            throw new Error(`Server returned ${res.status}`);
-        }
+        if (!res.ok) throw new Error(`Server returned ${res.status}`);
         const data = await res.json();
         (data.data || []).forEach(r => {
             const pid = typeof r.product === 'object' ? r.product._id : r.product;
@@ -225,7 +159,6 @@ async function loadMarketRates() {
         });
     } catch (e) {
         console.error('Failed to load market rates:', e);
-        // Show a subtle warning that can be dismissed
         showDataLoadWarning('market-rates', 'Market rates may be outdated');
     }
 }
@@ -238,47 +171,26 @@ async function loadProducts() {
         allProducts = (data.data || []).filter(p => p.isActive !== false);
     } catch (e) {
         console.error('Failed to load products:', e);
-        // Show warning - this affects "Add Product" functionality
         showDataLoadWarning('products', 'Product list unavailable');
     }
 }
 
-// Show a dismissible warning banner for data load failures
 function showDataLoadWarning(type, message) {
-    // Don't show duplicate warnings
     if (document.querySelector(`.data-warning[data-type="${type}"]`)) return;
-
     const warning = createElement('div', {
         className: 'data-warning',
         dataset: { type: type },
         style: {
-            background: 'var(--warning, #b89a5a)',
-            color: 'white',
-            padding: '0.5rem 1rem',
-            fontSize: '0.85rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '0.5rem'
+            background: 'var(--warning, #b89a5a)', color: 'white', padding: '0.5rem 1rem',
+            fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem'
         }
     }, [
         createElement('span', {}, `⚠️ ${message}`),
         createElement('button', {
-            style: {
-                background: 'transparent',
-                border: 'none',
-                color: 'white',
-                cursor: 'pointer',
-                fontSize: '1rem',
-                padding: '0 0.25rem'
-            },
-            onclick: (e) => {
-                e.target.closest('.data-warning').remove();
-            }
+            style: { background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1rem', padding: '0 0.25rem' },
+            onclick: (e) => { e.target.closest('.data-warning').remove(); }
         }, '×')
     ]);
-
-    // Insert at top of page
     const container = document.getElementById('ordersList');
     if (container && container.parentElement) {
         container.parentElement.insertBefore(warning, container);
@@ -289,15 +201,10 @@ async function loadOrders() {
     try {
         const res = await fetch('/api/orders?limit=100', { credentials: 'include' });
         if (res.status === 401) { window.location.href = '/pages/auth/login.html'; return; }
-        if (!res.ok) {
-            throw new Error(`Server returned ${res.status}`);
-        }
+        if (!res.ok) throw new Error(`Server returned ${res.status}`);
         const data = await res.json();
-        if (!data.success) {
-            throw new Error(data.message || 'Orders temporarily unavailable');
-        }
+        if (!data.success) throw new Error(data.message || 'Orders temporarily unavailable');
         orders = data.data || [];
-        // Debug: Log any orders with missing or invalid IDs
         const invalidOrders = orders.filter(o => !o._id || !/^[a-f\d]{24}$/i.test(o._id));
         if (invalidOrders.length > 0) {
             console.warn('Orders with invalid IDs:', invalidOrders.map(o => ({ orderNumber: o.orderNumber, _id: o._id })));
@@ -305,7 +212,6 @@ async function loadOrders() {
         renderOrders();
     } catch (e) {
         console.error('Failed to load orders:', e);
-        // Show retry UI if no orders loaded yet
         if (!orders || orders.length === 0) {
             const container = document.getElementById('ordersList');
             const errorMsg = !navigator.onLine ? 'No internet connection' : 'Orders not available';
@@ -325,9 +231,7 @@ async function loadOrders() {
 function getInitials(name) {
     if (!name) return '?';
     const words = name.trim().split(/\s+/);
-    if (words.length === 1) {
-        return words[0].substring(0, 2).toUpperCase();
-    }
+    if (words.length === 1) return words[0].substring(0, 2).toUpperCase();
     return (words[0][0] + words[words.length - 1][0]).toUpperCase();
 }
 
@@ -340,18 +244,14 @@ function renderOrders() {
     const isAdmin = currentUser?.role === 'admin';
     const isStaff = currentUser?.role === 'admin' || currentUser?.role === 'staff';
 
-    // Filter out orders without valid _id first
     let filtered = orders.filter(o => o._id && /^[a-f\d]{24}$/i.test(o._id));
 
-    // Filter by status
     if (currentFilter === 'all') {
-        // "All" shows everything except cancelled (there's a dedicated Cancelled tab)
         filtered = filtered.filter(o => o.status !== 'cancelled');
     } else {
         filtered = filtered.filter(o => o.status === currentFilter);
     }
 
-    // Filter by search
     if (search) {
         filtered = filtered.filter(o =>
             o.orderNumber?.toLowerCase().includes(search) ||
@@ -365,19 +265,15 @@ function renderOrders() {
         return;
     }
 
-    // Clear container
     container.innerHTML = '';
-
     const fragment = document.createDocumentFragment();
 
     filtered.forEach((o, idx) => {
-        // Batch Badge
         let batchBadge = null;
         if (o.batch?.batchType) {
             batchBadge = createElement('span', { className: 'badge badge-batch' }, o.batch.batchType);
         }
 
-        // Packing Status Badge - show for confirmed orders
         let packingBadge = null;
         if (isStaff && o.status === 'confirmed') {
             if (o.packingDone) {
@@ -387,7 +283,6 @@ function renderOrders() {
             }
         }
 
-        // Swipe Content
         const swipeContent = createElement('div', {
             className: 'swipe-content',
             onclick: () => window.viewOrder(o._id)
@@ -405,17 +300,14 @@ function renderOrders() {
             createElement('div', { className: 'order-amount-pill' }, `₹${(o.totalAmount || 0).toLocaleString('en-IN')}`)
         ]);
 
-        // Swipe Actions - add Pack action for confirmed orders that aren't packed yet
         const actions = [];
         const canPack = isStaff && o.status === 'confirmed' && !o.packingDone;
-
         if (canPack) {
             actions.push(createElement('button', {
                 className: 'swipe-action pack',
                 onclick: (e) => { e.stopPropagation(); window.openPackingPanel(o._id); }
             }, 'Pack'));
         }
-        // Show Bill button for confirmed orders with a batch
         const canDownloadBill = isStaff && o.status === 'confirmed' && o.batch;
         if (canDownloadBill) {
             actions.push(createElement('button', {
@@ -431,12 +323,10 @@ function renderOrders() {
         }
         const swipeActions = createElement('div', { className: 'swipe-actions' }, actions);
 
-        // Determine action count class for desktop hover
         let actionCountClass = '';
         if (actions.length === 1) actionCountClass = 'single-action';
         else if (actions.length === 2) actionCountClass = 'two-actions';
 
-        // Main Card
         const card = createElement('div', {
             className: `swipe-item card-fade-in ${actionCountClass}`.trim(),
             dataset: { orderId: o._id },
@@ -447,7 +337,6 @@ function renderOrders() {
     });
 
     container.appendChild(fragment);
-    // Swipe handlers are now initialized once in initGlobalListeners() using event delegation
 }
 
 function setupFilters() {
@@ -455,55 +344,35 @@ function setupFilters() {
     const indicator = document.getElementById('segmentIndicator');
     const buttons = segmentControl.querySelectorAll('.segment-btn');
 
-    // Function to move indicator to a button
     function moveIndicator(btn) {
         const controlRect = segmentControl.getBoundingClientRect();
         const btnRect = btn.getBoundingClientRect();
-
-        // Calculate position relative to the segment control
-        const left = btnRect.left - controlRect.left;
-        const width = btnRect.width;
-
-        indicator.style.left = left + 'px';
-        indicator.style.width = width + 'px';
+        indicator.style.left = (btnRect.left - controlRect.left) + 'px';
+        indicator.style.width = btnRect.width + 'px';
     }
 
-    // Initialize indicator position
     const activeBtn = segmentControl.querySelector('.segment-btn.active');
-    if (activeBtn) {
-        // Small delay to ensure layout is complete
-        setTimeout(() => moveIndicator(activeBtn), 10);
-    }
+    if (activeBtn) setTimeout(() => moveIndicator(activeBtn), 10);
 
-    // Handle clicks
     buttons.forEach(btn => {
         btn.onclick = () => {
-            // Update active state
             buttons.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-
-            // Slide the indicator
             moveIndicator(btn);
-
-            // Update filter and re-render with animation
             currentFilter = btn.dataset.filter;
             const container = document.getElementById('ordersList');
             container.classList.add('segment-content');
             renderOrders();
-
-            // Remove animation class after it plays
             setTimeout(() => container.classList.remove('segment-content'), 300);
         };
     });
 
-    // Recalculate on window resize
     window.addEventListener('resize', () => {
         const active = segmentControl.querySelector('.segment-btn.active');
         if (active) moveIndicator(active);
     });
 }
 
-// Debounce utility to prevent excessive function calls
 function debounce(fn, delay) {
     let timeoutId;
     return function (...args) {
@@ -515,349 +384,21 @@ function debounce(fn, delay) {
 function setupSearch() {
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
-        const debouncedRender = debounce(renderOrders, 200);
-        searchInput.addEventListener('input', debouncedRender);
+        searchInput.addEventListener('input', debounce(renderOrders, 200));
     }
-}
-
-// Invoice state
-let invoiceData = null;
-let selectedFirmId = null;
-let selectedProductIds = new Set();
-
-// Download delivery bill for an order
-async function downloadDeliveryBill(orderId, batchId) {
-    // Only staff/admin can download delivery bills
-    if (currentUser?.role === 'customer') {
-        showToast('Delivery bills are not available', 'info');
-        return;
-    }
-
-    // Close swipe
-    document.querySelectorAll('.swipe-item.swiped, .swipe-item.swiped-single').forEach(item => {
-        item.classList.remove('swiped', 'swiped-single');
-    });
-
-    // Validate IDs
-    const isValidMongoId = /^[a-f\d]{24}$/i.test(orderId);
-    const isValidBatchId = /^[a-f\d]{24}$/i.test(batchId);
-    if (!orderId || !isValidMongoId || !batchId || !isValidBatchId) {
-        console.error('Invalid order or batch ID:', orderId, batchId);
-        showToast('Order data updating. Please refresh.', 'info');
-        return;
-    }
-
-    // Disable the bill button to prevent double-download
-    const billBtn = document.querySelector(`.swipe-item[data-order-id="${orderId}"] .swipe-action.bill`);
-    if (billBtn) {
-        billBtn.disabled = true;
-        billBtn.classList.add('btn-loading');
-    }
-
-    showToast('Downloading delivery bill...', 'info');
-
-    try {
-        const response = await fetch(`/api/batches/${batchId}/bills/${orderId}/download?copy=original`, {
-            credentials: 'include'
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || 'Failed to download delivery bill');
-        }
-
-        // Get filename from Content-Disposition header or use default
-        const contentDisposition = response.headers.get('Content-Disposition');
-        let filename = 'delivery-bill.pdf';
-        if (contentDisposition) {
-            const match = contentDisposition.match(/filename="?([^";\n]+)"?/);
-            if (match) filename = match[1];
-        }
-
-        // Download the file
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        a.remove();
-
-        showToast('Delivery bill downloaded!', 'success');
-    } catch (error) {
-        console.error('Error downloading delivery bill:', error);
-        showToast(error.message || 'Failed to download delivery bill', 'error');
-    } finally {
-        if (billBtn) {
-            billBtn.disabled = false;
-            billBtn.classList.remove('btn-loading');
-        }
-    }
-}
-
-async function printOrder(orderId) {
-    // Only staff/admin can print invoices
-    if (currentUser?.role === 'customer') {
-        showToast('Invoice printing is not available', 'info');
-        return;
-    }
-
-    // Close swipe
-    document.querySelectorAll('.swipe-item.swiped, .swipe-item.swiped-single').forEach(item => {
-        item.classList.remove('swiped', 'swiped-single');
-    });
-
-    // Validate order ID before proceeding
-    const isValidMongoId = /^[a-f\d]{24}$/i.test(orderId);
-    if (!orderId || !isValidMongoId) {
-        console.error('Invalid order ID:', orderId);
-        showToast('Order data updating. Please refresh.', 'info');
-        return;
-    }
-
-    // Show invoice modal with loading
-    document.getElementById('invoiceModal').classList.add('show');
-    document.getElementById('invoiceModal').classList.add('show');
-    const modalBody = document.getElementById('invoiceModalBody');
-    modalBody.innerHTML = '';
-    modalBody.appendChild(createElement('div', { className: 'invoice-loading' }, 'Loading invoice data...'));
-    const generateBtn = document.getElementById('generateInvoiceBtn');
-    if (generateBtn) generateBtn.disabled = true;
-
-    try {
-        // Load firms list first
-        const firmsResult = await loadFirms();
-        if (!firmsResult.success) {
-            throw new Error('Could not load firm list. Please try again.');
-        }
-
-        // Fetch split data from API
-        const res = await fetch(`/api/invoices/${orderId}/split`, { credentials: 'include' });
-        if (!res.ok) {
-            const errData = await res.json().catch(() => ({}));
-            throw new Error(errData.message || 'Invoice data temporarily unavailable');
-        }
-        const data = await res.json();
-        invoiceData = data.data;
-
-        // Set modal title
-        document.getElementById('invoiceModalTitle').textContent = `Invoice for ${invoiceData.orderNumber}`;
-
-        // Render firms and items
-        renderInvoiceModal();
-    } catch (error) {
-        console.error('Print order error:', error);
-        document.getElementById('invoiceModalBody').innerHTML = ''; // Clear loading
-        document.getElementById('invoiceModalBody').appendChild(createElement('div', { className: 'invoice-no-items' }, [
-            createElement('p', {}, 'Invoice data not available'),
-            createElement('p', { style: { fontSize: '0.75rem', marginTop: '0.5rem' } }, error.message)
-        ]));
-    }
-}
-
-// All available firms (fetched once)
-let allFirms = [];
-
-async function loadFirms() {
-    if (allFirms.length > 0) return { success: true };
-    try {
-        const res = await fetch('/api/invoices/firms', { credentials: 'include' });
-        if (!res.ok) {
-            throw new Error(`Server returned ${res.status}`);
-        }
-        const data = await res.json();
-        allFirms = data.data || [];
-        return { success: true };
-    } catch (e) {
-        console.error('Failed to load firms:', e);
-        // Return error so caller can handle it
-        return { success: false, error: e.message };
-    }
-}
-
-function renderInvoiceModal() {
-    const modalBody = document.getElementById('invoiceModalBody');
-    if (!invoiceData) {
-        modalBody.innerHTML = '';
-        modalBody.appendChild(createElement('div', { className: 'invoice-no-items' }, 'No items to invoice'));
-        return;
-    }
-
-    // Get all items from all firms (flatten)
-    const allItems = invoiceData.firms.flatMap(f => f.items);
-    if (allItems.length === 0) {
-        modalBody.innerHTML = '';
-        modalBody.appendChild(createElement('div', { className: 'invoice-no-items' }, 'No items to invoice'));
-        return;
-    }
-
-    // Auto-select first firm and all items if none selected
-    if (!selectedFirmId) {
-        selectedFirmId = allFirms.length > 0 ? allFirms[0].id : (invoiceData?.firms?.[0]?.firmId || 'pratibha');
-        selectedProductIds = new Set(allItems.map(i => i.productId));
-    }
-
-    // Calculate selected total
-    const selectedTotal = allItems
-        .filter(i => selectedProductIds.has(i.productId))
-        .reduce((sum, i) => sum + (i.amount || 0), 0);
-
-    // Build firm selector
-    const firmsToShow = allFirms.length > 0 ? allFirms : (invoiceData?.firms || []).map(f => ({ id: f.firmId, name: f.firmName }));
-
-    modalBody.innerHTML = '';
-    const fragment = document.createDocumentFragment();
-
-    // Firm Selector
-    const firmSelector = createElement('div', { className: 'invoice-firm-selector' }, [
-        createElement('div', { className: 'info-label', style: { marginBottom: '0.5rem' } }, 'Select Firm'),
-        createElement('div', { className: 'firm-options' }, firmsToShow.map(firm =>
-            createElement('label', {
-                className: `firm-option ${selectedFirmId === firm.id ? 'selected' : ''}`,
-                onclick: () => window.selectFirm(firm.id)
-            }, [
-                createElement('input', {
-                    type: 'radio',
-                    name: 'firm',
-                    value: firm.id,
-                    checked: selectedFirmId === firm.id
-                }),
-                createElement('span', { className: 'firm-option-name' }, firm.name)
-            ])
-        ))
-    ]);
-    fragment.appendChild(firmSelector);
-
-    // Items Section
-    fragment.appendChild(createElement('div', { className: 'info-label', style: { margin: '1rem 0 0.5rem' } }, 'Select Items'));
-    fragment.appendChild(createElement('div', { className: 'invoice-items-list' }, allItems.map(item =>
-        createElement('div', { className: 'invoice-item' }, [
-            createElement('input', {
-                type: 'checkbox',
-                className: 'invoice-item-checkbox',
-                dataset: { product: item.productId },
-                checked: selectedProductIds.has(item.productId),
-                onchange: () => window.toggleInvoiceItem(null, item.productId)
-            }),
-            createElement('div', { className: 'invoice-item-details' }, [
-                createElement('div', { className: 'invoice-item-name' }, item.productName),
-                createElement('div', { className: 'invoice-item-meta' }, `${item.quantity || 0} ${item.unit || ''} × ₹${(item.rate || 0).toLocaleString('en-IN')}`)
-            ]),
-            createElement('div', { className: 'invoice-item-amount' }, `₹${(item.amount || 0).toLocaleString('en-IN')}`)
-        ])
-    )));
-
-    // Summary Section
-    fragment.appendChild(createElement('div', { className: 'invoice-summary' }, [
-        createElement('div', { className: 'invoice-summary-label' }, 'Total'),
-        createElement('div', { className: 'invoice-summary-total' }, `₹${selectedTotal.toLocaleString('en-IN')}`)
-    ]));
-
-    modalBody.appendChild(fragment);
-    const generateBtn = document.getElementById('generateInvoiceBtn');
-    if (generateBtn) generateBtn.disabled = selectedProductIds.size === 0;
-}
-
-function selectFirm(firmId) {
-    selectedFirmId = firmId;
-    renderInvoiceModal();
-}
-
-function toggleInvoiceItem(firmId, productId) {
-    if (selectedProductIds.has(productId)) {
-        selectedProductIds.delete(productId);
-    } else {
-        selectedProductIds.add(productId);
-    }
-    renderInvoiceModal();
-}
-
-async function generateInvoice() {
-    // Button should already be disabled if no items selected
-    if (!invoiceData || !selectedFirmId || selectedProductIds.size === 0) {
-        return;
-    }
-
-    const btn = document.getElementById('generateInvoiceBtn');
-    btn.classList.add('btn-loading');
-    btn.disabled = true;
-
-    try {
-        const headers = { 'Content-Type': 'application/json' };
-        const csrfToken = await Auth.ensureCsrfToken();
-        if (csrfToken) {
-            headers['X-CSRF-Token'] = csrfToken;
-        }
-
-        const res = await fetch(`/api/invoices/${invoiceData.orderId}/pdf`, {
-            method: 'POST',
-            headers,
-            credentials: 'include',
-            body: JSON.stringify({
-                firmId: selectedFirmId,
-                productIds: Array.from(selectedProductIds)
-            })
-        });
-
-        if (!res.ok) {
-            const errData = await res.json().catch(() => ({}));
-            throw new Error(errData.message || 'Invoice generation temporarily unavailable');
-        }
-
-        // Download the PDF
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `INV${invoiceData.orderNumber.replace('ORD', '')}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-
-        showToast('Invoice downloaded', 'success');
-        closeInvoiceModal();
-    } catch (error) {
-        console.error('Generate invoice error:', error);
-        showToast(error.message || 'Could not generate invoice', 'info');
-    } finally {
-        btn.classList.remove('btn-loading');
-        btn.disabled = false;
-    }
-}
-
-function closeInvoiceModal() {
-    document.getElementById('invoiceModal').classList.remove('show');
-    invoiceData = null;
-    selectedFirmId = null;
-    selectedProductIds = new Set();
 }
 
 function printFromModal() {
-    // Silently return if no order - button shouldn't be clickable without an order
-    if (!currentOrderId) {
-        return;
-    }
-    // Save the ID before closeModal clears it
+    if (!currentOrderId) return;
     const orderId = currentOrderId;
-    closeModal(); // Close order detail modal (this sets currentOrderId = null)
-    printOrder(orderId); // Open invoice modal with saved ID
+    closeModal();
+    _printOrder(orderId, currentUser);
 }
 
 async function deleteOrder(orderId) {
-    // Prevent concurrent deletes
     if (isDeleting) return;
-
-    // Admin check - button should be hidden for non-admins anyway
-    if (currentUser?.role !== 'admin') {
-        return;
-    }
-
-    if (!confirm('Are you sure you want to delete this order? This action cannot be undone.')) {
-        return;
-    }
+    if (currentUser?.role !== 'admin') return;
+    if (!confirm('Are you sure you want to delete this order? This action cannot be undone.')) return;
 
     isDeleting = true;
     const item = document.querySelector(`.swipe-item[data-order-id="${orderId}"]`);
@@ -865,25 +406,16 @@ async function deleteOrder(orderId) {
     try {
         const headers = { 'Content-Type': 'application/json' };
         const csrfToken = await Auth.ensureCsrfToken();
-        if (csrfToken) {
-            headers['X-CSRF-Token'] = csrfToken;
-        }
+        if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
 
-        const res = await fetch(`/api/orders/${orderId}`, {
-            method: 'DELETE',
-            headers,
-            credentials: 'include'
-        });
+        const res = await fetch(`/api/orders/${orderId}`, { method: 'DELETE', headers, credentials: 'include' });
 
         if (res.ok) {
-            // Add delete animation then reload orders
             if (item) {
                 item.classList.add('deleting');
-                setTimeout(() => {
-                    loadOrders(); // Reload from server
-                }, 300);
+                setTimeout(() => loadOrders(), 300);
             } else {
-                loadOrders(); // Reload from server
+                loadOrders();
             }
             showToast('Order cancelled', 'success');
         } else {
@@ -899,7 +431,6 @@ async function deleteOrder(orderId) {
 }
 
 async function viewOrder(id) {
-    // Prevent opening new order while saving is in progress
     if (isSaving) {
         showToast('Please wait, saving in progress...', 'info');
         return;
@@ -908,7 +439,6 @@ async function viewOrder(id) {
     try {
         const res = await fetch(`/api/orders/${id}`, { credentials: 'include' });
 
-        // Handle non-JSON responses
         let data;
         try {
             data = await res.json();
@@ -933,7 +463,7 @@ async function viewOrder(id) {
         currentOrder = order;
         priceChanges = {};
         quantityChanges = {};
-        addedProducts = [];
+        resetAddedProducts();
 
         const modalTitle = document.getElementById('modalTitle');
         if (modalTitle) modalTitle.textContent = `#${order.orderNumber}`;
@@ -943,17 +473,13 @@ async function viewOrder(id) {
 
         const isStaff = currentUser.role === 'admin' || currentUser.role === 'staff';
 
-        const _batchInfo = order.batch?.batchType
-            ? `<span class="badge badge-batch">${order.batch.batchType}</span>`
-            : '-';
-
         const modalBody = document.getElementById('modalBody');
-        modalBody.innerHTML = ''; // Clear existing content
+        modalBody.innerHTML = '';
 
         const fragment = document.createDocumentFragment();
 
         // Customer Info Row
-        const infoRow1 = createElement('div', { className: 'info-row' }, [
+        fragment.appendChild(createElement('div', { className: 'info-row' }, [
             createElement('div', {}, [
                 createElement('div', { className: 'info-label' }, 'Customer'),
                 createElement('div', { className: 'info-value' }, order.customer?.name || '')
@@ -962,15 +488,14 @@ async function viewOrder(id) {
                 createElement('div', { className: 'info-label' }, 'Phone'),
                 createElement('div', { className: 'info-value' }, order.customer?.phone || '-')
             ])
-        ]);
-        fragment.appendChild(infoRow1);
+        ]));
 
         // Date and Batch Row
         const batchBadge = order.batch?.batchType
             ? createElement('span', { className: 'badge badge-batch' }, order.batch.batchType)
             : '-';
 
-        const infoRow2 = createElement('div', { className: 'info-row' }, [
+        fragment.appendChild(createElement('div', { className: 'info-row' }, [
             createElement('div', {}, [
                 createElement('div', { className: 'info-label' }, 'Date'),
                 createElement('div', { className: 'info-value' }, new Date(order.createdAt).toLocaleDateString('en-IN'))
@@ -979,11 +504,10 @@ async function viewOrder(id) {
                 createElement('div', { className: 'info-label' }, 'Batch'),
                 createElement('div', { className: 'info-value' }, Array.isArray(batchBadge) ? batchBadge : [batchBadge])
             ])
-        ]);
-        fragment.appendChild(infoRow2);
+        ]));
 
         // Status Row
-        const infoRow3 = createElement('div', { className: 'info-row' }, [
+        fragment.appendChild(createElement('div', { className: 'info-row' }, [
             createElement('div', {}, [
                 createElement('div', { className: 'info-label' }, 'Status'),
                 createElement('div', { className: 'info-value' }, [
@@ -991,8 +515,7 @@ async function viewOrder(id) {
                 ])
             ]),
             createElement('div', {})
-        ]);
-        fragment.appendChild(infoRow3);
+        ]));
 
         // Products Section
         const infoSection = createElement('div', { className: 'info-section' });
@@ -1003,7 +526,6 @@ async function viewOrder(id) {
             const purchasePrice = marketRates[productId] || p.rate || null;
             const purchaseDisplay = purchasePrice ? `₹${purchasePrice.toLocaleString('en-IN')}` : 'N/A';
 
-            // Qty Controls (Staff) or Display (Customer)
             let qtyDisplay;
             if (isStaff) {
                 const qtyInput = createElement('input', {
@@ -1013,11 +535,7 @@ async function viewOrder(id) {
                     value: p.quantity,
                     min: '0',
                     step: '0.01',
-                    dataset: {
-                        idx: idx,
-                        original: p.quantity,
-                        unit: p.unit
-                    },
+                    dataset: { idx: idx, original: p.quantity, unit: p.unit },
                     onfocus: (e) => window.clearZero(e.target),
                     onblur: (e) => window.restoreValue(e.target),
                     onchange: () => window.handleQuantityChange(idx),
@@ -1034,7 +552,6 @@ async function viewOrder(id) {
                 qtyDisplay = createElement('div', { className: 'product-qty' }, `${p.quantity} ${p.unit}`);
             }
 
-            // Selling Price Controls (Staff) or Display (Customer)
             const sellingLabelChildren = ['Selling'];
             if (p.isContractPrice) {
                 sellingLabelChildren.push(' ');
@@ -1050,12 +567,7 @@ async function viewOrder(id) {
                     value: p.rate,
                     min: '0',
                     step: '0.01',
-                    dataset: {
-                        idx: idx,
-                        original: p.rate,
-                        qty: p.quantity,
-                        contract: p.isContractPrice || false
-                    },
+                    dataset: { idx: idx, original: p.rate, qty: p.quantity, contract: p.isContractPrice || false },
                     onfocus: (e) => window.clearZero(e.target),
                     onblur: (e) => window.restoreValue(e.target),
                     onchange: () => window.handlePriceChange(idx),
@@ -1070,7 +582,7 @@ async function viewOrder(id) {
                 sellingDisplay = createElement('div', { className: 'price-value' }, `₹${p.rate}`);
             }
 
-            const productItem = createElement('div', { className: 'product-item', dataset: { idx: idx } }, [
+            infoSection.appendChild(createElement('div', { className: 'product-item', dataset: { idx: idx } }, [
                 createElement('div', { className: 'product-top' }, [
                     createElement('div', {}, [
                         createElement('div', { className: 'product-name' }, p.productName),
@@ -1091,8 +603,7 @@ async function viewOrder(id) {
                     createElement('span', { className: 'amount-label' }, 'Amount'),
                     createElement('span', { className: 'amount-display', id: `amount-${idx}` }, `₹${p.amount}`)
                 ])
-            ]);
-            infoSection.appendChild(productItem);
+            ]));
         });
 
         // Added Products Container
@@ -1110,20 +621,19 @@ async function viewOrder(id) {
                     }, `${p.name} (${p.unit})`));
                 });
 
-            const productSelector = createElement('select', {
-                id: 'productSelector',
-                className: 'product-select',
-                onchange: () => window.addProductToOrder()
-            }, productOptions);
-
-            const addProductDiv = createElement('div', { className: 'add-product-section' }, [productSelector]);
-            infoSection.appendChild(addProductDiv);
+            infoSection.appendChild(createElement('div', { className: 'add-product-section' }, [
+                createElement('select', {
+                    id: 'productSelector',
+                    className: 'product-select',
+                    onchange: () => window.addProductToOrder()
+                }, productOptions)
+            ]));
         }
 
         fragment.appendChild(infoSection);
 
         // Total Section
-        const totalSection = createElement('div', { className: 'total-section' }, [
+        fragment.appendChild(createElement('div', { className: 'total-section' }, [
             createElement('div', { className: 'total-row' }, [
                 createElement('span', {}, 'Total'),
                 createElement('span', { id: 'orderTotal' }, `₹${order.totalAmount}`)
@@ -1136,8 +646,7 @@ async function viewOrder(id) {
                 createElement('span', {}, 'Balance'),
                 createElement('span', { id: 'orderBalance' }, `₹${order.totalAmount - (order.paidAmount || 0)}`)
             ])
-        ]);
-        fragment.appendChild(totalSection);
+        ]));
 
         modalBody.appendChild(fragment);
 
@@ -1145,75 +654,52 @@ async function viewOrder(id) {
         if (isStaff) {
             const footer = document.getElementById('modalFooter');
             if (footer) {
-                footer.innerHTML = ''; // Clear existing static buttons
+                footer.innerHTML = '';
 
-                // 1. Print Invoice Button
-                const printBtn = createElement('button', {
+                footer.appendChild(createElement('button', {
                     className: 'btn-modal secondary btn-animated',
                     onclick: () => window.printFromModal()
-                }, createElement('span', { className: 'btn-text' }, 'Invoice'));
-                footer.appendChild(printBtn);
+                }, createElement('span', { className: 'btn-text' }, 'Invoice')));
 
-                // 2. Action Button (Status Change) OR Save Button
-                // We show specific status actions if no unsaved changes, otherwise Save
-
-                // Confirm Order (Pending -> Confirmed)
                 if (order.status === 'pending') {
-                    const confirmBtn = createElement('button', {
+                    footer.appendChild(createElement('button', {
                         className: 'btn-modal primary btn-animated status-action-btn',
                         style: { background: 'var(--dusty-olive)', color: 'white', flex: '1.5' },
                         onclick: () => window.updateOrderStatus(order._id, 'confirmed')
-                    }, 'Confirm Order');
-                    footer.appendChild(confirmBtn);
-                }
-
-                // Mark Delivered (Confirmed -> Delivered) - only show if packing is done
-                else if (order.status === 'confirmed' && order.packingDone) {
-                    const deliverBtn = createElement('button', {
+                    }, 'Confirm Order'));
+                } else if (order.status === 'confirmed' && order.packingDone) {
+                    footer.appendChild(createElement('button', {
                         className: 'btn-modal primary btn-animated status-action-btn',
                         style: { background: 'var(--gunmetal)', color: 'white', flex: '1.5' },
                         onclick: () => window.updateOrderStatus(order._id, 'delivered')
-                    }, 'Mark Delivered');
-                    footer.appendChild(deliverBtn);
+                    }, 'Mark Delivered'));
                 }
 
-                // Pack Order button (for confirmed orders not yet packed)
-                const canPack = order.status === 'confirmed' && !order.packingDone;
-
-                if (canPack) {
-                    const packBtn = createElement('button', {
+                if (order.status === 'confirmed' && !order.packingDone) {
+                    footer.appendChild(createElement('button', {
                         className: 'btn-modal secondary btn-animated',
                         style: { background: 'var(--dusty-olive)', color: 'white', border: 'none' },
                         onclick: () => { window.closeModal(); setTimeout(() => window.openPackingPanel(order._id), 200); }
-                    }, 'Start Packing');
-                    footer.appendChild(packBtn);
+                    }, 'Start Packing'));
                 }
 
-                // 3. Save Changes Button (Always present but maybe hidden/disabled until changes)
-                // Actually, let's keep it simple: Save Button is always there but disabled if no changes
-                // But we want prominent status buttons. 
-                // Let's add Save button too.
-
-                const saveBtn = createElement('button', {
+                footer.appendChild(createElement('button', {
                     className: 'btn-save-prices btn-animated',
                     id: 'savePricesBtn',
-                    disabled: true, // Initially disabled
+                    disabled: true,
                     onclick: () => window.savePrices()
-                }, createElement('span', { className: 'btn-text' }, 'Save'));
-                footer.appendChild(saveBtn);
+                }, createElement('span', { className: 'btn-text' }, 'Save')));
             }
         }
 
         document.getElementById('orderModal').classList.add('show');
     } catch (err) {
         console.error('Error in viewOrder:', err);
-        // Reset state and close modal on error
         currentOrder = null;
         currentOrderId = null;
         const modal = document.getElementById('orderModal');
         if (modal) modal.classList.remove('show');
 
-        // Provide specific error messages based on error type
         if (!navigator.onLine) {
             showToast('No internet connection. Check your network.', 'error');
         } else if (err.message?.includes('401') || err.message?.includes('403')) {
@@ -1249,17 +735,14 @@ function handlePriceInput(idx) {
     const qtyInput = document.getElementById(`quantity-${idx}`);
     const original = parseFloat(input.dataset.original);
     const current = parseFloat(input.value) || 0;
-    // Use quantity from input if exists, otherwise from data attribute
     const qty = qtyInput ? (parseFloat(qtyInput.value) || 0) : parseFloat(input.dataset.qty);
 
     input.classList.toggle('changed', current !== original);
 
-    // Update amount display (round to 2 decimal places for consistency)
     const amount = Math.round(current * qty * 100) / 100;
     const amountEl = document.getElementById(`amount-${idx}`);
     if (amountEl) amountEl.textContent = `₹${amount.toLocaleString('en-IN')}`;
 
-    // Update total
     updateOrderTotal();
 }
 
@@ -1274,31 +757,19 @@ function handlePriceChange(idx) {
     } else {
         delete priceChanges[idx];
     }
-
-    // Enable/disable save button
     updateSaveButtonState();
 }
 
-// Quantity change handlers
 function changeQuantity(idx, delta) {
     const input = document.getElementById(`quantity-${idx}`);
     if (!input) return;
 
     const current = parseFloat(input.value) || 0;
     let newValue = current + delta;
-
-    // Minimum quantity for all units
     const minQty = 0.01;
 
-    // Snap to 0 if going below minimum (allows removal)
-    if (newValue < minQty && newValue > 0) {
-        newValue = 0;
-    }
-
-    // Don't go below 0
-    if (newValue < 0) {
-        newValue = 0;
-    }
+    if (newValue < minQty && newValue > 0) newValue = 0;
+    if (newValue < 0) newValue = 0;
 
     input.value = newValue;
     handleQuantityChange(idx);
@@ -1313,7 +784,6 @@ function handleQuantityInput(idx) {
     const originalQty = parseFloat(qtyInput.dataset.original);
     const currentQty = parseFloat(qtyInput.value) || 0;
 
-    // Visual feedback for changed quantity
     qtyInput.classList.remove('changed', 'removed');
     if (currentQty === 0) {
         qtyInput.classList.add('removed');
@@ -1321,15 +791,11 @@ function handleQuantityInput(idx) {
         qtyInput.classList.add('changed');
     }
 
-    // Get current rate (may be modified)
     const rate = priceInput ? (parseFloat(priceInput.value) || 0) : (currentOrder?.products[idx]?.rate || 0);
-
-    // Recalculate amount
     const amount = Math.round(currentQty * rate * 100) / 100;
     const amountEl = document.getElementById(`amount-${idx}`);
     if (amountEl) amountEl.textContent = `₹${amount.toLocaleString('en-IN')}`;
 
-    // Update total
     updateOrderTotal();
 }
 
@@ -1339,8 +805,6 @@ function handleQuantityChange(idx) {
 
     const original = parseFloat(input.dataset.original);
     const current = parseFloat(input.value) || 0;
-
-    // Validate minimum quantity
     const minQty = 0.01;
 
     if (current > 0 && current < minQty) {
@@ -1353,201 +817,17 @@ function handleQuantityChange(idx) {
         delete quantityChanges[idx];
     }
 
-    // Enable/disable save button (check price, quantity changes, and added products)
     updateSaveButtonState();
-
-    // Trigger amount recalculation
     handleQuantityInput(idx);
 }
 
 function updateSaveButtonState() {
+    const addedProducts = getAddedProducts();
     const hasChanges = Object.keys(priceChanges).length > 0 ||
         Object.keys(quantityChanges).length > 0 ||
         addedProducts.length > 0;
     const saveBtn = document.getElementById('savePricesBtn');
     if (saveBtn) saveBtn.disabled = !hasChanges;
-}
-
-function addProductToOrder() {
-    const select = document.getElementById('productSelector');
-    const productId = select.value;
-    if (!productId) {
-        // Check if dropdown is empty (no products available besides the placeholder)
-        if (allProducts.length === 0 || select.options.length <= 1) {
-            showToast('No products available', 'info');
-        }
-        return;
-    }
-
-    const option = select.options[select.selectedIndex];
-    const productName = option.dataset.name;
-    const unit = option.dataset.unit;
-
-    // Get market rate for this product
-    const rate = marketRates[productId] || 0;
-
-    // Add to addedProducts array
-    addedProducts.push({
-        product: productId,
-        productName: productName,
-        unit: unit,
-        quantity: 1,
-        rate: rate
-    });
-
-    // Remove from dropdown
-    option.remove();
-
-    // Render added products
-    renderAddedProducts();
-    updateOrderTotal();
-    updateSaveButtonState();
-
-    // Reset select
-    select.value = '';
-}
-
-function renderAddedProducts() {
-    const container = document.getElementById('addedProductsContainer');
-    if (!container) return;
-
-    container.innerHTML = '';
-    const fragment = document.createDocumentFragment();
-
-    addedProducts.forEach((p, idx) => {
-        const productItem = createElement('div', { className: 'product-item added-product', dataset: { addedIdx: idx } }, [
-            createElement('div', { className: 'product-top' }, [
-                createElement('div', {}, [
-                    createElement('div', { className: 'product-name' }, [
-                        p.productName,
-                        ' ',
-                        createElement('span', { className: 'new-badge' }, 'New')
-                    ]),
-                    createElement('div', { className: 'qty-controls-inline' }, [
-                        createElement('button', { className: 'qty-btn-sm', onclick: () => window.changeAddedQty(idx, -1), type: 'button' }, '−'),
-                        createElement('input', {
-                            type: 'number',
-                            className: 'qty-input-sm input-animated',
-                            id: `added-qty-${idx}`,
-                            value: p.quantity,
-                            min: '0',
-                            step: '0.01',
-                            onchange: () => window.handleAddedQtyChange(idx),
-                            oninput: () => window.handleAddedQtyInput(idx)
-                        }),
-                        createElement('button', { className: 'qty-btn-sm', onclick: () => window.changeAddedQty(idx, 1), type: 'button' }, '+'),
-                        createElement('span', { className: 'qty-unit' }, p.unit)
-                    ])
-                ]),
-                createElement('button', { className: 'remove-btn', onclick: () => window.removeAddedProduct(idx), title: 'Remove' }, '×')
-            ]),
-            createElement('div', { className: 'prices-container' }, [
-                createElement('div', { className: 'price-box' }, [
-                    createElement('div', { className: 'price-label' }, 'Purchase'),
-                    createElement('div', { className: 'price-value' }, p.rate ? `₹${p.rate.toLocaleString('en-IN')}` : 'N/A')
-                ]),
-                createElement('div', { className: 'price-box' }, [
-                    createElement('div', { className: 'price-label' }, 'Selling'),
-                    createElement('input', {
-                        type: 'number',
-                        className: 'price-input input-animated',
-                        id: `added-price-${idx}`,
-                        value: p.rate || 0,
-                        min: '0',
-                        step: '0.01',
-                        onchange: () => window.handleAddedPriceChange(idx)
-                    })
-                ])
-            ]),
-            createElement('div', { className: 'amount-row' }, [
-                createElement('span', { className: 'amount-label' }, 'Amount'),
-                createElement('span', { className: 'amount-display', id: `added-amount-${idx}` }, `₹${((p.rate || 0) * (p.quantity || 0)).toLocaleString('en-IN')}`)
-            ])
-        ]);
-        fragment.appendChild(productItem);
-    });
-
-    container.appendChild(fragment);
-}
-
-function changeAddedQty(idx, delta) {
-    const input = document.getElementById(`added-qty-${idx}`);
-    if (!input) return;
-    let val = parseFloat(input.value) || 0;
-    val = Math.max(0, val + delta);
-    if (val > 0 && val < 0.01) val = 0.01;
-    input.value = val;
-    addedProducts[idx].quantity = val;
-    updateAddedAmount(idx);
-    updateOrderTotal();
-}
-
-function handleAddedQtyChange(idx) {
-    const input = document.getElementById(`added-qty-${idx}`);
-    if (!input) return;
-    let val = parseFloat(input.value) || 0;
-    if (val > 0 && val < 0.01) {
-        showToast('Minimum quantity: 0.01', 'info');
-        val = 0.01;
-        input.value = val;
-    }
-    addedProducts[idx].quantity = val;
-    updateAddedAmount(idx);
-    updateOrderTotal();
-}
-
-function handleAddedQtyInput(idx) {
-    const input = document.getElementById(`added-qty-${idx}`);
-    if (!input) return;
-    const val = parseFloat(input.value) || 0;
-    addedProducts[idx].quantity = val;
-    updateAddedAmount(idx);
-    updateOrderTotal();
-}
-
-function handleAddedPriceChange(idx) {
-    const input = document.getElementById(`added-price-${idx}`);
-    if (!input) return;
-    const val = parseFloat(input.value) || 0;
-    addedProducts[idx].rate = val;
-    updateAddedAmount(idx);
-    updateOrderTotal();
-}
-
-function handleAddedPriceInput(idx) {
-    const input = document.getElementById(`added-price-${idx}`);
-    if (!input) return;
-    const val = parseFloat(input.value) || 0;
-    addedProducts[idx].rate = val;
-    updateAddedAmount(idx);
-    updateOrderTotal();
-}
-
-function updateAddedAmount(idx) {
-    const amountEl = document.getElementById(`added-amount-${idx}`);
-    if (!amountEl) return;
-    const p = addedProducts[idx];
-    const amount = (p.quantity || 0) * (p.rate || 0);
-    amountEl.textContent = `₹${amount.toLocaleString('en-IN')}`;
-}
-
-function removeAddedProduct(idx) {
-    const removed = addedProducts.splice(idx, 1)[0];
-
-    // Add back to dropdown
-    const select = document.getElementById('productSelector');
-    if (select && removed) {
-        const opt = document.createElement('option');
-        opt.value = removed.product;
-        opt.dataset.name = removed.productName;
-        opt.dataset.unit = removed.unit;
-        opt.textContent = `${removed.productName} (${removed.unit})`;
-        select.appendChild(opt);
-    }
-
-    renderAddedProducts();
-    updateOrderTotal();
-    updateSaveButtonState();
 }
 
 function updateOrderTotal() {
@@ -1562,12 +842,11 @@ function updateOrderTotal() {
         total += rate * quantity;
     });
 
-    // Include added products
+    const addedProducts = getAddedProducts();
     addedProducts.forEach(p => {
         total += (p.quantity || 0) * (p.rate || 0);
     });
 
-    // Round to 2 decimal places for consistency with backend
     total = Math.round(total * 100) / 100;
     const balance = Math.round((total - (currentOrder.paidAmount || 0)) * 100) / 100;
 
@@ -1577,35 +856,13 @@ function updateOrderTotal() {
     if (balanceEl) balanceEl.textContent = `₹${balance.toLocaleString('en-IN')}`;
 }
 
-// Check if invoices exist for an order
-// Returns: { exists: boolean, error?: string }
-async function checkInvoicesExist(orderId) {
-    try {
-        const res = await fetch(`/api/invoices/order/${orderId}`, { credentials: 'include' });
-        if (!res.ok) {
-            // Non-OK response - could be auth issue or server error
-            if (res.status === 401 || res.status === 403) {
-                return { exists: false, error: 'auth' };
-            }
-            return { exists: false, error: `Server returned ${res.status}` };
-        }
-        const data = await res.json();
-        return { exists: data.data && data.data.length > 0 };
-    } catch (e) {
-        console.error('Failed to check invoices:', e);
-        // Return error info so caller can decide how to handle
-        return { exists: false, error: e.message };
-    }
-}
-
 async function savePrices() {
-    // Check for price, quantity changes, or added products
+    const addedProducts = getAddedProducts();
     const hasChanges = Object.keys(priceChanges).length > 0 ||
         Object.keys(quantityChanges).length > 0 ||
         addedProducts.length > 0;
     if (!currentOrderId || !currentOrder || !currentOrder.products || !hasChanges) return;
 
-    // Prevent concurrent saves
     if (isSaving) {
         showToast('Save in progress...', 'info');
         return;
@@ -1618,21 +875,16 @@ async function savePrices() {
         btn.classList.add('btn-loading');
     }
 
-    // Check if invoices exist
     let hasInvoices = false;
     const invoiceCheck = await checkInvoicesExist(currentOrderId);
     if (invoiceCheck.error) {
-        // If we can't check invoices, warn user but allow them to proceed
         const proceedAnyway = confirm(
             'Could not check if invoices exist for this order.\n\n' +
             'If invoices exist, they may need to be regenerated after saving. Continue?'
         );
         if (!proceedAnyway) {
             isSaving = false;
-            if (btn) {
-                btn.classList.remove('btn-loading');
-                btn.disabled = false;
-            }
+            if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
             return;
         }
     } else if (invoiceCheck.exists) {
@@ -1643,22 +895,16 @@ async function savePrices() {
         );
         if (!proceed) {
             isSaving = false;
-            if (btn) {
-                btn.classList.remove('btn-loading');
-                btn.disabled = false;
-            }
+            if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
             return;
         }
     }
 
     try {
-        // Build updated products array with quantities
         const existingProducts = currentOrder.products
             .map((p, idx) => {
                 let price = priceChanges[idx] !== undefined ? priceChanges[idx] : p.rate;
                 let quantity = quantityChanges[idx] !== undefined ? quantityChanges[idx] : p.quantity;
-
-                // Safety checks
                 if (!price || price <= 0) price = p.rate;
                 if (quantity < 0) quantity = p.quantity;
 
@@ -1668,41 +914,29 @@ async function savePrices() {
                     priceAtTime: price
                 };
             })
-            .filter(item => item.quantity > 0); // Remove items with quantity = 0
+            .filter(item => item.quantity > 0);
 
-        // Include newly added products
         const newProducts = addedProducts
             .filter(p => p.quantity > 0)
-            .map(p => ({
-                product: p.product,
-                quantity: p.quantity,
-                priceAtTime: p.rate
-            }));
+            .map(p => ({ product: p.product, quantity: p.quantity, priceAtTime: p.rate }));
 
         const updatedProducts = [...existingProducts, ...newProducts];
 
         const headers = { 'Content-Type': 'application/json' };
         const csrfToken = await Auth.ensureCsrfToken();
-        if (csrfToken) {
-            headers['X-CSRF-Token'] = csrfToken;
-        }
+        if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
 
         const payload = { products: updatedProducts };
-        const orderId = currentOrderId; // Capture to avoid race conditions
+        const orderId = currentOrderId;
 
         let res = await fetch(`/api/orders/${orderId}`, {
-            method: 'PUT',
-            headers,
-            credentials: 'include',
+            method: 'PUT', headers, credentials: 'include',
             body: JSON.stringify(payload)
         });
 
-        // Handle CSRF error with single retry
         if (res.status === 403) {
             let errData;
-            try {
-                errData = await res.json();
-            } catch (parseError) {
+            try { errData = await res.json(); } catch (parseError) {
                 console.warn('Failed to parse CSRF error response:', parseError.message);
                 errData = { message: `Access denied (code: ${res.status})` };
             }
@@ -1712,38 +946,25 @@ async function savePrices() {
                 if (newToken) {
                     headers['X-CSRF-Token'] = newToken;
                     res = await fetch(`/api/orders/${orderId}`, {
-                        method: 'PUT',
-                        headers,
-                        credentials: 'include',
+                        method: 'PUT', headers, credentials: 'include',
                         body: JSON.stringify(payload)
                     });
-
-                    // If retry also fails with CSRF, tell user to refresh
                     if (res.status === 403) {
                         showToast('Session expired. Please refresh the page.', 'info');
                         isSaving = false;
-                        if (btn) {
-                            btn.classList.remove('btn-loading');
-                            btn.disabled = false;
-                        }
+                        if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
                         return;
                     }
                 } else {
                     showToast('Session expired. Please refresh the page.', 'info');
                     isSaving = false;
-                    if (btn) {
-                        btn.classList.remove('btn-loading');
-                        btn.disabled = false;
-                    }
+                    if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
                     return;
                 }
             } else {
                 showToast(errData.message || 'Access temporarily unavailable', 'info');
                 isSaving = false;
-                if (btn) {
-                    btn.classList.remove('btn-loading');
-                    btn.disabled = false;
-                }
+                if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
                 return;
             }
         }
@@ -1752,7 +973,7 @@ async function savePrices() {
             showToast('Changes saved', 'success');
             priceChanges = {};
             quantityChanges = {};
-            addedProducts = [];
+            resetAddedProducts();
             if (btn) {
                 btn.classList.remove('btn-loading');
                 btn.classList.add('btn-success');
@@ -1761,26 +982,22 @@ async function savePrices() {
             }
             loadOrders();
 
-            // Prompt to regenerate invoice if needed
             if (hasInvoices) {
                 setTimeout(() => {
                     if (confirm('Order updated. Regenerate invoice with new quantities?')) {
-                        const orderIdToEdit = orderId; // Capture before modal closes
+                        const orderIdToEdit = orderId;
                         closeModal();
-                        setTimeout(() => printOrder(orderIdToEdit), 300);
+                        setTimeout(() => _printOrder(orderIdToEdit, currentUser), 300);
                     }
                 }, 500);
             }
 
-            // Refresh the modal if still viewing same order
             if (currentOrderId === orderId) {
                 viewOrder(orderId);
             }
         } else {
             let errData;
-            try {
-                errData = await res.json();
-            } catch (parseError) {
+            try { errData = await res.json(); } catch (parseError) {
                 console.warn('Failed to parse order save error response:', parseError.message);
                 errData = { message: `Server error (${res.status})` };
             }
@@ -1802,14 +1019,12 @@ async function savePrices() {
 }
 
 function closeModal() {
-    // Warn about unsaved changes (price, quantity, or added products)
+    const addedProducts = getAddedProducts();
     const hasChanges = Object.keys(priceChanges).length > 0 ||
         Object.keys(quantityChanges).length > 0 ||
         addedProducts.length > 0;
     if (hasChanges) {
-        if (!confirm('You have unsaved changes. Discard them?')) {
-            return;
-        }
+        if (!confirm('You have unsaved changes. Discard them?')) return;
     }
     const orderModal = document.getElementById('orderModal');
     if (orderModal) orderModal.classList.remove('show');
@@ -1817,7 +1032,42 @@ function closeModal() {
     currentOrder = null;
     priceChanges = {};
     quantityChanges = {};
-    addedProducts = [];
+    resetAddedProducts();
+}
+
+async function updateOrderStatus(orderId, newStatus) {
+    if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'staff')) return;
+
+    const statusBtns = document.querySelectorAll('#modalBody .btn-confirm, #modalBody .btn-deliver');
+    statusBtns.forEach(b => { b.disabled = true; b.classList.add('btn-loading'); });
+
+    try {
+        const headers = { 'Content-Type': 'application/json' };
+        const csrfToken = await Auth.ensureCsrfToken();
+        if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
+
+        const res = await fetch(`/api/orders/${orderId}/status`, {
+            method: 'PUT', headers, credentials: 'include',
+            body: JSON.stringify({ status: newStatus })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            showToast(`Order marked as ${newStatus}`, 'success');
+            viewOrder(orderId);
+            loadOrders();
+        } else {
+            showToast(data.message || 'Failed to update status', 'error');
+            viewOrder(orderId);
+        }
+    } catch (error) {
+        console.error('Status update error:', error);
+        showToast('Network error updating status', 'error');
+        viewOrder(orderId);
+    } finally {
+        statusBtns.forEach(b => { b.disabled = false; b.classList.remove('btn-loading'); });
+    }
 }
 
 // Expose to window for onclick handlers
@@ -1832,396 +1082,32 @@ window.handleQuantityInput = handleQuantityInput;
 window.changeQuantity = changeQuantity;
 window.savePrices = savePrices;
 window.deleteOrder = deleteOrder;
-window.printOrder = printOrder;
-window.downloadDeliveryBill = downloadDeliveryBill;
-// Invoice modal functions
-window.closeInvoiceModal = closeInvoiceModal;
-window.selectFirm = selectFirm;
-window.toggleInvoiceItem = toggleInvoiceItem;
-window.generateInvoice = generateInvoice;
+window.updateOrderStatus = updateOrderStatus;
 window.printFromModal = printFromModal;
 
-// Added product functions
-window.addProductToOrder = addProductToOrder;
-window.renderAddedProducts = renderAddedProducts;
-window.changeAddedQty = changeAddedQty;
-window.handleAddedQtyChange = handleAddedQtyChange;
-window.handleAddedQtyInput = handleAddedQtyInput;
-window.handleAddedPriceChange = handleAddedPriceChange;
-window.handleAddedPriceInput = handleAddedPriceInput;
-window.removeAddedProduct = removeAddedProduct;
+// Invoice helpers (delegated)
+window.printOrder = (orderId) => _printOrder(orderId, currentUser);
+window.downloadDeliveryBill = (orderId, batchId) => _downloadDeliveryBill(orderId, batchId, currentUser);
+window.closeInvoiceModal = closeInvoiceModal;
+window.selectFirm = selectFirm;
+window.toggleInvoiceItem = (_firmId, productId) => _toggleInvoiceItem(productId);
+window.generateInvoice = generateInvoice;
 
-
-async function updateOrderStatus(orderId, newStatus) {
-    if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'staff')) return;
-
-    // Disable all status buttons to prevent double-click
-    const statusBtns = document.querySelectorAll('#modalBody .btn-confirm, #modalBody .btn-deliver');
-    statusBtns.forEach(b => { b.disabled = true; b.classList.add('btn-loading'); });
-
-    try {
-        const headers = { 'Content-Type': 'application/json' };
-        const csrfToken = await Auth.ensureCsrfToken();
-        if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
-
-        const res = await fetch(`/api/orders/${orderId}/status`, {
-            method: 'PUT',
-            headers,
-            credentials: 'include',
-            body: JSON.stringify({ status: newStatus })
-        });
-
-        const data = await res.json();
-
-        if (res.ok) {
-            showToast(`Order marked as ${newStatus}`, 'success');
-            // Reload order to update UI (logs, timestamps etc)
-            viewOrder(orderId);
-            // Also refresh list in background
-            loadOrders();
-        } else {
-            showToast(data.message || 'Failed to update status', 'error');
-            // Revert select by reloading view
-            viewOrder(orderId);
-        }
-    } catch (error) {
-        console.error('Status update error:', error);
-        showToast('Network error updating status', 'error');
-        viewOrder(orderId);
-    } finally {
-        statusBtns.forEach(b => { b.disabled = false; b.classList.remove('btn-loading'); });
-    }
-}
-
-window.updateOrderStatus = updateOrderStatus;
-
-// ============================================
-// PACKING PANEL FUNCTIONS
-// ============================================
-
-// Open packing panel for an order
-async function openPackingPanel(orderId) {
-    const panel = document.getElementById('packingPanel');
-    const overlay = document.getElementById('packingPanelOverlay');
-    if (!panel || !overlay) return;
-
-    // Close any open swipe items
-    document.querySelectorAll('.swipe-item.swiped, .swipe-item.swiped-single').forEach(item => {
-        item.classList.remove('swiped', 'swiped-single');
-    });
-
-    // Show panel with loading state
-    panel.classList.add('active');
-    overlay.classList.add('active');
-    document.body.style.overflow = 'hidden';
-
-    document.getElementById('packingPanelBody').innerHTML = '<div class="packing-loading">Loading order...</div>';
-    document.getElementById('packingCompleteBtn').disabled = true;
-
-    try {
-        // Load packing details
-        const response = await fetch(`/api/packing/${orderId}`, { credentials: 'include' });
-        if (!response.ok) throw new Error('Failed to load order');
-
-        const data = await response.json();
-        packingOrder = data.data;
-
-        // Items are directly on the order (simplified packing)
-        packingItems = packingOrder.items || [];
-        renderPackingPanel();
-    } catch (error) {
-        console.error('Error loading packing order:', error);
-        showToast('Failed to load order details', 'error');
-        packingOrder = null;
-        packingItems = [];
-        closePackingPanel();
-    }
-}
-
-// Render the packing panel content (simplified)
-function renderPackingPanel() {
-    // Update title
-    document.getElementById('packingPanelTitle').textContent = `Pack ${packingOrder.orderNumber}`;
-    document.getElementById('packingPanelSubtitle').textContent =
-        `${packingOrder.customer?.name || 'Unknown'} • ${packingOrder.customer?.phone || ''}`;
-
-    // Update progress
-    updatePackingProgress();
-
-    // Render body
-    const body = document.getElementById('packingPanelBody');
-
-    let orderDetailsHtml = '';
-    if (packingOrder.deliveryAddress || packingOrder.notes) {
-        orderDetailsHtml = `<div class="packing-order-details">`;
-        if (packingOrder.deliveryAddress) {
-            orderDetailsHtml += `
-                <div class="packing-delivery-info">
-                    <span class="packing-label">Deliver to</span>
-                    <span class="packing-value">${escapeHtml(packingOrder.deliveryAddress)}</span>
-                </div>`;
-        }
-        if (packingOrder.notes) {
-            orderDetailsHtml += `
-                <div class="packing-order-notes">
-                    <span class="packing-label">Notes</span>
-                    <span class="packing-value">${escapeHtml(packingOrder.notes)}</span>
-                </div>`;
-        }
-        orderDetailsHtml += `</div>`;
-    }
-
-    // Simplified packing - show items with packed checkbox and quantities
-    const checklistItems = packingItems.map((item, index) => {
-        // Track if quantity was modified
-        const packedQty = item.packedQuantity ?? item.orderedQuantity;
-        const isModified = item.packedQuantity !== undefined && item.packedQuantity !== item.orderedQuantity;
-        const isPacked = item.packed || false;
-
-        return `
-            <div class="packing-checklist-item ${isPacked ? 'item-packed' : ''} ${isModified ? 'item-modified' : ''}" data-index="${index}" data-product-id="${item.product}">
-                <div class="packing-item-main">
-                    <div class="packing-item-check ${isPacked ? 'checked' : ''}" onclick="togglePackedItem(${index})">
-                        ${isPacked ? '✓' : ''}
-                    </div>
-                    <div class="packing-item-details">
-                        <span class="packing-item-name">${escapeHtml(item.productName)}</span>
-                        <span class="packing-item-qty">Ordered: ${item.orderedQuantity} ${item.unit}</span>
-                    </div>
-                </div>
-                <div class="packing-item-input">
-                    <input type="number"
-                        class="packing-qty-input ${isModified ? 'modified' : ''}"
-                        value="${packedQty}"
-                        data-index="${index}"
-                        data-original="${item.orderedQuantity}"
-                        step="0.01"
-                        min="0"
-                        onchange="handlePackingQtyChange(${index})"
-                    >
-                    <span class="packing-unit-label">${item.unit}</span>
-                </div>
-            </div>
-        `;
-    }).join('');
-
-    body.innerHTML = `
-        ${orderDetailsHtml}
-        <div class="packing-checklist-header">
-            <span>Items to Pack</span>
-        </div>
-        <div class="packing-checklist">
-            ${checklistItems}
-        </div>
-    `;
-
-    // Hide acknowledgement section (simplified flow)
-    const ackSection = document.getElementById('packingPanelAcknowledgement');
-    if (ackSection) ackSection.style.display = 'none';
-
-    // Hide issues section (simplified flow)
-    const issuesSection = document.getElementById('packingPanelIssues');
-    if (issuesSection) issuesSection.style.display = 'none';
-
-    updatePackingCompleteButton();
-}
-
-// Toggle packed status for an item
-async function togglePackedItem(index) {
-    const item = packingItems[index];
-    const newPacked = !item.packed;
-
-    // Optimistic UI update
-    item.packed = newPacked;
-    renderPackingPanel();
-
-    try {
-        const csrfToken = await Auth.ensureCsrfToken();
-        const response = await fetch(`/api/packing/${packingOrder._id}/item/${item.product}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': csrfToken
-            },
-            credentials: 'include',
-            body: JSON.stringify({ packed: newPacked })
-        });
-
-        if (!response.ok) {
-            // Parse error response for better message
-            const errData = await response.json().catch(() => ({}));
-            const errorMsg = errData.message || `Server error (${response.status})`;
-            throw new Error(errorMsg);
-        }
-    } catch (error) {
-        console.error('Error toggling packed status:', error);
-        // Revert on error
-        item.packed = !newPacked;
-        renderPackingPanel();
-
-        // Provide specific error messages
-        if (!navigator.onLine) {
-            showToast('No connection. Check internet and retry.', 'error');
-        } else if (error.message?.includes('401') || error.message?.includes('403') || error.message?.includes('auth')) {
-            showToast('Session expired. Please refresh the page.', 'error');
-        } else if (error.message?.includes('404')) {
-            showToast('Order not found. It may have been modified.', 'error');
-        } else {
-            showToast(`Update failed: ${error.message}`, 'error');
-        }
-    }
-}
-
-// Handle quantity change (simplified - just update local state)
-async function handlePackingQtyChange(index) {
-    const qtyInput = document.querySelector(`.packing-qty-input[data-index="${index}"]`);
-    const qty = parseFloat(qtyInput?.value) || 0;
-    const original = parseFloat(qtyInput?.dataset.original) || 0;
-
-    // Store original value in case we need to revert
-    const previousQty = packingItems[index].packedQuantity;
-    packingItems[index].packedQuantity = qty;
-
-    // Update visual feedback
-    qtyInput.classList.toggle('modified', qty !== original);
-    const itemEl = qtyInput.closest('.packing-checklist-item');
-    if (itemEl) {
-        itemEl.classList.toggle('item-modified', qty !== original);
-    }
-
-    // Save to server
-    const result = await savePackingItemUpdate(index);
-
-    // If save failed, revert the local state and visual feedback
-    if (!result.success) {
-        packingItems[index].packedQuantity = previousQty;
-        qtyInput.value = previousQty ?? original;
-        qtyInput.classList.toggle('modified', (previousQty ?? original) !== original);
-        if (itemEl) {
-            itemEl.classList.toggle('item-modified', (previousQty ?? original) !== original);
-        }
-    }
-}
-
-// Save item quantity update to server
-// Returns { success: boolean, error?: string }
-async function savePackingItemUpdate(index) {
-    const item = packingItems[index];
-
-    try {
-        const csrfToken = await Auth.ensureCsrfToken();
-        const response = await fetch(`/api/packing/${packingOrder._id}/item/${item.product}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': csrfToken
-            },
-            credentials: 'include',
-            body: JSON.stringify({
-                quantity: item.packedQuantity
-            })
-        });
-
-        if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            throw new Error(errData.message || `Server error (${response.status})`);
-        }
-        return { success: true };
-    } catch (error) {
-        console.error('Error saving packing item:', error);
-        // Provide specific error message
-        let userMsg = 'Failed to save changes';
-        if (!navigator.onLine) {
-            userMsg = 'No connection. Changes not saved.';
-        } else if (error.message?.includes('401') || error.message?.includes('403')) {
-            userMsg = 'Session expired. Please refresh.';
-        }
-        showToast(userMsg, 'error');
-        return { success: false, error: error.message };
-    }
-}
-
-// Update progress bar
-function updatePackingProgress() {
-    const total = packingItems.length;
-    const packed = packingItems.filter(item => item.packed).length;
-    const percentage = total > 0 ? Math.round((packed / total) * 100) : 0;
-
-    document.getElementById('packingProgressFill').style.width = `${percentage}%`;
-    document.getElementById('packingProgressText').textContent = `${packed}/${total} items packed`;
-}
-
-// Update complete button state - disable until all items are packed
-function updatePackingCompleteButton() {
-    const completeBtn = document.getElementById('packingCompleteBtn');
-    if (completeBtn) {
-        const total = packingItems.length;
-        const packed = packingItems.filter(item => item.packed).length;
-        const allPacked = packed === total && total > 0;
-
-        completeBtn.disabled = !allPacked;
-
-        // Update button text with remaining count if not all packed
-        if (!allPacked && total > 0) {
-            const remaining = total - packed;
-            completeBtn.title = `${remaining} item(s) remaining`;
-        } else {
-            completeBtn.title = '';
-        }
-    }
-}
-
-// Complete packing (mark as done)
-async function completePackingSession() {
-    const completeBtn = document.getElementById('packingCompleteBtn');
-    completeBtn.disabled = true;
-    completeBtn.innerHTML = '<span class="btn-text">Completing...</span>';
-
-    try {
-        const csrfToken = await Auth.ensureCsrfToken();
-        const response = await fetch(`/api/packing/${packingOrder._id}/done`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': csrfToken
-            },
-            credentials: 'include'
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to complete packing');
-        }
-
-        showToast('Packing completed!', 'success');
-        closePackingPanel();
-        await loadOrders();
-    } catch (error) {
-        console.error('Error completing packing:', error);
-        showToast(error.message || 'Failed to complete packing', 'error');
-        completeBtn.disabled = false;
-        completeBtn.innerHTML = '<span class="btn-text">Mark Done</span>';
-    }
-}
-
-// Close packing panel
-function closePackingPanel() {
-    const panel = document.getElementById('packingPanel');
-    const overlay = document.getElementById('packingPanelOverlay');
-
-    panel.classList.remove('active');
-    overlay.classList.remove('active');
-    document.body.style.overflow = '';
-
-    packingOrder = null;
-    packingItems = [];
-}
-
-// Expose packing functions to window
+// Packing helpers (delegated)
 window.openPackingPanel = openPackingPanel;
 window.closePackingPanel = closePackingPanel;
 window.handlePackingQtyChange = handlePackingQtyChange;
-window.completePackingSession = completePackingSession;
+window.completePackingSession = () => _completePackingSession(loadOrders);
 window.togglePackedItem = togglePackedItem;
+
+// Added product helpers (delegated with callbacks)
+const onAddedProductUpdate = () => { updateOrderTotal(); updateSaveButtonState(); };
+window.addProductToOrder = () => _addProductToOrder(allProducts, marketRates, currentOrder, { onUpdate: onAddedProductUpdate });
+window.renderAddedProducts = renderAddedProducts;
+window.changeAddedQty = (idx, delta) => _changeAddedQty(idx, delta, onAddedProductUpdate);
+window.handleAddedQtyChange = (idx) => _handleAddedQtyChange(idx, onAddedProductUpdate);
+window.handleAddedQtyInput = (idx) => _handleAddedQtyInput(idx, onAddedProductUpdate);
+window.handleAddedPriceChange = (idx) => _handleAddedPriceChange(idx, onAddedProductUpdate);
+window.removeAddedProduct = (idx) => _removeAddedProduct(idx, onAddedProductUpdate);
 
 init();
