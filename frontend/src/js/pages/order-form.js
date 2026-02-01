@@ -2,16 +2,7 @@
 import { showToast, createElement } from '/js/ui.js';
 import { logout } from '/js/init.js';
 
-// Wait for Auth to be available
-const waitForAuth = (maxWait = 10000) => new Promise((resolve, reject) => {
-    const startTime = Date.now();
-    const check = () => {
-        if (window.Auth) return resolve(window.Auth);
-        if (Date.now() - startTime > maxWait) return reject(new Error('Auth not available'));
-        setTimeout(check, 50);
-    };
-    check();
-});
+import { waitForAuth } from '/js/helpers/auth-wait.js';
 const Auth = await waitForAuth();
 
 // Logout button
@@ -92,11 +83,13 @@ async function init() {
 
 async function loadData() {
     try {
-        const [productsRes, ratesRes, customersRes] = await Promise.all([
+        const fetches = [
             fetch('/api/products', { credentials: 'include' }),
             fetch('/api/market-rates', { credentials: 'include' }),
-            fetch('/api/customers', { credentials: 'include' }).catch(() => ({ ok: false }))
-        ]);
+            // Only staff/admin can access /api/customers - skip for customers to avoid 401
+            isStaff ? fetch('/api/customers', { credentials: 'include' }).catch(() => ({ ok: false })) : Promise.resolve({ ok: false })
+        ];
+        const [productsRes, ratesRes, customersRes] = await Promise.all(fetches);
 
         if (productsRes.ok) {
             const data = await productsRes.json();

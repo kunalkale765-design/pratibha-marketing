@@ -198,7 +198,7 @@ describe('Auth Endpoints', () => {
 
       expect(res.statusCode).toBe(401);
       expect(res.body.success).toBe(false);
-      expect(res.body.message).toContain('Not authenticated');
+      expect(res.body.message).toContain('Not authorized');
     });
 
     it('should work with cookie-based token', async () => {

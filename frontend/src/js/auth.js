@@ -282,7 +282,10 @@ if (typeof window !== 'undefined') {
         if (response.status === 401 && !_redirecting) {
             const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
             // Only intercept API calls (not external fetches)
-            if (url.startsWith('/api/') || url.startsWith(window.location.origin + '/api/')) {
+            // Exclude /api/auth/me — it's used to *check* auth status, and 401 is
+            // an expected response handled by callers (login checkAuth, Auth.verify)
+            const isAuthCheck = url.includes('/api/auth/me');
+            if (!isAuthCheck && (url.startsWith('/api/') || url.startsWith(window.location.origin + '/api/'))) {
                 _redirecting = true;
                 Auth.clearAuth();
                 window.location.href = '/pages/auth/login.html';

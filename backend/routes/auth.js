@@ -8,6 +8,8 @@ const User = require('../models/User');
 const Customer = require('../models/Customer');
 const { JWT_SECRET } = require('../config/secrets');
 const { handleValidationErrors, buildSafeCustomerResponse } = require('../utils/helpers');
+const { logAudit } = require('../utils/auditLog');
+const { protect } = require('../middleware/auth');
 
 // SECURITY: Rate limiters for sensitive auth endpoints
 // Prevents brute force attacks on password reset and magic link tokens
@@ -254,53 +256,28 @@ router.post('/logout', async (req, res) => {
 
 // @route   GET /api/auth/me
 // @desc    Get current logged in user
-// @access  Private (will add middleware later)
-router.get('/me', async (req, res, next) => {
+// @access  Private
+router.get('/me', protect, async (req, res, next) => {
   try {
-    // Get token from cookie or header
-    const token = req.cookies?.token || req.headers.authorization?.replace('Bearer ', '');
+    // protect middleware already verified token, checked isActive, tokenVersion, revocation
 
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: 'Not authenticated'
-      });
-    }
-
-    // Verify token
-    const decoded = jwt.verify(token, JWT_SECRET);
-
-    // Handle magic link tokens
-    if (decoded.type === 'magic' && decoded.customerId) {
-      const customer = await Customer.findById(decoded.customerId);
-      if (!customer || !customer.isActive) {
-        return res.status(401).json({
-          success: false,
-          message: 'Invalid session'
-        });
-      }
+    // Handle magic link users (set by protect middleware)
+    if (req.user.isMagicLink) {
       return res.json({
         success: true,
         user: {
           id: null,
-          name: customer.name,
+          name: req.user.name,
           email: null,
           role: 'customer',
-          customer: buildSafeCustomerResponse(customer),
+          customer: buildSafeCustomerResponse(req.customer),
           isMagicLink: true
         }
       });
     }
 
-    // Regular user token
-    const user = await User.findById(decoded.id).select('-password').populate('customer');
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
+    // Regular user - populate customer for response
+    const user = await User.findById(req.user._id).select('-password').populate('customer');
 
     res.json({
       success: true,
