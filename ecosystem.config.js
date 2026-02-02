@@ -64,7 +64,7 @@ module.exports = {
       repo: 'https://github.com/kunalkale765-design/pratibha-marketing.git',
       path: '/var/www/pratibha-marketing',
       'pre-deploy-local': '',
-      'post-deploy': 'npm install --production && pm2 reload ecosystem.config.js --env production',
+      'post-deploy': 'npm install --production && npm run build:frontend && pm2 reload ecosystem.config.js --env production',
       'pre-setup': ''
     }
   }

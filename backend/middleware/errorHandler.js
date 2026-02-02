@@ -1,4 +1,10 @@
 // Error handling middleware
+let Sentry;
+try {
+  Sentry = require('@sentry/node');
+} catch (_) {
+  // Sentry not installed — optional dependency
+}
 
 // 404 Not Found handler
 const notFound = (req, res, next) => {
@@ -40,10 +46,7 @@ const errorHandler = (err, req, res, _next) => {
 
   if (err.code === 11000) {
     const field = err.keyPattern ? Object.keys(err.keyPattern)[0] : 'field';
-    const value = err.keyValue ? Object.values(err.keyValue)[0] : '';
-    errorResponse.message = value
-      ? `A record with this ${field} "${value}" already exists`
-      : `This ${field} already exists`;
+    errorResponse.message = `A record with this ${field} already exists`;
     statusCode = 400;
   }
 
@@ -89,6 +92,14 @@ const errorHandler = (err, req, res, _next) => {
 
   // Apply the status code
   res.status(statusCode);
+
+  // Report 5xx errors to Sentry if available
+  if (statusCode >= 500 && Sentry && process.env.SENTRY_DSN) {
+    Sentry.captureException(err, {
+      tags: { statusCode },
+      extra: { url: req.originalUrl, method: req.method }
+    });
+  }
 
   // Log errors - but skip expected client errors (4xx) in test mode to reduce noise
   const isTestMode = process.env.NODE_ENV === 'test';

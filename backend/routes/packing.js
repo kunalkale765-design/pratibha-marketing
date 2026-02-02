@@ -4,6 +4,7 @@ const { param, body } = require('express-validator');
 const Order = require('../models/Order');
 const { protect, authorize } = require('../middleware/auth');
 const deliveryBillService = require('../services/deliveryBillService');
+const mongoose = require('mongoose');
 const {
   roundTo2Decimals,
   handleValidationErrors,
@@ -24,17 +25,22 @@ router.get('/queue', protect, authorize('admin', 'staff'), async (req, res, next
       packingDone: { $ne: true }
     };
 
-    // Filter by batch if provided
+    // Filter by batch if provided (validate as MongoId)
     if (batch) {
+      if (!mongoose.Types.ObjectId.isValid(batch)) {
+        return res.status(400).json({ success: false, message: 'Invalid batch ID' });
+      }
       query.batch = batch;
     }
+
+    const parsedLimit = Math.min(Math.max(1, parseInt(limit) || 50), 100);
 
     const orders = await Order.find(query)
       .select('orderNumber customer batch products totalAmount status packingDone notes deliveryAddress createdAt')
       .populate('customer', 'name phone address')
       .populate('batch', 'batchNumber batchType status')
       .sort({ batch: 1, createdAt: 1 })
-      .limit(parseInt(limit))
+      .limit(parsedLimit)
       .lean();
 
     // Transform for queue view using shared helper
@@ -267,6 +273,10 @@ router.put('/:orderId/item/:productId',
           newTotal: product.amount,
           reason: notes || 'Quantity updated during packing'
         });
+        // Cap audit log at 100 entries
+        if (order.priceAuditLog.length > 100) {
+          order.priceAuditLog = order.priceAuditLog.slice(-100);
+        }
       }
 
       await order.save();

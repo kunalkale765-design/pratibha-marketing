@@ -165,8 +165,13 @@ pm2 set pm2-logrotate:rotateInterval '0 0 * * *'
 
 echo ""
 echo "Step 14: Starting application with PM2..."
-pm2 delete pratibha-marketing 2>/dev/null || true
-pm2 start ecosystem.config.js --env production
+if pm2 list | grep -q "pratibha-marketing"; then
+    echo "Application already running, performing zero-downtime reload..."
+    pm2 reload ecosystem.config.js --env production
+else
+    echo "Starting application for the first time..."
+    pm2 start ecosystem.config.js --env production
+fi
 pm2 save
 
 # Setup PM2 to start on boot

@@ -207,9 +207,10 @@ describe('Error Handler Middleware', () => {
             message: expect.stringContaining('email')
           })
         );
+        // Value should NOT be leaked in the error message (security)
         expect(mockRes.json).toHaveBeenCalledWith(
           expect.objectContaining({
-            message: expect.stringContaining('test@example.com')
+            message: expect.not.stringContaining('test@example.com')
           })
         );
       });

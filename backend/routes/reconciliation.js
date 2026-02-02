@@ -145,8 +145,11 @@ router.get('/pending', protect, authorize('admin', 'staff'), async (req, res, ne
       'reconciliation.completedAt': { $exists: false }
     };
 
-    // Filter by batch if provided
+    // Filter by batch if provided (validate as MongoId)
     if (batch) {
+      if (!mongoose.Types.ObjectId.isValid(batch)) {
+        return res.status(400).json({ success: false, message: 'Invalid batch ID' });
+      }
       query.batch = batch;
     }
 
@@ -441,20 +444,14 @@ router.post('/:orderId/complete',
             throw err;
           }
 
-          // Read current balance within transaction for isolation
-          const freshCustomer = sessionOrNull
-            ? await Customer.findById(customer._id).session(sessionOrNull)
-            : await Customer.findById(customer._id);
-          const previousBalance = freshCustomer.balance || 0;
-
-          // Calculate and set new balance atomically (avoids $inc + correction race)
+          // Use $inc for atomic balance update to prevent race conditions
           const invoiceAmount = roundTo2Decimals(order.totalAmount);
-          const newBalance = roundTo2Decimals(previousBalance + invoiceAmount);
-          await Customer.findByIdAndUpdate(
+          const updatedCustomer = await Customer.findByIdAndUpdate(
             customer._id,
-            { $set: { balance: newBalance } },
-            sessionOpts
+            { $inc: { balance: invoiceAmount } },
+            { new: true, ...sessionOpts }
           );
+          const newBalance = roundTo2Decimals(updatedCustomer.balance || 0);
 
           // Create invoice ledger entry with the actual new balance
           if (sessionOrNull) {

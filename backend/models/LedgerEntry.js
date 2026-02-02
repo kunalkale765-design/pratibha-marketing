@@ -4,8 +4,8 @@ const ledgerEntrySchema = new mongoose.Schema({
   customer: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Customer',
-    required: [true, 'Customer is required'],
-    index: true
+    required: [true, 'Customer is required']
+    // Note: single-field index removed — covered by compound index { customer: 1, date: -1 }
   },
   type: {
     type: String,

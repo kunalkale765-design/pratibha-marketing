@@ -359,9 +359,8 @@ async function generateBillPDF(billData) {
  * @returns {Object} Result for this order
  */
 async function generateBillForOrder(order, batch) {
-  // Update prices for market/markup customers
+  // Update prices for market/markup customers (in-memory only, saved after bills succeed)
   const updatedOrder = await updateOrderPrices(order);
-  await updatedOrder.save();
 
   // Split order by firm
   const firmSplit = await splitOrderByFirm(updatedOrder);

@@ -241,16 +241,19 @@ if (process.env.NODE_ENV === 'development') {
 
 // API Documentation (Swagger UI)
 // ================================
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-  customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: 'Pratibha Marketing API Docs'
-}));
+// Only expose docs in non-production environments
+if (process.env.NODE_ENV !== 'production') {
+  app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'Pratibha Marketing API Docs'
+  }));
 
-// Serve OpenAPI spec as JSON
-app.get('/api/docs.json', (req, res) => {
-  res.setHeader('Content-Type', 'application/json');
-  res.send(swaggerSpec);
-});
+  // Serve OpenAPI spec as JSON
+  app.get('/api/docs.json', (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.send(swaggerSpec);
+  });
+}
 
 // API Routes
 // ===========

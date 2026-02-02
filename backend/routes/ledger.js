@@ -175,19 +175,14 @@ router.post('/payment',
       const performPayment = async (sessionOrNull) => {
         const sessionOpts = sessionOrNull ? { session: sessionOrNull } : {};
 
-        // Read current balance within transaction for isolation
-        const freshCustomer = sessionOrNull
-          ? await Customer.findById(customerId).session(sessionOrNull)
-          : await Customer.findById(customerId);
-        previousBalance = freshCustomer.balance || 0;
-
-        // Calculate and set new balance atomically (avoids $inc + correction race)
-        newBalance = roundTo2Decimals(previousBalance - paymentAmount);
-        await Customer.findByIdAndUpdate(
+        // Use $inc for atomic balance update to prevent race conditions
+        const updatedCustomer = await Customer.findByIdAndUpdate(
           customerId,
-          { $set: { balance: newBalance } },
-          sessionOpts
+          { $inc: { balance: -paymentAmount } },
+          { new: true, ...sessionOpts }
         );
+        previousBalance = roundTo2Decimals((updatedCustomer.balance || 0) + paymentAmount);
+        newBalance = roundTo2Decimals(updatedCustomer.balance || 0);
 
         // Create payment ledger entry
         if (sessionOrNull) {
@@ -290,19 +285,14 @@ router.post('/adjustment',
       const performAdjustment = async (sessionOrNull) => {
         const sessionOpts = sessionOrNull ? { session: sessionOrNull } : {};
 
-        // Read current balance within transaction for isolation
-        const freshCustomer = sessionOrNull
-          ? await Customer.findById(customerId).session(sessionOrNull)
-          : await Customer.findById(customerId);
-        previousBalance = freshCustomer.balance || 0;
-
-        // Calculate and set new balance atomically (avoids $inc + correction race)
-        newBalance = roundTo2Decimals(previousBalance + adjustmentAmount);
-        await Customer.findByIdAndUpdate(
+        // Use $inc for atomic balance update to prevent race conditions
+        const updatedCustomer = await Customer.findByIdAndUpdate(
           customerId,
-          { $set: { balance: newBalance } },
-          sessionOpts
+          { $inc: { balance: adjustmentAmount } },
+          { new: true, ...sessionOpts }
         );
+        previousBalance = roundTo2Decimals((updatedCustomer.balance || 0) - adjustmentAmount);
+        newBalance = roundTo2Decimals(updatedCustomer.balance || 0);
 
         // Create adjustment ledger entry
         if (sessionOrNull) {

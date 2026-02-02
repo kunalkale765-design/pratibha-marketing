@@ -150,8 +150,13 @@ router.get('/:id',
 // @route   GET /api/orders/customer/:customerId
 // @desc    Get orders by customer
 // @access  Private
-router.get('/customer/:customerId', protect, async (req, res, next) => {
+router.get('/customer/:customerId',
+  protect,
+  param('customerId').isMongoId().withMessage('Invalid customer ID'),
+  async (req, res, next) => {
   try {
+    if (handleValidationErrors(req, res)) return;
+
     // SECURITY: Customers can only view their own orders
     if (req.user.role === 'customer') {
       const userCustomerId = getCustomerId(req.user);
@@ -494,12 +499,15 @@ router.put('/:id',
         order.totalAmount = totalAmount;
         order.markModified('products'); // Ensure array replacement is detected
 
-        // Add changes to audit log
+        // Add changes to audit log (capped at 100 most recent entries)
         if (auditChanges.length > 0) {
           if (!order.priceAuditLog) {
             order.priceAuditLog = [];
           }
           order.priceAuditLog.push(...auditChanges);
+          if (order.priceAuditLog.length > 100) {
+            order.priceAuditLog = order.priceAuditLog.slice(-100);
+          }
         }
       }
 
@@ -815,7 +823,9 @@ router.put('/:id/status', protect, authorize('admin', 'staff'), [
 
           if (ratesUpdated) {
             order.totalAmount = roundTo2Decimals(totalAmount);
-            await order.save();
+            // Include rate updates in the atomic status transition below
+            updateData.products = order.products;
+            updateData.totalAmount = order.totalAmount;
           }
         }
       }
@@ -823,6 +833,7 @@ router.put('/:id/status', protect, authorize('admin', 'staff'), [
 
     // Use conditional update to prevent race condition:
     // Only update if status hasn't changed since we read it
+    // This also atomically applies any rate updates calculated above
     const updatedOrder = await Order.findOneAndUpdate(
       { _id: req.params.id, status: currentStatus },
       updateData,

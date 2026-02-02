@@ -1,7 +1,9 @@
 const cron = require('node-cron');
+const fs = require('fs').promises;
+const path = require('path');
 const Batch = require('../models/Batch');
 const Order = require('../models/Order');
-const { generateBillsForBatch } = require('./deliveryBillService');
+const { generateBillsForBatch, BILL_STORAGE_DIR } = require('./deliveryBillService');
 const { withLock } = require('../utils/locks');
 const { getISTTime, getNextDay, IST_TIMEZONE } = require('../utils/dateTime');
 
@@ -19,6 +21,11 @@ try {
 let scheduledTask = null;
 let batchCreationTask = null;
 let recoveryTask = null;
+let pdfCleanupTask = null;
+
+// Storage directories for PDF cleanup
+const INVOICE_STORAGE_DIR = path.join(__dirname, '..', 'storage', 'invoices');
+const PDF_RETENTION_DAYS = 90;
 
 // Track scheduler health for status checks
 const schedulerHealth = {
@@ -29,7 +36,7 @@ const schedulerHealth = {
 };
 let isAutoConfirmRunning = false; // Concurrency guard
 let autoConfirmStartedAt = null; // Timestamp for deadlock detection
-const AUTO_CONFIRM_TIMEOUT_MS = 5 * 60 * 1000; // 5 minute safety timeout
+const AUTO_CONFIRM_TIMEOUT_MS = 10 * 60 * 1000; // 10 minute safety timeout (2x operation timeout)
 
 // Batch cutoff hours (IST)
 const BATCH_CONFIG = {
@@ -204,7 +211,7 @@ async function autoConfirmFirstBatch() {
       console.error('[BatchScheduler] CRITICAL: All bill generation attempts failed! Reverting orders to pending.');
       try {
         await Order.updateMany(
-          { _id: { $in: orderIds } },
+          { _id: { $in: orderIds }, status: 'confirmed' },
           { $set: { status: 'pending' } }
         );
         // Reopen the batch
@@ -344,7 +351,7 @@ async function checkMissedBatches() {
         console.log('[BatchScheduler] RECOVERY: Found unconfirmed 1st batch on startup, confirming now');
         const lockResult = await withLock('batch-auto-confirm', async () => {
           return await autoConfirmFirstBatch();
-        }, { ttlMs: 5 * 60 * 1000, timeoutMs: 60000 });
+        }, { ttlMs: 10 * 60 * 1000, timeoutMs: 60000 });
 
         if (lockResult.skipped) {
           console.log('[BatchScheduler] RECOVERY: Another instance is handling the missed batch');
@@ -370,7 +377,7 @@ async function checkMissedBatches() {
             console.log('[BatchScheduler] RECOVERY RETRY: Confirming missed batch');
             const retryLock = await withLock('batch-auto-confirm', async () => {
               return await autoConfirmFirstBatch();
-            }, { ttlMs: 5 * 60 * 1000, timeoutMs: 60000 });
+            }, { ttlMs: 10 * 60 * 1000, timeoutMs: 60000 });
 
             if (!retryLock.skipped && !retryLock.error) {
               schedulerHealth.lastAutoConfirmSuccess = new Date();
@@ -384,6 +391,44 @@ async function checkMissedBatches() {
       }
     }, 30 * 1000);
   }
+}
+
+/**
+ * Clean up PDFs older than retention period from both storage directories
+ */
+async function cleanupOldPDFs() {
+  const cutoffDate = new Date(Date.now() - PDF_RETENTION_DAYS * 24 * 60 * 60 * 1000);
+  let totalDeleted = 0;
+
+  for (const dir of [BILL_STORAGE_DIR, INVOICE_STORAGE_DIR]) {
+    try {
+      const files = await fs.readdir(dir);
+      for (const file of files) {
+        if (!file.endsWith('.pdf')) continue;
+        try {
+          const filePath = path.join(dir, file);
+          const stat = await fs.stat(filePath);
+          if (stat.mtime < cutoffDate) {
+            await fs.unlink(filePath);
+            totalDeleted++;
+          }
+        } catch (err) {
+          // Skip files that can't be read/deleted (already removed, permissions, etc.)
+          console.warn(`[PDFCleanup] Could not process ${file}:`, err.message);
+        }
+      }
+    } catch (err) {
+      // Directory may not exist yet
+      if (err.code !== 'ENOENT') {
+        console.error(`[PDFCleanup] Error reading directory ${dir}:`, err.message);
+      }
+    }
+  }
+
+  if (totalDeleted > 0) {
+    console.log(`[PDFCleanup] Deleted ${totalDeleted} PDFs older than ${PDF_RETENTION_DAYS} days`);
+  }
+  return { deleted: totalDeleted };
 }
 
 /**
@@ -408,7 +453,7 @@ function startScheduler() {
   scheduledTask = cron.schedule('0 8 * * *', async () => {
     const lockResult = await withLock('batch-auto-confirm', async () => {
       return await autoConfirmFirstBatch();
-    }, { ttlMs: 5 * 60 * 1000, timeoutMs: 60000 });
+    }, { ttlMs: 10 * 60 * 1000, timeoutMs: 60000 });
 
     if (lockResult.skipped) {
       console.log(`[BatchScheduler] Auto-confirm skipped: another instance (${lockResult.holder}) holds the lock`);
@@ -424,7 +469,7 @@ function startScheduler() {
       setTimeout(async () => {
         const retryResult = await withLock('batch-auto-confirm', async () => {
           return await autoConfirmFirstBatch();
-        }, { ttlMs: 5 * 60 * 1000, timeoutMs: 60000 });
+        }, { ttlMs: 10 * 60 * 1000, timeoutMs: 60000 });
 
         if (retryResult.skipped) {
           console.log('[BatchScheduler] Auto-confirm retry skipped: another instance already ran it');
@@ -470,7 +515,7 @@ function startScheduler() {
       console.log('[BatchScheduler] RECOVERY: Found unconfirmed 1st batch at periodic check, confirming now');
       const lockResult = await withLock('batch-auto-confirm', async () => {
         return await autoConfirmFirstBatch();
-      }, { ttlMs: 5 * 60 * 1000, timeoutMs: 60000 });
+      }, { ttlMs: 10 * 60 * 1000, timeoutMs: 60000 });
 
       if (lockResult.skipped) {
         console.log('[BatchScheduler] RECOVERY: Another instance is handling the batch');
@@ -512,7 +557,19 @@ function startScheduler() {
     timezone: IST_TIMEZONE
   });
 
-  console.log(`[BatchScheduler] Scheduler started - auto-confirm at 8:00 AM IST, create batches at 12:01 PM IST`);
+  // Daily PDF cleanup at 2:00 AM IST - remove PDFs older than 90 days
+  pdfCleanupTask = cron.schedule('0 2 * * *', async () => {
+    try {
+      await cleanupOldPDFs();
+    } catch (err) {
+      console.error('[PDFCleanup] Cleanup failed:', err.message);
+    }
+  }, {
+    scheduled: true,
+    timezone: IST_TIMEZONE
+  });
+
+  console.log(`[BatchScheduler] Scheduler started - auto-confirm at 8:00 AM IST, create batches at 12:01 PM IST, PDF cleanup at 2:00 AM IST`);
 }
 
 /**
@@ -530,6 +587,10 @@ function stopScheduler() {
   if (batchCreationTask) {
     batchCreationTask.stop();
     batchCreationTask = null;
+  }
+  if (pdfCleanupTask) {
+    pdfCleanupTask.stop();
+    pdfCleanupTask = null;
   }
   console.log('[BatchScheduler] All schedulers stopped');
 }
@@ -699,5 +760,6 @@ module.exports = {
   getBatchWithStats,
   getISTTime,
   getSchedulerHealth,
+  cleanupOldPDFs,
   BATCH_CONFIG
 };

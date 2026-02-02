@@ -46,7 +46,13 @@ const customerSchema = new mongoose.Schema({
   contractPrices: {
     type: Map,
     of: Number,
-    default: new Map()
+    default: new Map(),
+    validate: {
+      validator: function(map) {
+        return !map || map.size <= 500;
+      },
+      message: 'Contract prices cannot exceed 500 products'
+    }
   },
   isActive: {
     type: Boolean,
@@ -134,6 +140,9 @@ customerSchema.index({ isActive: 1 });
 
 // Compound index for listing active customers by name
 customerSchema.index({ isActive: 1, name: 1 });
+
+// Index for ledger balance queries and sorting
+customerSchema.index({ balance: 1 });
 
 // Note: magicLinkToken index is already defined in field definition with unique + sparse
 
