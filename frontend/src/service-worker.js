@@ -351,12 +351,20 @@ self.addEventListener('message', (event) => {
 
   if (event.data === 'clearCache' || event.data === 'logout') {
     // On logout, purge all caches to prevent cross-user data leaks
-    caches.keys().then((names) => {
+    // Use event.waitUntil to ensure purge completes before SW goes idle
+    const purge = caches.keys().then((names) => {
       return Promise.all(names.map((name) => caches.delete(name)));
     }).then(() => {
       if (event.data === 'logout') {
         console.log('[SW] Caches cleared on logout');
+        // Notify all clients that cache purge is complete
+        self.clients.matchAll().then(clients => {
+          clients.forEach(client => {
+            client.postMessage({ type: 'CACHE_PURGED' });
+          });
+        });
       }
     });
+    event.waitUntil(purge);
   }
 });

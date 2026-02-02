@@ -571,4 +571,40 @@ window.openOrderDetail = openOrderDetail;
 window.closeOrderModal = closeOrderModal;
 window.downloadInvoice = downloadInvoice;
 
-init();
+// Refresh market rates every 5 minutes to prevent stale pricing
+const RATE_REFRESH_INTERVAL = 5 * 60 * 1000;
+let rateRefreshTimer = null;
+
+async function refreshMarketRates() {
+    try {
+        const res = await fetch('/api/market-rates', { credentials: 'include' });
+        if (res.ok) {
+            const data = await res.json();
+            let updated = false;
+            (data?.data || []).forEach(rate => {
+                const pid = typeof rate.product === 'object' ? rate.product._id : rate.product;
+                if (pid && marketRates[pid] !== rate.rate) {
+                    marketRates[pid] = rate.rate;
+                    updated = true;
+                }
+            });
+            if (updated && selectedCustomer) {
+                renderProducts();
+            }
+        }
+    } catch (_) {
+        // Silently ignore — stale rates are better than crashing
+    }
+}
+
+function startRateRefresh() {
+    if (rateRefreshTimer) clearInterval(rateRefreshTimer);
+    rateRefreshTimer = setInterval(refreshMarketRates, RATE_REFRESH_INTERVAL);
+}
+
+// Clean up on page unload
+window.addEventListener('beforeunload', () => {
+    if (rateRefreshTimer) clearInterval(rateRefreshTimer);
+});
+
+init().then(() => startRateRefresh());

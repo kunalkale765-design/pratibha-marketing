@@ -203,7 +203,7 @@ const authLimiter = rateLimit({
 // Rate limiting for write operations (create/update/delete) on sensitive resources
 const writeOperationsLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // Allow 200 write operations per 15 minutes per IP
+  max: 100, // Allow 100 write operations per 15 minutes per IP
   message: 'Too many requests, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,

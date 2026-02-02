@@ -210,8 +210,14 @@ async function autoConfirmFirstBatch() {
     if (billGenerationFailed) {
       console.error('[BatchScheduler] CRITICAL: All bill generation attempts failed! Reverting orders to pending.');
       try {
+        // Only revert orders that are still 'confirmed' and haven't been reconciled/delivered
+        // This prevents reverting orders that progressed to delivered state during retries
         await Order.updateMany(
-          { _id: { $in: orderIds }, status: 'confirmed' },
+          {
+            _id: { $in: orderIds },
+            status: 'confirmed',
+            'reconciliation.completedAt': { $exists: false }
+          },
           { $set: { status: 'pending' } }
         );
         // Reopen the batch
@@ -680,8 +686,13 @@ async function manuallyConfirmBatch(batchId, userId, options = {}) {
       try {
         if (pendingOrders.length > 0) {
           const orderIds = pendingOrders.map(o => o._id);
+          // Only revert orders still in confirmed state and not yet reconciled
           await Order.updateMany(
-            { _id: { $in: orderIds } },
+            {
+              _id: { $in: orderIds },
+              status: 'confirmed',
+              'reconciliation.completedAt': { $exists: false }
+            },
             { $set: { status: 'pending' } }
           );
         }

@@ -287,15 +287,14 @@ router.get('/procurement-summary', protect, authorize('admin', 'staff'), async (
     const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
     const datesToQuery = ist.hour >= 12 ? [today, tomorrow] : [today];
 
-    // Get batches for relevant dates (today and possibly tomorrow)
-    const batches = await Batch.find({ date: { $in: datesToQuery } }).sort({ date: 1, batchType: 1 }).lean();
+    // Run independent queries in parallel for faster response
+    const [batches, products, todayProcurements] = await Promise.all([
+      Batch.find({ date: { $in: datesToQuery } }).sort({ date: 1, batchType: 1 }).lean(),
+      Product.find({ isActive: true }).select('_id name unit category').lean(),
+      DailyProcurement.find({ date: today }).lean()
+    ]);
 
-    // Get all active products (all categories for procurement)
-    const products = await Product.find({
-      isActive: true
-    }).select('_id name unit category');
-
-    // Get latest market rates only for active products (avoids full collection scan)
+    // Get latest market rates (depends on products for ID filtering)
     const productIds = products.map(p => p._id);
     const allLatestRates = await MarketRate.aggregate([
       { $match: { product: { $in: productIds } } },
@@ -314,8 +313,7 @@ router.get('/procurement-summary', protect, authorize('admin', 'staff'), async (
       latestRateMap.set(r._id.toString(), r.latestRate);
     });
 
-    // Get today's EXPLICIT procurement records (separate from market rates)
-    const todayProcurements = await DailyProcurement.find({ date: today });
+    // Build procurement map
     const procurementMap = new Map();
     todayProcurements.forEach(p => {
       procurementMap.set(p.product.toString(), {
@@ -331,10 +329,12 @@ router.get('/procurement-summary', protect, authorize('admin', 'staff'), async (
 
     if (batches.length > 0) {
       const batchIds = batches.map(b => b._id);
+      // Skip populate — we only need product IDs and quantities, not names/units
+      // (product info is already loaded from the Product.find above)
       const allOrders = await Order.find({
         batch: { $in: batchIds },
         status: { $nin: ['cancelled'] }
-      }).select('products batch').populate('products.product', 'name unit').limit(500).lean();
+      }).select('products.product products.quantity batch').limit(500).lean();
 
       // Aggregate quantities across ALL batches
       allOrders.forEach(order => {

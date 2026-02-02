@@ -181,8 +181,16 @@ router.post('/payment',
           { $inc: { balance: -paymentAmount } },
           { new: true, ...sessionOpts }
         );
-        previousBalance = roundTo2Decimals((updatedCustomer.balance || 0) + paymentAmount);
-        newBalance = roundTo2Decimals(updatedCustomer.balance || 0);
+        if (!updatedCustomer) {
+          throw new Error('Customer not found during balance update');
+        }
+        // Correct floating-point drift from repeated $inc
+        const roundedBalance = roundTo2Decimals(updatedCustomer.balance || 0);
+        if (roundedBalance !== updatedCustomer.balance) {
+          await Customer.findByIdAndUpdate(customerId, { $set: { balance: roundedBalance } }, sessionOpts);
+        }
+        previousBalance = roundTo2Decimals(roundedBalance + paymentAmount);
+        newBalance = roundedBalance;
 
         // Create payment ledger entry
         if (sessionOrNull) {
@@ -291,8 +299,16 @@ router.post('/adjustment',
           { $inc: { balance: adjustmentAmount } },
           { new: true, ...sessionOpts }
         );
-        previousBalance = roundTo2Decimals((updatedCustomer.balance || 0) - adjustmentAmount);
-        newBalance = roundTo2Decimals(updatedCustomer.balance || 0);
+        if (!updatedCustomer) {
+          throw new Error('Customer not found during balance update');
+        }
+        // Correct floating-point drift from repeated $inc
+        const roundedBalance = roundTo2Decimals(updatedCustomer.balance || 0);
+        if (roundedBalance !== updatedCustomer.balance) {
+          await Customer.findByIdAndUpdate(customerId, { $set: { balance: roundedBalance } }, sessionOpts);
+        }
+        previousBalance = roundTo2Decimals(roundedBalance - adjustmentAmount);
+        newBalance = roundedBalance;
 
         // Create adjustment ledger entry
         if (sessionOrNull) {

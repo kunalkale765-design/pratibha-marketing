@@ -112,13 +112,20 @@ if (procuredHeader) {
 document.addEventListener('click', initSound, { once: true });
 document.addEventListener('touchstart', initSound, { once: true });
 
+function fetchWithTimeout(url, options = {}, timeoutMs = 15000) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    return fetch(url, { ...options, signal: controller.signal })
+        .finally(() => clearTimeout(timeout));
+}
+
 async function loadDashboardStats() {
     try {
         const [ordersRes, productsRes, ratesRes, procurementRes] = await Promise.all([
-            fetch('/api/orders', { credentials: 'include' }),
-            fetch('/api/products', { credentials: 'include' }),
-            fetch('/api/market-rates', { credentials: 'include' }),
-            fetch('/api/supplier/procurement-summary', { credentials: 'include' })
+            fetchWithTimeout('/api/orders', { credentials: 'include' }),
+            fetchWithTimeout('/api/products', { credentials: 'include' }),
+            fetchWithTimeout('/api/market-rates', { credentials: 'include' }),
+            fetchWithTimeout('/api/supplier/procurement-summary', { credentials: 'include' })
         ]);
 
         const allResponses = [ordersRes, productsRes, ratesRes, procurementRes];

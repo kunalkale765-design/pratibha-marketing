@@ -3,6 +3,7 @@ const router = express.Router();
 const mongoose = require('mongoose');
 const path = require('path');
 const fs = require('fs').promises;
+const crypto = require('crypto');
 const { param, body } = require('express-validator');
 const Order = require('../models/Order');
 const Customer = require('../models/Customer');
@@ -108,8 +109,12 @@ async function autoGenerateInvoices(order, userId) {
 
       try {
         const pdfBuffer = await invoiceService.generateInvoicePDF(invoiceData);
+        // Atomic write: temp file + rename prevents corrupted PDFs on crash
+        const tempFilename = `.tmp-${crypto.randomBytes(8).toString('hex')}.pdf`;
+        const tempPath = path.join(INVOICE_STORAGE_DIR, tempFilename);
         const pdfFilePath = path.join(INVOICE_STORAGE_DIR, filename);
-        await fs.writeFile(pdfFilePath, pdfBuffer);
+        await fs.writeFile(tempPath, pdfBuffer);
+        await fs.rename(tempPath, pdfFilePath);
         invoice.pdfPath = filename;
         await invoice.save();
       } catch (pdfError) {
@@ -451,7 +456,16 @@ router.post('/:orderId/complete',
             { $inc: { balance: invoiceAmount } },
             { new: true, ...sessionOpts }
           );
+          if (!updatedCustomer) {
+            const err = new Error('Customer not found during balance update');
+            err.statusCode = 404;
+            throw err;
+          }
+          // Correct floating-point drift from repeated $inc
           const newBalance = roundTo2Decimals(updatedCustomer.balance || 0);
+          if (newBalance !== updatedCustomer.balance) {
+            await Customer.findByIdAndUpdate(customer._id, { $set: { balance: newBalance } }, sessionOpts);
+          }
 
           // Create invoice ledger entry with the actual new balance
           if (sessionOrNull) {

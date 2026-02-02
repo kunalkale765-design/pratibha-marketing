@@ -219,6 +219,8 @@ router.put('/:orderId/item/:productId',
 
       const product = order.products[productIndex];
       const oldQuantity = product.quantity;
+      // Capture version for optimistic locking to detect concurrent modifications
+      const orderVersion = order.__v;
 
       // Handle packed status update
       if (typeof packed === 'boolean') {
@@ -227,7 +229,18 @@ router.put('/:orderId/item/:productId',
 
       // If quantity is not provided, just save packed status change
       if (quantity === undefined) {
-        await order.save();
+        // Use optimistic locking: only update if version hasn't changed
+        const result = await Order.findOneAndUpdate(
+          { _id: orderId, __v: orderVersion },
+          { $set: { [`products.${productIndex}.packed`]: product.packed }, $inc: { __v: 1 } },
+          { new: true }
+        );
+        if (!result) {
+          return res.status(409).json({
+            success: false,
+            message: 'Order was modified by another user. Please refresh and try again.'
+          });
+        }
         return res.json({
           success: true,
           message: 'Product packed status updated',
@@ -254,32 +267,50 @@ router.put('/:orderId/item/:productId',
       }
       order.totalAmount = roundTo2Decimals(newTotal);
 
-      // Add to audit log if quantity changed
-      if (oldQuantity !== newQuantity) {
-        if (!order.priceAuditLog) {
-          order.priceAuditLog = [];
-        }
-        order.priceAuditLog.push({
-          changedAt: new Date(),
-          changedBy: req.user._id,
-          changedByName: req.user.name,
-          productId: productId,
-          productName: product.productName,
-          oldRate: product.rate,
-          newRate: product.rate,
-          oldQuantity: oldQuantity,
-          newQuantity: newQuantity,
-          oldTotal: roundTo2Decimals(oldQuantity * product.rate),
-          newTotal: product.amount,
-          reason: notes || 'Quantity updated during packing'
-        });
-        // Cap audit log at 100 entries
-        if (order.priceAuditLog.length > 100) {
-          order.priceAuditLog = order.priceAuditLog.slice(-100);
-        }
+      // Build audit log entry if quantity changed
+      const auditEntry = (oldQuantity !== newQuantity) ? {
+        changedAt: new Date(),
+        changedBy: req.user._id,
+        changedByName: req.user.name,
+        productId: productId,
+        productName: product.productName,
+        oldRate: product.rate,
+        newRate: product.rate,
+        oldQuantity: oldQuantity,
+        newQuantity: newQuantity,
+        oldTotal: roundTo2Decimals(oldQuantity * product.rate),
+        newTotal: product.amount,
+        reason: notes || 'Quantity updated during packing'
+      } : null;
+
+      // Use optimistic locking: only update if version hasn't changed
+      const updateOps = {
+        $set: {
+          [`products.${productIndex}.quantity`]: newQuantity,
+          [`products.${productIndex}.amount`]: product.amount,
+          [`products.${productIndex}.packed`]: product.packed,
+          totalAmount: order.totalAmount
+        },
+        $inc: { __v: 1 }
+      };
+      if (auditEntry) {
+        updateOps.$push = {
+          priceAuditLog: { $each: [auditEntry], $slice: -100 }
+        };
       }
 
-      await order.save();
+      const result = await Order.findOneAndUpdate(
+        { _id: orderId, __v: orderVersion },
+        updateOps,
+        { new: true }
+      );
+
+      if (!result) {
+        return res.status(409).json({
+          success: false,
+          message: 'Order was modified by another user. Please refresh and try again.'
+        });
+      }
 
       res.json({
         success: true,

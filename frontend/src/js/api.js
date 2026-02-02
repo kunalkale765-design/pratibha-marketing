@@ -119,6 +119,10 @@ const API = {
                     await this.refreshCsrfToken();
                     return this.request(endpoint, options, true);
                 }
+                // Show user-friendly message for CSRF errors (retry already failed)
+                if (isCsrfError) {
+                    return { success: false, error: 'Security token expired. Please refresh the page and try again.', status: 403 };
+                }
                 return { success: false, error: data?.message || 'Access denied. You do not have permission.', status: 403 };
             }
 

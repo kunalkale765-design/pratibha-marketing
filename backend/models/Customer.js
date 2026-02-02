@@ -78,6 +78,11 @@ const customerSchema = new mongoose.Schema({
   magicLinkCreatedAt: {
     type: Date
   },
+  // Timestamp when magic link was revoked — used to invalidate active sessions
+  // created from the magic link before this date
+  magicLinkRevokedAt: {
+    type: Date
+  },
   // Audit fields
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,

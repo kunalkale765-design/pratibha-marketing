@@ -164,21 +164,28 @@ pm2 set pm2-logrotate:compress true
 pm2 set pm2-logrotate:rotateInterval '0 0 * * *'
 
 echo ""
-echo "Step 14: Starting application with PM2..."
-if pm2 list | grep -q "pratibha-marketing"; then
+echo "Step 14: Creating application user and setting permissions..."
+APP_USER="appuser"
+if ! id "$APP_USER" &>/dev/null; then
+    useradd -m -s /bin/bash "$APP_USER"
+    echo "Created user: $APP_USER"
+fi
+chown -R "$APP_USER":"$APP_USER" /var/www/pratibha-marketing
+
+echo "Starting application with PM2 (as $APP_USER)..."
+if su - "$APP_USER" -c "pm2 list" | grep -q "pratibha-marketing"; then
     echo "Application already running, performing zero-downtime reload..."
-    pm2 reload ecosystem.config.js --env production
+    su - "$APP_USER" -c "cd /var/www/pratibha-marketing && pm2 reload ecosystem.config.js --env production"
 else
     echo "Starting application for the first time..."
-    pm2 start ecosystem.config.js --env production
+    su - "$APP_USER" -c "cd /var/www/pratibha-marketing && pm2 start ecosystem.config.js --env production"
 fi
-pm2 save
+su - "$APP_USER" -c "pm2 save"
 
-# Setup PM2 to start on boot
-# Note: Using root here since deploy.sh requires root. For better security,
-# create a dedicated user (e.g., 'appuser') and run PM2 under that user.
-pm2 startup systemd -u root --hp /root
-pm2 save
+# Setup PM2 to start on boot (as non-root appuser)
+APP_HOME="/home/$APP_USER"
+pm2 startup systemd -u "$APP_USER" --hp "$APP_HOME"
+su - "$APP_USER" -c "pm2 save"
 
 echo ""
 echo "Step 15: Configuring Nginx..."

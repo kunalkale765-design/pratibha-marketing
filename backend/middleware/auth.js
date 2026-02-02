@@ -53,10 +53,16 @@ const protect = async (req, res, next) => {
         });
       }
 
-      // Note: We no longer check customer.magicLinkToken here because
-      // magic links are single-use (cleared on first auth). Once a session JWT
-      // is issued, it remains valid until expiry (24h). To revoke access
-      // immediately, set customer.isActive = false.
+      // Reject sessions issued before the magic link was revoked
+      if (customer.magicLinkRevokedAt && decoded.iat) {
+        const revokedAtSec = Math.floor(customer.magicLinkRevokedAt.getTime() / 1000);
+        if (decoded.iat <= revokedAtSec) {
+          return res.status(401).json({
+            success: false,
+            message: 'Access has been revoked. Please request a new magic link.'
+          });
+        }
+      }
 
       // Create a virtual user object for magic link sessions
       req.user = {

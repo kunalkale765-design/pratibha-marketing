@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { body, param, validationResult } = require('express-validator');
 const Order = require('../models/Order');
+const Batch = require('../models/Batch');
 const Customer = require('../models/Customer');
 const Product = require('../models/Product');
 const MarketRate = require('../models/MarketRate');
@@ -951,6 +952,15 @@ router.delete('/:id',
       order.cancelledBy = req.user._id;
       order.cancelledAt = new Date();
       await order.save();
+
+      // Decrement batch order count if order belongs to a batch
+      if (order.batch) {
+        try {
+          await Batch.decrementOrderCount(order.batch);
+        } catch (batchErr) {
+          console.error(`[Orders] Failed to decrement batch order count for batch ${order.batch}:`, batchErr.message);
+        }
+      }
 
       logAudit(req, 'ORDER_CANCELLED', 'Order', order._id, {
         orderNumber: order.orderNumber, customer: order.customer

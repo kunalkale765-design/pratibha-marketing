@@ -1,6 +1,7 @@
 const PDFDocument = require('pdfkit');
 const path = require('path');
 const fs = require('fs').promises;
+const crypto = require('crypto');
 const companies = require('../config/companies');
 const Counter = require('../models/Counter');
 const Order = require('../models/Order');
@@ -416,7 +417,12 @@ async function generateBillForOrder(order, batch) {
     const displayFilename = `${customerName} ${day} ${month}.pdf`;
     // Safe filename for disk storage (no spaces)
     const storageFilename = `${billNumber}.pdf`;
-    await fs.writeFile(path.join(BILL_STORAGE_DIR, storageFilename), billPdf);
+    // Atomic write: write to temp file first, then rename (prevents corrupted PDFs on crash)
+    const tempFilename = `.tmp-${crypto.randomBytes(8).toString('hex')}.pdf`;
+    const tempPath = path.join(BILL_STORAGE_DIR, tempFilename);
+    const finalPath = path.join(BILL_STORAGE_DIR, storageFilename);
+    await fs.writeFile(tempPath, billPdf);
+    await fs.rename(tempPath, finalPath);
 
     orderBills.push({
       billNumber: billNumber,

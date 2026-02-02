@@ -133,9 +133,18 @@ router.post('/', protect, authorize('admin', 'staff'), validateCustomer, async (
       createdBy: req.user._id
     };
 
-    // Handle contractPrices Map
+    // Handle contractPrices Map with validation
     if (req.body.contractPrices) {
-      customerData.contractPrices = new Map(Object.entries(req.body.contractPrices));
+      const entries = Object.entries(req.body.contractPrices);
+      for (const [productId, price] of entries) {
+        if (typeof price !== 'number' || price <= 0) {
+          return res.status(400).json({
+            success: false,
+            message: `Contract price for product ${productId} must be a positive number`
+          });
+        }
+      }
+      customerData.contractPrices = new Map(entries);
     }
 
     const customer = await Customer.create(customerData);
@@ -342,6 +351,8 @@ router.delete('/:id/magic-link',
 
     customer.magicLinkToken = undefined;
     customer.magicLinkCreatedAt = undefined;
+    // Record revocation time so auth middleware can reject sessions issued before this
+    customer.magicLinkRevokedAt = new Date();
     await customer.save();
 
     res.json({

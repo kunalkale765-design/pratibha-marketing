@@ -95,10 +95,14 @@ const errorHandler = (err, req, res, _next) => {
 
   // Report 5xx errors to Sentry if available
   if (statusCode >= 500 && Sentry && process.env.SENTRY_DSN) {
-    Sentry.captureException(err, {
-      tags: { statusCode },
-      extra: { url: req.originalUrl, method: req.method }
-    });
+    try {
+      Sentry.captureException(err, {
+        tags: { statusCode },
+        extra: { url: req.path, method: req.method }
+      });
+    } catch (sentryErr) {
+      console.error('[Sentry] Failed to report error:', sentryErr.message);
+    }
   }
 
   // Log errors - but skip expected client errors (4xx) in test mode to reduce noise
